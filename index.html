@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ClayLog">
+<title>ClayLog – Schießtraining</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg: #0a0a0c;
+  --surface: #13131a;
+  --card: #1a1a24;
+  --border: #2a2a3a;
+  --accent: #e8c84a;
+  --accent2: #4ae8c8;
+  --red: #e84a4a;
+  --text: #f0f0f8;
+  --muted: #6a6a88;
+  --radius: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; max-width: 100vw; }
+
+/* ─── APP SHELL ─────────────────────────────────────────────── */
+#root { height: 100%; }
+.app { display: flex; flex-direction: column; height: 100dvh; }
+
+/* ─── HEADER ────────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, #0d0d18 0%, transparent 100%);
+  position: relative; z-index: 10; flex-shrink: 0;
+}
+.header-logo-row { display: flex; align-items: center; gap: 10px; }
+.logo { font-family: 'Arial', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--accent); }
+.header-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.sync-status { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+/* ─── MAIN ──────────────────────────────────────────────────── */
+.main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; -webkit-overflow-scrolling: touch; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ─── BOTTOM NAV ────────────────────────────────────────────── */
+.bottom-nav {
+  display: flex; background: var(--surface);
+  border-top: 1px solid var(--border); padding: 8px 0 24px; flex-shrink: 0;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 0; cursor: pointer; transition: all .2s; user-select: none;
+}
+.nav-icon { font-size: 22px; transition: transform .2s; }
+.nav-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.nav-item.active .nav-icon { transform: scale(1.1); }
+.nav-item.active .nav-label { color: var(--accent); }
+
+/* ─── FAB ───────────────────────────────────────────────────── */
+.fab {
+  position: fixed; bottom: 90px; right: 20px;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--accent); color: #000;
+  font-size: 28px; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 32px rgba(232,200,74,.4);
+  cursor: pointer; z-index: 100; border: none;
+  transition: all .2s;
+}
+.fab:active { transform: scale(.92); }
+
+/* ─── CARDS ─────────────────────────────────────────────────── */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.card-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* ─── STAT GRID ─────────────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-box { background: var(--surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+.stat-val { font-family: 'Arial', sans-serif; font-size: 36px; color: var(--accent); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ─── SESSION ITEMS ─────────────────────────────────────────── */
+.session-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: opacity .15s;
+}
+.session-item:last-child { border-bottom: none; }
+.session-item:active { opacity: .6; }
+.session-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.session-icon.training { background: rgba(232,200,74,.12); }
+.session-icon.competition { background: rgba(74,232,200,.12); }
+.session-info { flex: 1; min-width: 0; }
+.session-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-meta { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.session-score { font-family: 'Arial', sans-serif; font-size: 28px; color: var(--accent); flex-shrink: 0; }
+.score-max { font-size: 13px; color: var(--muted); }
+
+/* ─── EMPTY STATE ───────────────────────────────────────────── */
+.empty { text-align: center; padding: 40px 20px; }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* ─── MODAL ─────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  backdrop-filter: blur(8px); z-index: 200;
+  display: flex; align-items: flex-end;
+}
+.modal {
+  background: var(--surface); border-radius: 24px 24px 0 0;
+  width: 100%; padding: 24px 20px 48px;
+  border: 1px solid var(--border); border-bottom: none;
+  animation: slideUp .3s cubic-bezier(.34,1.56,.64,1);
+  max-height: 90dvh; overflow-y: auto;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-family: 'Arial', sans-serif; font-size: 26px; letter-spacing: 2px; margin-bottom: 20px; }
+
+/* ─── FORMS ─────────────────────────────────────────────────── */
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+input, select, textarea {
+  width: 100%; background: #0e0e18; border: 1px solid var(--border);
+  border-left: 3px solid var(--accent2);
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px;
+  padding: 13px 16px; border-radius: 10px; outline: none;
+  -webkit-appearance: none; appearance: none;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.3);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent); border-left-color: var(--accent);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.3), 0 0 0 2px rgba(232,200,74,.15);
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236a6a88' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 42px;
+}
+textarea { resize: none; min-height: 80px; }
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ─── BUTTONS ───────────────────────────────────────────────── */
+.btn {
+  width: 100%; padding: 16px; border-radius: 12px; border: none;
+  font-family: 'Arial', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; transition: all .15s; margin-top: 8px;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #f0d060 0%, #c8a030 100%);
+  color: #000;
+  box-shadow: 0 4px 0 #8a6a10, 0 6px 12px rgba(0,0,0,.4);
+}
+.btn-primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a6a10; }
+.btn-danger {
+  background: linear-gradient(180deg, #f06060 0%, #c03030 100%);
+  color: #fff;
+  box-shadow: 0 4px 0 #801010, 0 6px 12px rgba(0,0,0,.4);
+}
+.btn-danger:active { transform: translateY(3px); box-shadow: 0 1px 0 #801010; }
+.btn-ghost {
+  background: linear-gradient(180deg, #2a2a3e 0%, #1a1a2e 100%);
+  color: var(--muted); border: 1px solid var(--border);
+  box-shadow: 0 4px 0 #0a0a14, 0 6px 10px rgba(0,0,0,.3);
+}
+.btn-ghost:active { transform: translateY(3px); box-shadow: 0 1px 0 #0a0a14; }
+
+/* ─── AUTH SCREEN ───────────────────────────────────────────── */
+.auth-screen {
+  position: fixed; inset: 0; background: var(--bg); z-index: 999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.auth-logo { font-family: 'Arial', sans-serif; font-size: 40px; font-weight: 700; letter-spacing: 4px; color: var(--accent); margin-bottom: 4px; }
+.auth-subtitle { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-bottom: 40px; text-transform: uppercase; }
+.auth-title { font-family: 'Arial', sans-serif; font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; color: var(--text); }
+.auth-box { width: 100%; max-width: 340px; }
+.auth-error { color: var(--red); font-size: 13px; margin-bottom: 12px; min-height: 18px; font-family: 'DM Mono', monospace; }
+.auth-success { color: var(--accent2); font-size: 13px; margin-bottom: 12px; font-family: 'DM Mono', monospace; }
+.auth-link { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; margin-top: 6px; }
+.auth-forgot { width: 100%; padding: 10px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; text-decoration: underline; margin-top: 4px; }
+
+/* ─── DETAIL MODAL ──────────────────────────────────────────── */
+.detail-section { margin-bottom: 20px; }
+.detail-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+.detail-val { font-size: 15px; color: var(--text); }
+.detail-score-big { font-family: 'Arial', sans-serif; font-size: 56px; color: var(--accent); line-height: 1; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { margin-top: 0; }
+
+/* ─── SETTINGS ──────────────────────────────────────────────── */
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; font-weight: 500; }
+.settings-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-btn { padding: 8px 16px; font-size: 14px; margin: 0; width: auto; }
+
+/* ─── CHART ─────────────────────────────────────────────────── */
+.chart-wrap { padding: 4px 0; }
+canvas { width: 100% !important; }
+
+/* ─── ANALYSE ───────────────────────────────────────────────── */
+.analyse-tab {
+  padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted); font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+}
+.analyse-tab.active { background: rgba(232,200,74,.15); color: var(--accent); border-color: var(--accent); }
+.tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
+.a-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.a-table th { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+.a-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.a-table tr:last-child td { border-bottom: none; }
+.a-table .num { text-align: right; font-family: 'DM Mono', monospace; font-weight: 600; }
+.a-bar-wrap { background: var(--border); border-radius: 3px; height: 5px; margin-top: 4px; }
+.a-bar { height: 5px; border-radius: 3px; background: var(--accent); }
+
+/* ─── NOTIZEN ───────────────────────────────────────────────── */
+.notiz-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.notiz-card.erledigt { opacity: .5; }
+.notiz-card.erledigt .notiz-text { text-decoration: line-through; color: var(--muted); }
+.notiz-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+.notiz-text { font-size: 14px; line-height: 1.6; }
+.notiz-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.notiz-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px;
+  font-family: 'DM Mono', monospace; cursor: pointer; border: 1px solid;
+  user-select: none;
+}
+.notiz-tag.aufgabe { background: rgba(232,200,74,.1); color: var(--accent); border-color: rgba(232,200,74,.3); }
+.notiz-tag.erledigt-tag { background: rgba(74,232,200,.1); color: var(--accent2); border-color: rgba(74,232,200,.3); }
+.notiz-tag.active { background: rgba(232,200,74,.25); border-color: var(--accent); }
+
+/* ─── PASSEN GRID ───────────────────────────────────────────── */
+.passen-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
+.passen-input { text-align: center; font-family: 'Arial', sans-serif; font-size: 22px; padding: 10px 6px; }
+.serie-total { font-family: 'Arial', sans-serif; font-size: 32px; color: var(--accent); text-align: center; padding: 10px 0; }
+.serie-max { font-size: 15px; color: var(--muted); }
+
+/* ─── MISC ──────────────────────────────────────────────────── */
+.divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text { font-size: 10px; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.type-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.type-btn { padding: 13px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+.score-check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; margin-bottom: 4px; }
+.check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); background: var(--card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.check-box.checked { background: var(--accent); border-color: var(--accent); }
+.passen-control { display: flex; align-items: center; gap: 12px; }
+.passen-btn { width: 44px; height: 44px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: 22px; cursor: pointer; flex-shrink: 0; }
+.add-btn { width: 38px; height: 48px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--accent); font-size: 20px; cursor: pointer; flex-shrink: 0; }
+.select-row { display: flex; gap: 6px; }
+.select-row select { flex: 1; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ════════════════════════════════════════════════════════════════
+   SUPABASE CONFIG & API
+════════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://zdgpuclshewqgsoqgwmq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZ3B1Y2xzaGV3cWdzb3Fnd21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTQxMjYsImV4cCI6MjA5Mjk3MDEyNn0.F8CcstgVYRYJ_-7UUCAg40wED8VTy95nP2qCPVGNlKs';
+
+function getHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + (token || SUPABASE_KEY),
+    'Prefer': 'return=representation'
+  };
+}
+
+async function sbFetch(method, table, body, filter, token, retry = true) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${filter || ''}`, {
+    method,
+    headers: getHeaders(token),
+    body: body ? JSON.stringify(body) : null
+  });
+  if (res.status === 401 && retry) throw new Error('AUTH_EXPIRED');
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  return method === 'DELETE' || method === 'PATCH' ? null : res.json();
+}
+
+async function authSignIn(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Login fehlgeschlagen');
+  return data;
+}
+
+async function authSignUp(email, password, name) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+    body: JSON.stringify({ email, password, data: { name } })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Registrierung fehlgeschlagen');
+  return data;
+}
+
+async function authRefresh(refreshToken) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  return res.json();
+}
+
+async function authForgotPassword(email) {
+  await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+    body: JSON.stringify({ email })
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LOCAL STORAGE HELPERS
+════════════════════════════════════════════════════════════════ */
+const LS = {
+  get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════════════ */
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function fmtScore(s) {
+  if (!s || s.score == null) return '';
+  return `${s.score}/${s.max}`;
+}
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   AUTH SCREEN
+════════════════════════════════════════════════════════════════ */
+function AuthScreen({ onLogin }) {
+  const [mode, setMode] = useState('login'); // login | register
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    if (!email || !password) { setError('E-Mail und Passwort eingeben.'); return; }
+    setLoading(true); setError(''); setSuccess('');
+    try {
+      const data = await authSignIn(email, password);
+      onLogin(data);
+    } catch(e) {
+      setError(e.message);
+    } finally { setLoading(false); }
+  }
+
+  async function handleRegister() {
+    if (!email || !password || !name) { setError('Alle Felder ausfüllen.'); return; }
+    if (password.length < 6) { setError('Passwort mindestens 6 Zeichen.'); return; }
+    setLoading(true); setError(''); setSuccess('');
+    try {
+      const data = await authSignUp(email, password, name);
+      // Try to get session
+      if (data.access_token) { onLogin(data); return; }
+      if (data.session?.access_token) { onLogin(data.session); return; }
+      // Try login directly
+      try {
+        const loginData = await authSignIn(email, password);
+        onLogin(loginData);
+      } catch {
+        setSuccess('✅ Konto erstellt! Bitte E-Mail bestätigen und dann anmelden.');
+        setTimeout(() => { setMode('login'); setSuccess(''); }, 3000);
+      }
+    } catch(e) {
+      setError(e.message);
+    } finally { setLoading(false); }
+  }
+
+  async function handleForgot() {
+    if (!email) { setError('Bitte zuerst E-Mail eingeben.'); return; }
+    setLoading(true);
+    try {
+      await authForgotPassword(email);
+      setSuccess('✅ E-Mail gesendet! Prüfe dein Postfach.');
+    } catch { setError('Fehler beim Senden.'); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="auth-screen">
+      <div style={{marginBottom:'12px',textAlign:'center'}}>
+        <div style={{fontSize:'60px'}}>🎯</div>
+      </div>
+      <div className="auth-logo">ClayLog</div>
+      <div className="auth-subtitle">Schießtraining</div>
+      <div className="auth-box">
+        <div className="auth-title">{mode === 'login' ? 'Anmelden' : 'Registrieren'}</div>
+        {mode === 'register' && (
+          <div className="form-group">
+            <label>Name</label>
+            <input type="text" placeholder="Dein Name" value={name} onChange={e=>setName(e.target.value)} />
+          </div>
+        )}
+        <div className="form-group">
+          <label>E-Mail</label>
+          <input type="email" placeholder="name@beispiel.ch" value={email} onChange={e=>setEmail(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Passwort</label>
+          <input type="password" placeholder="Mindestens 6 Zeichen" value={password}
+            onChange={e=>setPassword(e.target.value)}
+            onKeyDown={e => e.key==='Enter' && mode==='login' && handleLogin()} />
+        </div>
+        {error && <div className="auth-error">{error}</div>}
+        {success && <div className="auth-success">{success}</div>}
+        {mode === 'login' ? (
+          <button className="btn btn-primary" onClick={handleLogin} disabled={loading} style={{marginTop:'4px'}}>
+            {loading ? '⟳ Laden…' : 'Anmelden'}
+          </button>
+        ) : (
+          <button className="btn btn-primary" onClick={handleRegister} disabled={loading} style={{marginTop:'4px'}}>
+            {loading ? '⟳ Laden…' : 'Registrieren'}
+          </button>
+        )}
+        <button className="auth-link" onClick={() => { setMode(mode==='login'?'register':'login'); setError(''); setSuccess(''); }}>
+          {mode === 'login' ? 'Noch kein Konto? Registrieren' : 'Bereits ein Konto? Anmelden'}
+        </button>
+        {mode === 'login' && (
+          <button className="auth-forgot" onClick={handleForgot} disabled={loading}>
+            Passwort vergessen?
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HEADER
+════════════════════════════════════════════════════════════════ */
+function Header({ user, syncStatus }) {
+  const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
+  const dateStr = new Date().toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' }).toUpperCase();
+  const statusIcon = syncStatus === 'syncing' ? '⟳' : syncStatus === 'ok' ? '✓' : syncStatus === 'error' ? '✗' : '';
+  const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : 'var(--muted)';
+
+  return (
+    <header className="header">
+      <div>
+        <div className="header-logo-row">
+          <span style={{fontSize:'26px'}}>🎯</span>
+          <span className="logo">ClayLog</span>
+        </div>
+        <div className="header-date">{name ? `${name.toUpperCase()} · ` : ''}{dateStr}</div>
+      </div>
+      <span className="sync-status" style={{color: statusColor}}>{statusIcon}</span>
+    </header>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   BOTTOM NAV
+════════════════════════════════════════════════════════════════ */
+const NAV_ITEMS = [
+  { id: 'dashboard', icon: '🎯', label: 'Home' },
+  { id: 'sessions',  icon: '📋', label: 'Einträge' },
+  { id: 'notizen',   icon: '📝', label: 'Notizen' },
+  { id: 'analyse',   icon: '🔬', label: 'Analyse' },
+  { id: 'settings',  icon: '⚙️', label: 'Settings' },
+];
+
+function BottomNav({ active, onChange }) {
+  return (
+    <nav className="bottom-nav">
+      {NAV_ITEMS.map(item => (
+        <div key={item.id} className={`nav-item ${active===item.id?'active':''}`} onClick={()=>onChange(item.id)}>
+          <div className="nav-icon">{item.icon}</div>
+          <div className="nav-label">{item.label}</div>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SESSION ITEM (shared component)
+════════════════════════════════════════════════════════════════ */
+function SessionItem({ s, compact, onClick }) {
+  const isComp = s.type === 'wettkampf';
+  const hasScore = s.score != null && s.max != null && s.max > 0;
+  return (
+    <div className="session-item" onClick={onClick}>
+      <div className={`session-icon ${isComp ? 'competition' : 'training'}`}>
+        {isComp ? '🏆' : '🏋️'}
+      </div>
+      <div className="session-info">
+        <div className="session-name">{s.disziplin || 'Training'}</div>
+        <div className="session-meta">
+          {fmtDate(s.date)}{s.ort ? ` · ${s.ort}` : ''}{s.waffe ? ` · ${s.waffe}` : ''}
+        </div>
+      </div>
+      {hasScore && (
+        <div className="session-score">
+          {s.score}<span className="score-max">/{s.max}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════════════════ */
+function Dashboard({ sessions, onSessionClick }) {
+  const year = new Date().getFullYear();
+  const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
+  const totalShots = yearSessions.reduce((a,s) => a + (s.munition||0), 0);
+  const scored = yearSessions.filter(s => s.max > 0);
+  const quote = scored.length ? Math.round(scored.reduce((a,s) => a + s.score/s.max, 0) / scored.length * 100) : 0;
+  const recent = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
+
+  return (
+    <div>
+      <div className="stat-grid">
+        <div className="stat-box">
+          <div className="stat-val">{yearSessions.length}</div>
+          <div className="stat-label">Sessions {year}</div>
+        </div>
+        <div className="stat-box">
+          <div className="stat-val">{quote}%</div>
+          <div className="stat-label">Ø Quote</div>
+        </div>
+        <div className="stat-box">
+          <div className="stat-val">{totalShots.toLocaleString()}</div>
+          <div className="stat-label">Schüsse {year}</div>
+        </div>
+        <div className="stat-box">
+          <div className="stat-val">{scored.length}</div>
+          <div className="stat-label">Mit Score</div>
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Letzte Einträge</span>
+        </div>
+        {recent.length === 0 ? (
+          <div className="empty">
+            <div className="empty-icon">🎯</div>
+            <div className="empty-text">Noch keine Einträge.<br/>Tippe auf + um zu starten.</div>
+          </div>
+        ) : (
+          recent.map(s => <SessionItem key={s.id} s={s} compact onClick={() => onSessionClick(s)} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SESSIONS PAGE
+════════════════════════════════════════════════════════════════ */
+function SessionsPage({ sessions, onSessionClick }) {
+  const [filter, setFilter] = useState({ type: '', disziplin: '' });
+  const disziplinen = [...new Set(sessions.map(s => s.disziplin).filter(Boolean))];
+
+  const filtered = sessions
+    .filter(s => !filter.type || s.type === filter.type)
+    .filter(s => !filter.disziplin || s.disziplin === filter.disziplin)
+    .sort((a,b) => b.date > a.date ? 1 : -1);
+
+  return (
+    <div>
+      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+        <select style={{flex:'0 0 auto',width:'auto'}} value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
+          <option value="">Alle Typen</option>
+          <option value="training">Training</option>
+          <option value="wettkampf">Wettkampf</option>
+        </select>
+        <select style={{flex:'0 0 auto',width:'auto'}} value={filter.disziplin} onChange={e=>setFilter(f=>({...f,disziplin:e.target.value}))}>
+          <option value="">Alle Disziplinen</option>
+          {disziplinen.map(d => <option key={d}>{d}</option>)}
+        </select>
+        {(filter.type||filter.disziplin) && (
+          <button className="analyse-tab" onClick={()=>setFilter({type:'',disziplin:''})}>✕ Reset</button>
+        )}
+      </div>
+      <div className="card">
+        {filtered.length === 0 ? (
+          <div className="empty">
+            <div className="empty-icon">📋</div>
+            <div className="empty-text">Keine Einträge gefunden.</div>
+          </div>
+        ) : (
+          filtered.map(s => <SessionItem key={s.id} s={s} onClick={() => onSessionClick(s)} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NOTIZEN PAGE
+════════════════════════════════════════════════════════════════ */
+function NotizenPage({ sessions, noteStates, onToggleNote }) {
+  const [filter, setFilter] = useState('alle');
+  const withNotes = sessions.filter(s => s.notes && s.notes.trim());
+
+  const filtered = withNotes.filter(s => {
+    const st = noteStates[s.id] || 'normal';
+    if (filter === 'aufgaben') return st === 'aufgabe';
+    if (filter === 'erledigt') return st === 'erledigt';
+    return true;
+  }).sort((a,b) => b.date > a.date ? 1 : -1);
+
+  return (
+    <div>
+      <div className="tab-row">
+        {['alle','aufgaben','erledigt'].map(f => (
+          <button key={f} className={`analyse-tab ${filter===f?'active':''}`} onClick={()=>setFilter(f)}>
+            {f.charAt(0).toUpperCase()+f.slice(1)}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">📝</div>
+          <div className="empty-text">Keine Notizen gefunden.</div>
+        </div>
+      ) : filtered.map(s => {
+        const st = noteStates[s.id] || 'normal';
+        return (
+          <div key={s.id} className={`notiz-card ${st==='erledigt'?'erledigt':''}`}>
+            <div className="notiz-meta">{fmtDate(s.date)} · {s.disziplin}</div>
+            <div className="notiz-text">{s.notes}</div>
+            <div className="notiz-actions">
+              <span className={`notiz-tag aufgabe ${st==='aufgabe'?'active':''}`}
+                onClick={()=>onToggleNote(s.id, st==='aufgabe'?'normal':'aufgabe')}>
+                📌 Aufgabe
+              </span>
+              <span className={`notiz-tag erledigt-tag ${st==='erledigt'?'active':''}`}
+                onClick={()=>onToggleNote(s.id, st==='erledigt'?'normal':'erledigt')}>
+                ✅ Erledigt
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ANALYSE PAGE
+════════════════════════════════════════════════════════════════ */
+function AnalysePage({ sessions }) {
+  const [tab, setTab] = useState('resultate');
+
+  const scored = sessions.filter(s => s.max > 0).sort((a,b) => a.date > b.date ? 1 : -1);
+
+  // Waffen stats
+  const waffenMap = {};
+  sessions.forEach(s => {
+    if (!s.waffe) return;
+    if (!waffenMap[s.waffe]) waffenMap[s.waffe] = { sessions: 0, scored: 0, totalQ: 0 };
+    waffenMap[s.waffe].sessions++;
+    if (s.max > 0) { waffenMap[s.waffe].scored++; waffenMap[s.waffe].totalQ += s.score/s.max; }
+  });
+  const waffenRows = Object.entries(waffenMap).sort((a,b) => b[1].sessions - a[1].sessions);
+
+  // Munition stats
+  const munMap = {};
+  sessions.forEach(s => {
+    if (!s.munition_typ) return;
+    if (!munMap[s.munition_typ]) munMap[s.munition_typ] = { sessions: 0, shots: 0 };
+    munMap[s.munition_typ].sessions++;
+    munMap[s.munition_typ].shots += s.munition || 0;
+  });
+  const munRows = Object.entries(munMap).sort((a,b) => b[1].sessions - a[1].sessions);
+
+  return (
+    <div>
+      <div className="tab-row">
+        {['resultate','waffen','munition'].map(t => (
+          <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'resultate' && (
+        <div className="card">
+          {scored.length === 0 ? (
+            <div className="empty"><div className="empty-icon">📈</div><div className="empty-text">Noch keine Ergebnisse.</div></div>
+          ) : (
+            <table className="a-table">
+              <thead>
+                <tr><th>Datum</th><th>Disziplin</th><th className="num">Score</th><th className="num">%</th></tr>
+              </thead>
+              <tbody>
+                {scored.slice(-20).reverse().map(s => (
+                  <tr key={s.id}>
+                    <td style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>{fmtDate(s.date)}</td>
+                    <td>{s.disziplin}</td>
+                    <td className="num">{s.score}/{s.max}</td>
+                    <td className="num" style={{color:'var(--accent)'}}>{Math.round(s.score/s.max*100)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {tab === 'waffen' && (
+        <div className="card">
+          {waffenRows.length === 0 ? (
+            <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">Keine Waffendaten.</div></div>
+          ) : (
+            <table className="a-table">
+              <thead>
+                <tr><th>Waffe</th><th className="num">Sessions</th><th className="num">Ø Quote</th></tr>
+              </thead>
+              <tbody>
+                {waffenRows.map(([w,d]) => (
+                  <tr key={w}>
+                    <td>{w}</td>
+                    <td className="num">{d.sessions}</td>
+                    <td className="num" style={{color:'var(--accent)'}}>
+                      {d.scored ? Math.round(d.totalQ/d.scored*100)+'%' : '–'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {tab === 'munition' && (
+        <div className="card">
+          {munRows.length === 0 ? (
+            <div className="empty"><div className="empty-icon">💊</div><div className="empty-text">Keine Munitionsdaten.</div></div>
+          ) : (
+            <table className="a-table">
+              <thead>
+                <tr><th>Munition</th><th className="num">Sessions</th><th className="num">Schüsse</th></tr>
+              </thead>
+              <tbody>
+                {munRows.map(([m,d]) => (
+                  <tr key={m}>
+                    <td>{m}</td>
+                    <td className="num">{d.sessions}</td>
+                    <td className="num">{d.shots.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SETTINGS PAGE
+════════════════════════════════════════════════════════════════ */
+function SettingsPage({ user, lists, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus }) {
+  const [showLists, setShowLists] = useState(false);
+  const name = user?.user_metadata?.name || '';
+  const email = user?.email || '';
+
+  function exportData(sessions) {
+    onExport();
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-title" style={{marginBottom:16}}>Profil</div>
+        <div className="form-group">
+          <label>Name</label>
+          <input type="text" value={name} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
+        </div>
+        <div className="form-group">
+          <label>E-Mail</label>
+          <input type="text" value={email} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
+        </div>
+        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onSignOut}>🚪 Abmelden</button>
+      </div>
+
+      <div className="card">
+        <div className="card-title" style={{marginBottom:12}}>Sync & Daten</div>
+        <div className="settings-row">
+          <div><div className="settings-label">Manuell synchronisieren</div><div className="settings-sub">Daten von Supabase neu laden</div></div>
+          <button className="btn btn-ghost settings-btn" onClick={onSync}>↻ Sync</button>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Daten exportieren</div><div className="settings-sub">Als JSON herunterladen (Backup)</div></div>
+          <button className="btn btn-ghost settings-btn" onClick={onExport}>Export</button>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Alle Daten löschen</div><div className="settings-sub">Lokal und in Supabase</div></div>
+          <button className="btn btn-danger settings-btn" onClick={onClearData}>Löschen</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title" style={{marginBottom:12}}>🔫 Waffen / Orte / Munition</div>
+        {['waffe','ort','munition'].map(key => (
+          <div key={key} style={{marginBottom:12}}>
+            <label style={{marginBottom:6}}>{key.charAt(0).toUpperCase()+key.slice(1)}</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {(lists[key]||[]).map((item,i) => (
+                <span key={i} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',fontSize:13,display:'flex',alignItems:'center',gap:6}}>
+                  {item}
+                  <span style={{cursor:'pointer',color:'var(--red)',fontSize:16}} onClick={()=>{
+                    const nl = {...lists};
+                    nl[key] = nl[key].filter((_,idx)=>idx!==i);
+                    onSaveLists(nl);
+                  }}>×</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog React v1.0 · Supabase Cloud Sync</p>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SESSION MODAL (Neue Einheit / Bearbeiten)
+════════════════════════════════════════════════════════════════ */
+const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
+const DISZ_CONFIG = {
+  Fitasc: { passen: 4, maxPro: 25 },
+  Compak: { passen: 4, maxPro: 25 },
+  Skeet:  { passen: 4, maxPro: 25 },
+  Universal: { passen: 6, maxPro: 25 },
+  Trap:   { passen: 5, maxPro: 25 },
+};
+
+function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose }) {
+  const isEdit = !!session?.id;
+  const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
+
+  const [type, setType] = useState(session?.type || 'training');
+  const [disziplin, setDisziplin] = useState(session?.disziplin || 'Fitasc');
+  const [date, setDate] = useState(session?.date || todayStr());
+  const [notes, setNotes] = useState(session?.notes || '');
+  const [munition, setMunition] = useState(session?.munition || '');
+  const [ort, setOrt] = useState(session?.ort || '');
+  const [waffe, setWaffe] = useState(session?.waffe || '');
+  const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ || '');
+
+  // Score state
+  const [hasScore, setHasScore] = useState(session?.max > 0 || false);
+  const [passen, setPassen] = useState(() => {
+    if (session?.passen?.length) return session.passen.length;
+    const cfg = DISZ_CONFIG[session?.disziplin] || DISZ_CONFIG['Fitasc'];
+    return cfg.passen;
+  });
+  const [passenVals, setPassenVals] = useState(() => {
+    if (session?.passen?.length) return session.passen;
+    const cfg = DISZ_CONFIG[session?.disziplin] || DISZ_CONFIG['Fitasc'];
+    return Array(cfg.passen).fill('');
+  });
+  const [maxPro, setMaxPro] = useState(() => {
+    if (session?.id && session?.max) {
+      const cfg = DISZ_CONFIG[session.disziplin];
+      if (cfg) return cfg.maxPro;
+      // Custom
+      const cd = customDisz.find(d=>d.name===session.disziplin);
+      return cd ? cd.maxPro : 25;
+    }
+    return DISZ_CONFIG[disziplin]?.maxPro || 25;
+  });
+
+  // When disziplin changes (wettkampf), update passen config
+  useEffect(() => {
+    if (type !== 'wettkampf') return;
+    const cfg = DISZ_CONFIG[disziplin] || customDisz.find(d=>d.name===disziplin);
+    if (cfg) {
+      const p = cfg.passen || 4;
+      const mp = cfg.maxPro || 25;
+      setPassen(p);
+      setPassenVals(Array(p).fill(''));
+      setMaxPro(mp);
+    }
+  }, [disziplin, type]);
+
+  const totalScore = passenVals.reduce((a,v) => a + (parseInt(v)||0), 0);
+  const totalMax = passen * maxPro;
+
+  function handlePassen(delta) {
+    setPassen(p => {
+      const np = Math.max(1, Math.min(20, p + delta));
+      setPassenVals(v => {
+        const nv = [...v];
+        while (nv.length < np) nv.push('');
+        return nv.slice(0, np);
+      });
+      return np;
+    });
+  }
+
+  function handleSave() {
+    const s = {
+      id: session?.id || crypto.randomUUID(),
+      type, disziplin, date, notes,
+      munition: parseInt(munition)||0,
+      ort, waffe, munition_typ: munitionTyp,
+      score: (type==='wettkampf' || hasScore) ? totalScore : null,
+      max:   (type==='wettkampf' || hasScore) ? totalMax : null,
+      passen: (type==='wettkampf' || hasScore) ? passenVals.map(v=>parseInt(v)||0) : [],
+    };
+    onSave(s);
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-handle" />
+        <div className="modal-title">{isEdit ? 'Bearbeiten' : 'Neue Einheit'}</div>
+
+        {/* Typ */}
+        <div className="form-group">
+          <label>Typ</label>
+          <div className="type-btn-row">
+            <button className="type-btn" style={{background: type==='training'?'var(--accent)':'var(--card)', color: type==='training'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('training')}>🏋️ Training</button>
+            <button className="type-btn" style={{background: type==='wettkampf'?'var(--accent2)':'var(--card)', color: type==='wettkampf'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('wettkampf')}>🏆 Wettkampf</button>
+          </div>
+        </div>
+
+        {/* Disziplin + Datum */}
+        <div className="input-row">
+          <div className="form-group">
+            <label>Disziplin</label>
+            <select value={disziplin} onChange={e=>setDisziplin(e.target.value)}>
+              {allDisz.map(d => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Datum</label>
+            <input type="date" value={date} onChange={e=>setDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="divider"><div className="divider-line"/><div className="divider-text">ERGEBNIS</div><div className="divider-line"/></div>
+
+        {/* Score section */}
+        {type === 'wettkampf' ? (
+          <WettkampfScore passen={passen} passenVals={passenVals} maxPro={maxPro}
+            totalScore={totalScore} totalMax={totalMax}
+            onChangePassen={handlePassen}
+            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setPassenVals(nv); }} />
+        ) : (
+          <TrainingScore hasScore={hasScore} onToggle={()=>setHasScore(h=>!h)}
+            passen={passen} passenVals={passenVals} maxPro={maxPro}
+            totalScore={totalScore} totalMax={totalMax}
+            onChangePassen={handlePassen}
+            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setPassenVals(nv); }} />
+        )}
+
+        {/* Notes */}
+        <div className="form-group" style={{marginTop:8}}>
+          <label>Notizen</label>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Wie war die Einheit? Was hat gut/schlecht funktioniert?" />
+        </div>
+
+        {/* Schüsse + Ort */}
+        <div className="input-row">
+          <div className="form-group">
+            <label>Schussanzahl</label>
+            <input type="number" value={munition} onChange={e=>setMunition(e.target.value)} placeholder="25" min="0" />
+          </div>
+          <div className="form-group">
+            <label>Ort / Stand</label>
+            <div className="select-row">
+              <select value={ort} onChange={e=>setOrt(e.target.value)}>
+                <option value="">– Ort –</option>
+                {(lists.ort||[]).map(o=><option key={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Munition + Waffe */}
+        <div className="input-row">
+          <div className="form-group">
+            <label>Munition</label>
+            <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
+              <option value="">– Munition –</option>
+              {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Waffe</label>
+            <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
+              <option value="">– Waffe –</option>
+              {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <button className="btn btn-primary" onClick={handleSave}>Eintrag speichern</button>
+        {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={()=>onDelete(session.id)}>🗑 Löschen</button>}
+        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Abbrechen</button>
+      </div>
+    </div>
+  );
+}
+
+function WettkampfScore({ passen, passenVals, maxPro, totalScore, totalMax, onChangePassen, onChangeVal }) {
+  return (
+    <>
+      <div className="form-group">
+        <label>Anzahl Passen</label>
+        <div className="passen-control">
+          <button className="passen-btn" onClick={()=>onChangePassen(-1)}>−</button>
+          <input type="number" value={passen} min="1" max="20"
+            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            onChange={e=>{ const n=parseInt(e.target.value)||1; onChangePassen(n-passen); }} />
+          <button className="passen-btn" onClick={()=>onChangePassen(1)}>+</button>
+        </div>
+      </div>
+      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:10,letterSpacing:1}}>TREFFER PRO PASSE (max. {maxPro})</div>
+      <div className="passen-grid">
+        {passenVals.map((v,i) => (
+          <input key={i} type="number" className="passen-input" value={v} min="0" max={maxPro}
+            placeholder={`P${i+1}`}
+            onChange={e=>onChangeVal(i,e.target.value)} />
+        ))}
+      </div>
+      <div className="serie-total">{totalScore}<span className="serie-max"> / {totalMax}</span></div>
+    </>
+  );
+}
+
+function TrainingScore({ hasScore, onToggle, passen, passenVals, maxPro, totalScore, totalMax, onChangePassen, onChangeVal }) {
+  return (
+    <>
+      <div className="score-check-row" onClick={onToggle}>
+        <div className={`check-box ${hasScore?'checked':''}`}>
+          {hasScore && <svg width="12" height="12" viewBox="0 0 12 12"><polyline points="1.5,6 4.5,9.5 10.5,2.5" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </div>
+        <span style={{fontSize:13,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase'}}>Ergebnis erfassen</span>
+      </div>
+      {hasScore && (
+        <div style={{marginTop:12}}>
+          <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:10,letterSpacing:1}}>TREFFER PRO PASSE (max. {maxPro})</div>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+            <span style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>PASSEN:</span>
+            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangePassen(-1)}>−</button>
+            <input type="number" value={passen} min="1" max="20"
+              style={{width:60,textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:22,padding:6,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:8,outline:'none'}}
+              onChange={e=>{ const n=parseInt(e.target.value)||1; onChangePassen(n-passen); }} />
+            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangePassen(1)}>+</button>
+          </div>
+          <div className="passen-grid">
+            {passenVals.map((v,i) => (
+              <input key={i} type="number" className="passen-input" value={v} min="0" max={maxPro}
+                placeholder={`P${i+1}`} onChange={e=>onChangeVal(i,e.target.value)} />
+            ))}
+          </div>
+          <div className="serie-total">{totalScore}<span className="serie-max"> / {totalMax}</span></div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DETAIL MODAL
+════════════════════════════════════════════════════════════════ */
+function DetailModal({ session, onEdit, onDelete, onClose }) {
+  const hasScore = session.max > 0;
+  const quote = hasScore ? Math.round(session.score / session.max * 100) : null;
+
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-handle" />
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+          <div>
+            <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:2,marginBottom:4}}>{session.type?.toUpperCase()}</div>
+            <div style={{fontSize:22,fontWeight:600}}>{session.disziplin}</div>
+            <div style={{fontSize:13,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginTop:4}}>{fmtDate(session.date)}</div>
+          </div>
+          {hasScore && (
+            <div style={{textAlign:'right'}}>
+              <div className="detail-score-big">{session.score}</div>
+              <div style={{fontSize:14,color:'var(--muted)'}}>/ {session.max}</div>
+              <div style={{fontSize:20,color:'var(--accent2)',fontFamily:'DM Mono,monospace'}}>{quote}%</div>
+            </div>
+          )}
+        </div>
+
+        {session.notes && (
+          <div className="detail-section">
+            <div className="detail-label">Notizen</div>
+            <div className="detail-val" style={{lineHeight:1.6}}>{session.notes}</div>
+          </div>
+        )}
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+          {session.waffe && <div><div className="detail-label">Waffe</div><div className="detail-val">{session.waffe}</div></div>}
+          {session.ort && <div><div className="detail-label">Ort</div><div className="detail-val">{session.ort}</div></div>}
+          {session.munition_typ && <div><div className="detail-label">Munition</div><div className="detail-val">{session.munition_typ}</div></div>}
+          {session.munition > 0 && <div><div className="detail-label">Schüsse</div><div className="detail-val">{session.munition.toLocaleString()}</div></div>}
+        </div>
+
+        <div className="btn-row">
+          <button className="btn btn-ghost" style={{flex:1,marginTop:0}} onClick={()=>onEdit(session)}>✏️ Bearbeiten</button>
+          <button className="btn btn-danger" style={{flex:1,marginTop:0}} onClick={()=>onDelete(session.id)}>🗑 Löschen</button>
+        </div>
+        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Schließen</button>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════════════════════════════ */
+function App() {
+  // Auth state
+  const [authToken, setAuthToken] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // App state
+  const [sessions, setSessions] = useState([]);
+  const [noteStates, setNoteStates] = useState({});
+  const [lists, setLists] = useState({ waffe:[], ort:[], munition:[] });
+  const [customDisz, setCustomDisz] = useState([]);
+  const [syncStatus, setSyncStatus] = useState('idle');
+
+  // UI state
+  const [tab, setTab] = useState('dashboard');
+  const [modal, setModal] = useState(null); // null | 'new' | 'edit' | 'detail'
+  const [selectedSession, setSelectedSession] = useState(null);
+
+  const refreshTimerRef = useRef(null);
+
+  /* ── AUTH ── */
+  useEffect(() => {
+    const saved = LS.get('claylog_auth', null);
+    if (saved?.token) {
+      setAuthToken(saved.token);
+      setCurrentUser(saved.user);
+      scheduleRefresh(saved.refresh_token, saved.expires_at);
+      loadData(saved.token);
+    }
+  }, []);
+
+  function saveAuth(data) {
+    const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+    setAuthToken(data.access_token);
+    setCurrentUser(data.user);
+    LS.set('claylog_auth', { token: data.access_token, refresh_token: data.refresh_token, user: data.user, expires_at: expiresAt });
+    scheduleRefresh(data.refresh_token, expiresAt);
+  }
+
+  function scheduleRefresh(refreshTok, expiresAt) {
+    if (!refreshTok) return;
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    const delay = Math.max(0, (expiresAt||Date.now()) - Date.now() - 120000);
+    refreshTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await authRefresh(refreshTok);
+        saveAuth(data);
+      } catch { handleSignOut(); }
+    }, delay);
+  }
+
+  function handleLogin(data) {
+    saveAuth(data);
+    loadData(data.access_token);
+  }
+
+  function handleSignOut() {
+    setAuthToken(null); setCurrentUser(null);
+    setSessions([]); setNoteStates({});
+    LS.del('claylog_auth'); LS.del('claylog_sessions'); LS.del('claylog_notestates');
+  }
+
+  /* ── DATA ── */
+  async function loadData(token) {
+    setSyncStatus('syncing');
+    try {
+      const [sessionData, listData] = await Promise.all([
+        sbFetch('GET', 'sessions', null, '?order=date.desc', token),
+        sbFetch('GET', 'lists', null, '', token).catch(()=>[])
+      ]);
+      const s = Array.isArray(sessionData) ? sessionData : [];
+      setSessions(s);
+      LS.set('claylog_sessions', s);
+
+      // Note states
+      const ns = {};
+      s.forEach(ses => { if (ses.note_state && ses.note_state !== 'normal') ns[ses.id] = ses.note_state; });
+      setNoteStates(ns);
+      LS.set('claylog_notestates', ns);
+
+      // Lists
+      if (listData?.length) {
+        const ld = listData[0]?.data || { waffe:[], ort:[], munition:[] };
+        setLists(ld);
+        LS.set('claylog_lists', ld);
+      } else {
+        const saved = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
+        setLists(saved);
+      }
+
+      setSyncStatus('ok');
+    } catch(e) {
+      // Fall back to localStorage
+      setSessions(LS.get('claylog_sessions', []));
+      setNoteStates(LS.get('claylog_notestates', {}));
+      setLists(LS.get('claylog_lists', { waffe:[], ort:[], munition:[] }));
+      setSyncStatus('error');
+    }
+  }
+
+  async function saveSession(session) {
+    const newSessions = sessions.some(s=>s.id===session.id)
+      ? sessions.map(s=>s.id===session.id?session:s)
+      : [session, ...sessions];
+    setSessions(newSessions);
+    LS.set('claylog_sessions', newSessions);
+    setModal(null); setSelectedSession(null);
+    // Supabase upsert
+    try {
+      await sbFetch('POST', 'sessions', [session], '', authToken);
+    } catch {}
+  }
+
+  async function deleteSession(id) {
+    const newSessions = sessions.filter(s=>s.id!==id);
+    setSessions(newSessions);
+    LS.set('claylog_sessions', newSessions);
+    setModal(null); setSelectedSession(null);
+    try {
+      await sbFetch('DELETE', 'sessions', null, `?id=eq.${id}`, authToken);
+    } catch {}
+  }
+
+  async function toggleNote(sessionId, newState) {
+    const ns = {...noteStates, [sessionId]: newState};
+    if (newState === 'normal') delete ns[sessionId];
+    setNoteStates(ns);
+    LS.set('claylog_notestates', ns);
+    // Update in Supabase
+    try {
+      await sbFetch('PATCH', 'sessions', { note_state: newState }, `?id=eq.${sessionId}`, authToken);
+    } catch {}
+  }
+
+  async function saveLists(newLists) {
+    setLists(newLists);
+    LS.set('claylog_lists', newLists);
+    try {
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: newLists }], '', authToken);
+    } catch {}
+  }
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify({ sessions, lists, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `claylog-backup-${todayStr()}.json`;
+    a.click();
+  }
+
+  async function clearAllData() {
+    if (!confirm('Wirklich ALLE Daten löschen? Dies kann nicht rückgängig gemacht werden!')) return;
+    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] });
+    LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists');
+    try {
+      await sbFetch('DELETE', 'sessions', null, '', authToken);
+    } catch {}
+  }
+
+  /* ── MODALS ── */
+  function openNew() {
+    setSelectedSession(null);
+    setModal('new');
+  }
+  function openDetail(s) {
+    setSelectedSession(s);
+    setModal('detail');
+  }
+  function openEdit(s) {
+    setSelectedSession(s);
+    setModal('edit');
+  }
+  function closeModal() {
+    setModal(null);
+    setSelectedSession(null);
+  }
+
+  /* ── RENDER ── */
+  if (!authToken) {
+    return <AuthScreen onLogin={handleLogin} />;
+  }
+
+  return (
+    <div className="app">
+      <Header user={currentUser} syncStatus={syncStatus} />
+
+      <div className="main">
+        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} />}
+        {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
+        {tab === 'notizen' && <NotizenPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} />}
+        {tab === 'analyse' && <AnalysePage sessions={sessions} />}
+        {tab === 'settings' && (
+          <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
+            onSignOut={handleSignOut}
+            onSync={() => loadData(authToken)}
+            onExport={exportData}
+            onClearData={clearAllData}
+            onSaveLists={saveLists} />
+        )}
+      </div>
+
+      <button className="fab" onClick={openNew}>+</button>
+      <BottomNav active={tab} onChange={setTab} />
+
+      {(modal === 'new' || modal === 'edit') && (
+        <SessionModal
+          session={modal === 'edit' ? selectedSession : null}
+          lists={lists}
+          customDisz={customDisz}
+          onSave={saveSession}
+          onDelete={deleteSession}
+          onClose={closeModal} />
+      )}
+      {modal === 'detail' && selectedSession && (
+        <DetailModal
+          session={selectedSession}
+          onEdit={(s) => { setSelectedSession(s); setModal('edit'); }}
+          onDelete={deleteSession}
+          onClose={closeModal} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
