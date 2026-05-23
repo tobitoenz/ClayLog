@@ -876,7 +876,7 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 ════════════════════════════════════════════════════════════════ */
 function ResultateChart({ sessions }) {
   const canvasRef = useRef(null);
-  const [typeFilter, setTypeFilter] = useState('beide'); // beide | wettkampf | training
+  const [typeFilter, setTypeFilter] = useState('wettkampf'); // beide | wettkampf | training
   const [disziplin, setDisziplin] = useState('alle');
 
   const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
@@ -1019,7 +1019,7 @@ function ResultateChart({ sessions }) {
 
       {/* Type filter */}
       <div style={{display:'flex',gap:6,marginBottom:12}}>
-        {[['beide','Beide'],['wettkampf','🏆 Wettkampf'],['training','🏋️ Training']].map(([v,l]) => (
+        {[['wettkampf','🏆 Wettkampf'],['training','🏋️ Training'],['beide','Beide']].map(([v,l]) => (
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`} onClick={()=>setTypeFilter(v)}>{l}</button>
         ))}
       </div>
@@ -1053,6 +1053,115 @@ function ResultateChart({ sessions }) {
           <div style={{display:'flex',gap:16,marginTop:10,flexWrap:'wrap'}}>
             {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#4ae8c8',borderRadius:2}}/><span style={{color:'#4ae8c8'}}>Wettkampf</span></div>}
             {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#e8c84a',borderRadius:2}}/><span style={{color:'#e8c84a'}}>Training</span></div>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function JahresvergleichChart({ sessions }) {
+  const canvasRef = useRef(null);
+  const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
+  const years = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
+
+  // For each year: monthly avg % (all scored sessions)
+  function getMonthlyAvg(year) {
+    const monthly = {};
+    sessions.filter(s => s.date?.startsWith(year) && s.max > 0).forEach(s => {
+      const m = parseInt(s.date.slice(5,7)) - 1; // 0-11
+      if (!monthly[m]) monthly[m] = { total: 0, count: 0 };
+      monthly[m].total += s.score/s.max*100;
+      monthly[m].count++;
+    });
+    // Overall avg for year
+    const allScored = sessions.filter(s => s.date?.startsWith(year) && s.max > 0);
+    const avg = allScored.length ? Math.round(allScored.reduce((a,s)=>a+s.score/s.max*100,0)/allScored.length*10)/10 : null;
+    return { monthly, avg };
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !years.length) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 220;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0,0,W,H);
+
+    const padL=32, padR=10, padT=14, padB=28;
+    const chartW=W-padL-padR, chartH=H-padT-padB;
+    const MONTH_LABELS=['J','F','M','A','M','J','J','A','S','O','N','D'];
+
+    // Grid
+    [0,25,50,75,100].forEach(v => {
+      const y = padT + chartH - (v/100)*chartH;
+      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
+      ctx.fillText(v+'%', padL-4, y+3);
+    });
+
+    // Month labels
+    for (let i=0;i<12;i++) {
+      const x = padL + (i/11)*chartW;
+      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
+      ctx.fillText(MONTH_LABELS[i], x, H-8);
+    }
+
+    // Draw one line per year
+    years.forEach((year, yi) => {
+      const { monthly, avg } = getMonthlyAvg(year);
+      const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+      const pts = [];
+      for (let i=0;i<12;i++) {
+        if (monthly[i]) {
+          pts.push({ i, x: padL+(i/11)*chartW, y: padT+chartH-(monthly[i].total/monthly[i].count/100)*chartH, val: Math.round(monthly[i].total/monthly[i].count) });
+        }
+      }
+      if (pts.length === 0) return;
+
+      // Line
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.beginPath();
+      pts.forEach((p,idx) => idx===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+
+      // Dots + labels
+      pts.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
+        ctx.fillStyle='#13131a'; ctx.fill();
+        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+        ctx.fillStyle=color; ctx.font='bold 8px DM Mono,monospace'; ctx.textAlign='center';
+        ctx.fillText(p.val+'%', p.x, p.y-8);
+      });
+    });
+
+  }, [sessions]);
+
+  return (
+    <div className="card">
+      <div className="card-title" style={{marginBottom:12}}>Jahresvergleich</div>
+      {years.length === 0 ? (
+        <div className="empty"><div className="empty-text">Keine Ergebnisse vorhanden.</div></div>
+      ) : (
+        <>
+          <canvas ref={canvasRef} style={{width:'100%',height:'220px',display:'block'}} />
+          {/* Legend with yearly avg */}
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
+            {years.map((y,i) => {
+              const { avg } = getMonthlyAvg(y);
+              return (
+                <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                  <div style={{width:16,height:3,background:YEAR_COLORS[i%YEAR_COLORS.length],borderRadius:2}}/>
+                  <span style={{color:YEAR_COLORS[i%YEAR_COLORS.length]}}>{y}</span>
+                  {avg !== null && <span style={{color:'var(--muted)'}}>Ø {avg}%</span>}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -1168,7 +1277,7 @@ function AnalysePage({ sessions }) {
     <div>
       {/* Tab switcher - no year filter for resultate (chart handles all data) */}
       <div className="tab-row">
-        {[['resultate','📈 Resultate'],['munition','🔴 Munition'],['waffen','🔫 Waffen'],['jahresvergleich','📅 Jahre']].map(([t,l]) => (
+        {[['resultate','📈 Resultate'],['jahresvergleich','📅 Jahre'],['munition','🔴 Munition'],['waffen','🔫 Waffen']].map(([t,l]) => (
           <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>{l}</button>
         ))}
       </div>
@@ -1219,31 +1328,7 @@ function AnalysePage({ sessions }) {
       )}
 
       {tab === 'jahresvergleich' && (
-        <div>
-          <div className="card" style={{marginBottom:12}}>
-            <div className="card-title" style={{marginBottom:10}}>Jahre vergleichen</div>
-            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-              {years.map((y,i) => (
-                <button key={y}
-                  className={`analyse-tab ${compareYears.includes(y)||selectedYear===y?'active':''}`}
-                  style={{borderColor:(compareYears.includes(y)||selectedYear===y)?YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))]:undefined,color:(compareYears.includes(y)||selectedYear===y)?YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))]:undefined}}
-                  onClick={()=>{ if(y===selectedYear) return; toggleCompareYear(y); }}>
-                  {y}{selectedYear===y?' (Basis)':''}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="card">
-            <canvas ref={canvasRef} style={{width:'100%',height:'200px',display:'block'}} />
-            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:10}}>
-              {[selectedYear,...compareYears].filter(y=>y!=='alle').map((y,i)=>(
-                <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                  <div style={{width:16,height:3,background:YEAR_COLORS[i],borderRadius:2}}/><span style={{color:YEAR_COLORS[i]}}>{y}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <JahresvergleichChart sessions={sessions} />
       )}
     </div>
   );
