@@ -599,40 +599,107 @@ function Dashboard({ sessions, onSessionClick }) {
    SESSIONS PAGE
 ════════════════════════════════════════════════════════════════ */
 function SessionsPage({ sessions, onSessionClick }) {
-  const [filter, setFilter] = useState({ type: '', disziplin: '' });
-  const disziplinen = [...new Set(sessions.map(s => s.disziplin).filter(Boolean))];
+  const [filter, setFilter] = useState({ type: '', disziplin: '', waffe: '', ort: '', munition: '' });
+  const [showFilter, setShowFilter] = useState(false);
+
+  const disziplinen = [...new Set(sessions.map(s => s.disziplin).filter(Boolean))].sort();
+  const waffen = [...new Set(sessions.map(s => s.waffe).filter(Boolean))].sort();
+  const orte = [...new Set(sessions.map(s => s.ort).filter(Boolean))].sort();
+  const munitions = [...new Set(sessions.map(s => s.munition_typ).filter(Boolean))].sort();
+
+  const hasFilter = filter.type || filter.disziplin || filter.waffe || filter.ort || filter.munition;
 
   const filtered = sessions
     .filter(s => !filter.type || s.type === filter.type)
     .filter(s => !filter.disziplin || s.disziplin === filter.disziplin)
+    .filter(s => !filter.waffe || s.waffe === filter.waffe)
+    .filter(s => !filter.ort || s.ort === filter.ort)
+    .filter(s => !filter.munition || s.munition_typ === filter.munition)
     .sort((a,b) => b.date > a.date ? 1 : -1);
+
+  // Group by month
+  const grouped = {};
+  filtered.forEach(s => {
+    const d = new Date(s.date);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const label = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    if (!grouped[key]) grouped[key] = { label, sessions: [] };
+    grouped[key].sessions.push(s);
+  });
+  const groupKeys = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
 
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <select style={{flex:'0 0 auto',width:'auto'}} value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
-          <option value="">Alle Typen</option>
-          <option value="training">Training</option>
-          <option value="wettkampf">Wettkampf</option>
-        </select>
-        <select style={{flex:'0 0 auto',width:'auto'}} value={filter.disziplin} onChange={e=>setFilter(f=>({...f,disziplin:e.target.value}))}>
-          <option value="">Alle Disziplinen</option>
-          {disziplinen.map(d => <option key={d}>{d}</option>)}
-        </select>
-        {(filter.type||filter.disziplin) && (
-          <button className="analyse-tab" onClick={()=>setFilter({type:'',disziplin:''})}>✕ Reset</button>
+      {/* Filter Bar */}
+      <div style={{display:'flex',gap:8,marginBottom:12,alignItems:'center'}}>
+        <button className={`analyse-tab ${showFilter?'active':''}`} onClick={()=>setShowFilter(f=>!f)} style={{flexShrink:0}}>
+          🔽 Filter{hasFilter ? ' ●' : ''}
+        </button>
+        {hasFilter && (
+          <button className="analyse-tab" onClick={()=>setFilter({type:'',disziplin:'',waffe:'',ort:'',munition:''})}>✕ Reset</button>
         )}
+        <span style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginLeft:'auto'}}>{filtered.length} Einträge</span>
       </div>
-      <div className="card">
-        {filtered.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">📋</div>
-            <div className="empty-text">Keine Einträge gefunden.</div>
+
+      {showFilter && (
+        <div className="card" style={{marginBottom:12,padding:'12px 14px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <div>
+              <label>Typ</label>
+              <select value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
+                <option value="">Alle</option>
+                <option value="training">Training</option>
+                <option value="wettkampf">Wettkampf</option>
+              </select>
+            </div>
+            <div>
+              <label>Disziplin</label>
+              <select value={filter.disziplin} onChange={e=>setFilter(f=>({...f,disziplin:e.target.value}))}>
+                <option value="">Alle</option>
+                {disziplinen.map(d => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Waffe</label>
+              <select value={filter.waffe} onChange={e=>setFilter(f=>({...f,waffe:e.target.value}))}>
+                <option value="">Alle</option>
+                {waffen.map(w => <option key={w}>{w}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Ort</label>
+              <select value={filter.ort} onChange={e=>setFilter(f=>({...f,ort:e.target.value}))}>
+                <option value="">Alle</option>
+                {orte.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label>Munition</label>
+              <select value={filter.munition} onChange={e=>setFilter(f=>({...f,munition:e.target.value}))}>
+                <option value="">Alle</option>
+                {munitions.map(m => <option key={m}>{m}</option>)}
+              </select>
+            </div>
           </div>
-        ) : (
-          filtered.map(s => <SessionItem key={s.id} s={s} onClick={() => onSessionClick(s)} />)
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Grouped Sessions */}
+      {filtered.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">📋</div>
+          <div className="empty-text">Keine Einträge gefunden.</div>
+        </div>
+      ) : groupKeys.map(key => (
+        <div key={key} style={{marginBottom:16}}>
+          <div style={{fontSize:11,letterSpacing:2,textTransform:'uppercase',color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:8,paddingLeft:2}}>
+            {grouped[key].label} <span style={{color:'var(--border)'}}>·</span> <span style={{color:'var(--accent)'}}>{grouped[key].sessions.length}</span>
+          </div>
+          <div className="card" style={{padding:'0 16px'}}>
+            {grouped[key].sessions.map(s => <SessionItem key={s.id} s={s} onClick={() => onSessionClick(s)} />)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -693,12 +760,18 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 ════════════════════════════════════════════════════════════════ */
 function AnalysePage({ sessions }) {
   const [tab, setTab] = useState('resultate');
+  const currentYear = new Date().getFullYear();
+  const years = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
+  const [compareYears, setCompareYears] = useState([]);
 
-  const scored = sessions.filter(s => s.max > 0).sort((a,b) => a.date > b.date ? 1 : -1);
+  const filtered = selectedYear === 'alle' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
+
+  const scored = filtered.filter(s => s.max > 0).sort((a,b) => a.date > b.date ? 1 : -1);
 
   // Waffen stats
   const waffenMap = {};
-  sessions.forEach(s => {
+  filtered.forEach(s => {
     if (!s.waffe) return;
     if (!waffenMap[s.waffe]) waffenMap[s.waffe] = { sessions: 0, scored: 0, totalQ: 0 };
     waffenMap[s.waffe].sessions++;
@@ -708,7 +781,7 @@ function AnalysePage({ sessions }) {
 
   // Munition stats
   const munMap = {};
-  sessions.forEach(s => {
+  filtered.forEach(s => {
     if (!s.munition_typ) return;
     if (!munMap[s.munition_typ]) munMap[s.munition_typ] = { sessions: 0, shots: 0 };
     munMap[s.munition_typ].sessions++;
@@ -716,12 +789,98 @@ function AnalysePage({ sessions }) {
   });
   const munRows = Object.entries(munMap).sort((a,b) => b[1].sessions - a[1].sessions);
 
+  // Year comparison data (monthly avg %)
+  const YEAR_COLORS = ['#e8c84a','#4ae8c8','#e84a4a','#c84ae8','#4a8ce8'];
+  function getMonthlyData(year) {
+    const monthly = {};
+    sessions.filter(s => s.date?.startsWith(year) && s.max > 0).forEach(s => {
+      const m = s.date.slice(5,7);
+      if (!monthly[m]) monthly[m] = { total: 0, count: 0 };
+      monthly[m].total += s.score/s.max*100;
+      monthly[m].count++;
+    });
+    return monthly;
+  }
+
+  const toggleCompareYear = (y) => {
+    setCompareYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
+  };
+
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (tab !== 'jahresvergleich') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+    const h = canvas.height = 200 * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    const W = canvas.offsetWidth, H = 200;
+    ctx.clearRect(0,0,W,H);
+
+    const activeYears = [selectedYear, ...compareYears].filter(y => y !== 'alle');
+    if (!activeYears.length) return;
+
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const monthLabels = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+    const padL=28, padR=10, padT=10, padB=24;
+    const chartW=W-padL-padR, chartH=H-padT-padB;
+
+    // Grid
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
+    [0,25,50,75,100].forEach(v => {
+      const y = padT + chartH - (v/100)*chartH;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
+      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
+      ctx.fillText(v+'%', padL-4, y+3);
+    });
+
+    // Month labels
+    months.forEach((m,i) => {
+      const x = padL + (i/(months.length-1))*chartW;
+      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
+      ctx.fillText(monthLabels[i], x, H-6);
+    });
+
+    // Lines per year
+    activeYears.forEach((year, yi) => {
+      const data = getMonthlyData(year);
+      const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      months.forEach((m, i) => {
+        if (!data[m]) return;
+        const x = padL + (i/(months.length-1))*chartW;
+        const y = padT + chartH - (data[m].total/data[m].count/100)*chartH;
+        if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+        // Dot
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath();
+        if (!started) { ctx.moveTo(x,y); started=true; } else ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+    });
+  }, [tab, selectedYear, compareYears, sessions]);
+
   return (
     <div>
+      {/* Year selector */}
+      <div style={{display:'flex',gap:8,marginBottom:14,alignItems:'center',flexWrap:'wrap'}}>
+        <div className="tab-row" style={{margin:0,flex:1}}>
+          {['alle', ...years].map(y => (
+            <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab switcher */}
       <div className="tab-row">
-        {['resultate','waffen','munition'].map(t => (
+        {['resultate','waffen','munition','jahresvergleich'].map(t => (
           <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
-            {t.charAt(0).toUpperCase()+t.slice(1)}
+            {t === 'jahresvergleich' ? '📈 Jahre' : t.charAt(0).toUpperCase()+t.slice(1)}
           </button>
         ))}
       </div>
@@ -736,9 +895,9 @@ function AnalysePage({ sessions }) {
                 <tr><th>Datum</th><th>Disziplin</th><th className="num">Score</th><th className="num">%</th></tr>
               </thead>
               <tbody>
-                {scored.slice(-20).reverse().map(s => (
+                {scored.slice(-30).reverse().map(s => (
                   <tr key={s.id}>
-                    <td style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>{fmtDate(s.date)}</td>
+                    <td style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>{fmtDate(s.date)}</td>
                     <td>{s.disziplin}</td>
                     <td className="num">{s.score}/{s.max}</td>
                     <td className="num" style={{color:'var(--accent)'}}>{Math.round(s.score/s.max*100)}%</td>
@@ -797,7 +956,36 @@ function AnalysePage({ sessions }) {
           )}
         </div>
       )}
-    </div>
+
+      {tab === 'jahresvergleich' && (
+        <div>
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-title" style={{marginBottom:10}}>Jahre vergleichen</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {years.map((y,i) => (
+                <button key={y} className={`analyse-tab ${compareYears.includes(y)||selectedYear===y?'active':''}`}
+                  style={{borderColor: (compareYears.includes(y)||selectedYear===y) ? YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))] : undefined,
+                         color: (compareYears.includes(y)||selectedYear===y) ? YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))] : undefined}}
+                  onClick={()=>{ if(y===selectedYear) return; toggleCompareYear(y); }}>
+                  {y} {selectedYear===y ? '(Basis)' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <canvas ref={canvasRef} style={{width:'100%',height:'200px',display:'block'}} />
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:10}}>
+              {[selectedYear,...compareYears].filter(y=>y!=='alle').map((y,i) => (
+                <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                  <div style={{width:16,height:3,background:YEAR_COLORS[i],borderRadius:2}}/>
+                  <span style={{color:YEAR_COLORS[i]}}>{y}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div
   );
 }
 
