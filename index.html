@@ -550,6 +550,121 @@ function SessionItem({ s, compact, onClick }) {
 /* ════════════════════════════════════════════════════════════════
    DASHBOARD
 ════════════════════════════════════════════════════════════════ */
+function MunitionsChart({ sessions, year }) {
+  const canvasRef = useRef(null);
+  const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+  const monthlyData = Array(12).fill(0);
+  sessions
+    .filter(s => (s.date||'').startsWith(year))
+    .forEach(s => {
+      const m = parseInt((s.date||'').slice(5,7)) - 1;
+      if (m >= 0 && m < 12) monthlyData[m] += s.munition || 0;
+    });
+
+  const maxVal = Math.max(...monthlyData, 1);
+  const currentMonth = new Date().getMonth();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 140;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const padL = 36, padR = 8, padT = 8, padB = 28;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const barW = chartW / 12;
+
+    // Grid lines
+    [0, 0.5, 1].forEach(v => {
+      const y = padT + chartH - v * chartH;
+      ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + chartW, y); ctx.stroke();
+      if (v > 0) {
+        ctx.fillStyle = '#6a6a88';
+        ctx.font = `9px DM Mono, monospace`;
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * v), padL - 4, y + 3);
+      }
+    });
+
+    // Bars
+    monthlyData.forEach((val, i) => {
+      if (val === 0) {
+        // Month label only
+        ctx.fillStyle = '#3a3a4a';
+        ctx.font = '9px DM Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(MONTHS[i].slice(0,1), padL + i * barW + barW/2, H - 10);
+        return;
+      }
+      const barH = (val / maxVal) * chartH;
+      const x = padL + i * barW + barW * 0.15;
+      const w = barW * 0.7;
+      const y = padT + chartH - barH;
+
+      // Bar color: current month = accent, past = muted, future = border
+      const isCurrentMonth = i === currentMonth;
+      const isPast = i < currentMonth;
+      
+      if (isCurrentMonth) {
+        const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+        grad.addColorStop(0, '#f0d060');
+        grad.addColorStop(1, '#c8a030');
+        ctx.fillStyle = grad;
+      } else if (isPast) {
+        ctx.fillStyle = '#3a4a5a';
+      } else {
+        ctx.fillStyle = '#2a2a3a';
+      }
+
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, barH, [3, 3, 0, 0]);
+      ctx.fill();
+
+      // Value label on top
+      if (val > 0) {
+        ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
+        ctx.font = `bold 8px DM Mono, monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(val, x + w/2, y - 3);
+      }
+
+      // Month label
+      ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
+      ctx.font = '9px DM Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(MONTHS[i].slice(0,1), x + w/2, H - 10);
+    });
+
+  }, [sessions, year]);
+
+  const total = monthlyData.reduce((a,v) => a+v, 0);
+
+  return (
+    <div className="card" style={{marginBottom:12}}>
+      <div className="card-header">
+        <span className="card-title">Munitionsverbrauch {year}</span>
+        <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)'}}>{total.toLocaleString()} Schuss</span>
+      </div>
+      {total === 0 ? (
+        <div className="empty" style={{padding:'20px 0'}}>
+          <div className="empty-text">Noch keine Schussdaten für {year}.</div>
+        </div>
+      ) : (
+        <canvas ref={canvasRef} style={{width:'100%',height:'140px',display:'block'}} />
+      )}
+    </div>
+  );
+}
+
 function Dashboard({ sessions, onSessionClick }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
@@ -578,6 +693,7 @@ function Dashboard({ sessions, onSessionClick }) {
           <div className="stat-label">Mit Score</div>
         </div>
       </div>
+      <MunitionsChart sessions={sessions} year={year} />
       <div className="card">
         <div className="card-header">
           <span className="card-title">Letzte Einträge</span>
