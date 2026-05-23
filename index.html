@@ -685,19 +685,9 @@ function Dashboard({ sessions, onSessionClick }) {
           <div className="stat-val">{yearSessions.length}</div>
           <div className="stat-label">Sessions {year}</div>
         </div>
-        <div className="stat-box" style={{gridColumn:'span 1'}}>
-          <div style={{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
-            <div>
-              <div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div>
-              <div className="stat-label">🏆 {year}</div>
-            </div>
-            {quoteAll !== null && quoteYear !== quoteAll && (
-              <div style={{borderLeft:'1px solid var(--border)',paddingLeft:8}}>
-                <div style={{fontFamily:'Arial,sans-serif',fontSize:22,color:'var(--muted)',lineHeight:1}}>{quoteAll}%</div>
-                <div className="stat-label">Gesamt</div>
-              </div>
-            )}
-          </div>
+        <div className="stat-box">
+          <div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div>
+          <div className="stat-label">🏆 Ø {year}</div>
         </div>
         <div className="stat-box">
           <div className="stat-val">{compYear.length}</div>
