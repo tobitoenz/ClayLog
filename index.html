@@ -874,6 +874,192 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 /* ════════════════════════════════════════════════════════════════
    ANALYSE PAGE
 ════════════════════════════════════════════════════════════════ */
+function ResultateChart({ sessions }) {
+  const canvasRef = useRef(null);
+  const [typeFilter, setTypeFilter] = useState('beide'); // beide | wettkampf | training
+  const [disziplin, setDisziplin] = useState('alle');
+
+  const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
+
+  // Filter sessions
+  const base = sessions.filter(s => s.max > 0)
+    .filter(s => disziplin === 'alle' || s.disziplin === disziplin)
+    .sort((a,b) => a.date > b.date ? 1 : -1);
+
+  const wettkampf = base.filter(s => s.type === 'wettkampf');
+  const training  = base.filter(s => s.type === 'training');
+
+  // Stats
+  const currentYear = String(new Date().getFullYear());
+  function avgQuote(arr) {
+    const v = arr.filter(s=>s.max>0);
+    return v.length ? Math.round(v.reduce((a,s)=>a+s.score/s.max*100,0)/v.length*10)/10 : null;
+  }
+  const showComp = typeFilter !== 'training';
+  const showTrain = typeFilter !== 'wettkampf';
+
+  const compYear  = avgQuote(wettkampf.filter(s=>s.date?.startsWith(currentYear)));
+  const compTotal = avgQuote(wettkampf);
+  const trainYear  = avgQuote(training.filter(s=>s.date?.startsWith(currentYear)));
+  const trainTotal = avgQuote(training);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 240;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const padL = 36, padR = 12, padT = 20, padB = 32;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    // Collect all data points sorted by date
+    const lines = [];
+    if (showComp && wettkampf.length > 0) lines.push({ data: wettkampf, color: '#4ae8c8', fill: 'rgba(74,232,200,0.12)' });
+    if (showTrain && training.length > 0)  lines.push({ data: training,  color: '#e8c84a', fill: 'rgba(232,200,74,0.10)' });
+
+    if (!lines.length || !lines.some(l=>l.data.length>0)) return;
+
+    // Determine x range (all dates)
+    const allDates = lines.flatMap(l => l.data.map(s => s.date)).sort();
+    const minDate = new Date(allDates[0]);
+    const maxDate = new Date(allDates[allDates.length-1]);
+    const dateRange = Math.max(maxDate - minDate, 1);
+
+    // Y range
+    const allVals = lines.flatMap(l => l.data.map(s => Math.round(s.score/s.max*100)));
+    const minY = Math.max(0, Math.min(...allVals) - 10);
+    const maxY = Math.min(100, Math.max(...allVals) + 5);
+    const yRange = maxY - minY || 1;
+
+    function toX(dateStr) {
+      return padL + ((new Date(dateStr) - minDate) / dateRange) * chartW;
+    }
+    function toY(pct) {
+      return padT + chartH - ((pct - minY) / yRange) * chartH;
+    }
+
+    // Grid
+    const gridVals = [];
+    for (let v = Math.ceil(minY/25)*25; v <= maxY; v += 25) gridVals.push(v);
+    gridVals.forEach(v => {
+      const y = toY(v);
+      ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+chartW, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'right';
+      ctx.fillText(v+'%', padL-4, y+3);
+    });
+
+    // Year separators
+    const years = [...new Set(lines.flatMap(l=>l.data.map(s=>s.date.slice(0,4))))].sort();
+    years.forEach(yr => {
+      const x = toX(yr+'-01-01');
+      if (x > padL+10 && x < padL+chartW-10) {
+        ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
+        ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#4a4a6a'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
+        ctx.fillText(yr, x, padT-4);
+      }
+    });
+
+    // X axis month labels (sample a few)
+    const monthDates = [];
+    let d = new Date(minDate); d.setDate(1);
+    while (d <= maxDate) { monthDates.push(new Date(d)); d.setMonth(d.getMonth()+3); }
+    monthDates.forEach(md => {
+      const x = toX(md.toISOString().slice(0,10));
+      ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
+      const lbl = md.toLocaleDateString('de-DE',{month:'short'});
+      ctx.fillText(lbl, x, H-8);
+    });
+
+    // Draw each line
+    lines.forEach(({ data, color, fill }) => {
+      if (data.length === 0) return;
+      const pts = data.map(s => ({ x: toX(s.date), y: toY(Math.round(s.score/s.max*100)), pct: Math.round(s.score/s.max*100) }));
+
+      // Fill area
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, padT+chartH);
+      pts.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(pts[pts.length-1].x, padT+chartH);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+      pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+
+      // Dots + labels
+      pts.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#13131a'; ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = color; ctx.font = 'bold 9px DM Mono,monospace'; ctx.textAlign = 'center';
+        ctx.fillText(p.pct+'%', p.x, p.y - 8);
+      });
+    });
+
+  }, [sessions, typeFilter, disziplin]);
+
+  return (
+    <div className="card">
+      <div className="card-title" style={{marginBottom:12}}>Score</div>
+
+      {/* Type filter */}
+      <div style={{display:'flex',gap:6,marginBottom:12}}>
+        {[['beide','Beide'],['wettkampf','🏆 Wettkampf'],['training','🏋️ Training']].map(([v,l]) => (
+          <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`} onClick={()=>setTypeFilter(v)}>{l}</button>
+        ))}
+      </div>
+
+      {/* Disziplin */}
+      <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{marginBottom:12}}>
+        <option value="alle">Alle Disziplinen</option>
+        {disziplinen.map(d=><option key={d}>{d}</option>)}
+      </select>
+
+      {/* Stats row */}
+      {showComp && compTotal !== null && (
+        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent2)',marginBottom:6}}>
+          🏆 Ø {currentYear}: {compYear !== null ? compYear+'%' : '–'} | Ø Gesamt: {compTotal}%
+        </div>
+      )}
+      {showTrain && trainTotal !== null && (
+        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)',marginBottom:6}}>
+          🏋️ Ø {currentYear}: {trainYear !== null ? trainYear+'%' : '–'} | Ø Gesamt: {trainTotal}%
+        </div>
+      )}
+
+      {/* Chart */}
+      {base.length === 0 ? (
+        <div className="empty" style={{padding:'20px 0'}}>
+          <div className="empty-text">Keine Ergebnisse vorhanden.</div>
+        </div>
+      ) : (
+        <>
+          <canvas ref={canvasRef} style={{width:'100%',height:'240px',display:'block',marginTop:8}} />
+          <div style={{display:'flex',gap:16,marginTop:10,flexWrap:'wrap'}}>
+            {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#4ae8c8',borderRadius:2}}/><span style={{color:'#4ae8c8'}}>Wettkampf</span></div>}
+            {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#e8c84a',borderRadius:2}}/><span style={{color:'#e8c84a'}}>Training</span></div>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AnalysePage({ sessions }) {
   const [tab, setTab] = useState('resultate');
   const currentYear = new Date().getFullYear();
@@ -882,8 +1068,6 @@ function AnalysePage({ sessions }) {
   const [compareYears, setCompareYears] = useState([]);
 
   const filtered = selectedYear === 'alle' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
-
-  const scored = filtered.filter(s => s.max > 0).sort((a,b) => a.date > b.date ? 1 : -1);
 
   // Waffen stats
   const waffenMap = {};
@@ -905,7 +1089,7 @@ function AnalysePage({ sessions }) {
   });
   const munRows = Object.entries(munMap).sort((a,b) => b[1].sessions - a[1].sessions);
 
-  // Year comparison data (monthly avg %)
+  // Year comparison
   const YEAR_COLORS = ['#e8c84a','#4ae8c8','#e84a4a','#c84ae8','#4a8ce8'];
   function getMonthlyData(year) {
     const monthly = {};
@@ -927,11 +1111,13 @@ function AnalysePage({ sessions }) {
     if (tab !== 'jahresvergleich') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 200;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-    const h = canvas.height = 200 * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    const W = canvas.offsetWidth, H = 200;
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0,0,W,H);
 
     const activeYears = [selectedYear, ...compareYears].filter(y => y !== 'alle');
@@ -939,26 +1125,23 @@ function AnalysePage({ sessions }) {
 
     const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
     const monthLabels = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-    const padL=28, padR=10, padT=10, padB=24;
+    const padL=32, padR=10, padT=10, padB=24;
     const chartW=W-padL-padR, chartH=H-padT-padB;
 
-    // Grid
-    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
     [0,25,50,75,100].forEach(v => {
       const y = padT + chartH - (v/100)*chartH;
+      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
       ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
       ctx.fillText(v+'%', padL-4, y+3);
     });
 
-    // Month labels
     months.forEach((m,i) => {
       const x = padL + (i/(months.length-1))*chartW;
       ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
       ctx.fillText(monthLabels[i], x, H-6);
     });
 
-    // Lines per year
     activeYears.forEach((year, yi) => {
       const data = getMonthlyData(year);
       const color = YEAR_COLORS[yi % YEAR_COLORS.length];
@@ -969,55 +1152,48 @@ function AnalysePage({ sessions }) {
         const x = padL + (i/(months.length-1))*chartW;
         const y = padT + chartH - (data[m].total/data[m].count/100)*chartH;
         if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
-        // Dot
-        ctx.fillStyle = color;
-        ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
-        ctx.beginPath();
-        if (!started) { ctx.moveTo(x,y); started=true; } else ctx.moveTo(x,y);
       });
       ctx.stroke();
+      months.forEach((m, i) => {
+        if (!data[m]) return;
+        const x = padL + (i/(months.length-1))*chartW;
+        const y = padT + chartH - (data[m].total/data[m].count/100)*chartH;
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+      });
     });
   }, [tab, selectedYear, compareYears, sessions]);
 
   return (
     <div>
-      {/* Year selector */}
-      <div style={{display:'flex',gap:8,marginBottom:14,alignItems:'center',flexWrap:'wrap'}}>
-        <div className="tab-row" style={{margin:0,flex:1}}>
-          {['alle', ...years].map(y => (
-            <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>
-              {y}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab switcher */}
+      {/* Tab switcher - no year filter for resultate (chart handles all data) */}
       <div className="tab-row">
-        {['resultate','waffen','munition','jahresvergleich'].map(t => (
-          <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
-            {t === 'jahresvergleich' ? '📈 Jahre' : t.charAt(0).toUpperCase()+t.slice(1)}
-          </button>
+        {[['resultate','📈 Resultate'],['munition','🔴 Munition'],['waffen','🔫 Waffen'],['jahresvergleich','📅 Jahre']].map(([t,l]) => (
+          <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>{l}</button>
         ))}
       </div>
 
-      {tab === 'resultate' && (
+      {/* Year filter (not for resultate) */}
+      {tab !== 'resultate' && (
+        <div className="tab-row" style={{marginBottom:14}}>
+          {['alle', ...years].map(y => (
+            <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y}</button>
+          ))}
+        </div>
+      )}
+
+      {tab === 'resultate' && <ResultateChart sessions={sessions} />}
+
+      {tab === 'munition' && (
         <div className="card">
-          {scored.length === 0 ? (
-            <div className="empty"><div className="empty-icon">📈</div><div className="empty-text">Noch keine Ergebnisse.</div></div>
+          {munRows.length === 0 ? (
+            <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">Keine Munitionsdaten.</div></div>
           ) : (
             <table className="a-table">
-              <thead>
-                <tr><th>Datum</th><th>Disziplin</th><th className="num">Score</th><th className="num">%</th></tr>
-              </thead>
+              <thead><tr><th>Munition</th><th className="num">Sessions</th><th className="num">Schüsse</th></tr></thead>
               <tbody>
-                {scored.slice(-30).reverse().map(s => (
-                  <tr key={s.id}>
-                    <td style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>{fmtDate(s.date)}</td>
-                    <td>{s.disziplin}</td>
-                    <td className="num">{s.score}/{s.max}</td>
-                    <td className="num" style={{color:'var(--accent)'}}>{Math.round(s.score/s.max*100)}%</td>
-                  </tr>
+                {munRows.map(([m,d]) => (
+                  <tr key={m}><td>{m}</td><td className="num">{d.sessions}</td><td className="num">{d.shots.toLocaleString()}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -1031,41 +1207,10 @@ function AnalysePage({ sessions }) {
             <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">Keine Waffendaten.</div></div>
           ) : (
             <table className="a-table">
-              <thead>
-                <tr><th>Waffe</th><th className="num">Sessions</th><th className="num">Ø Quote</th></tr>
-              </thead>
+              <thead><tr><th>Waffe</th><th className="num">Sessions</th><th className="num">Ø Quote</th></tr></thead>
               <tbody>
                 {waffenRows.map(([w,d]) => (
-                  <tr key={w}>
-                    <td>{w}</td>
-                    <td className="num">{d.sessions}</td>
-                    <td className="num" style={{color:'var(--accent)'}}>
-                      {d.scored ? Math.round(d.totalQ/d.scored*100)+'%' : '–'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {tab === 'munition' && (
-        <div className="card">
-          {munRows.length === 0 ? (
-            <div className="empty"><div className="empty-icon">💊</div><div className="empty-text">Keine Munitionsdaten.</div></div>
-          ) : (
-            <table className="a-table">
-              <thead>
-                <tr><th>Munition</th><th className="num">Sessions</th><th className="num">Schüsse</th></tr>
-              </thead>
-              <tbody>
-                {munRows.map(([m,d]) => (
-                  <tr key={m}>
-                    <td>{m}</td>
-                    <td className="num">{d.sessions}</td>
-                    <td className="num">{d.shots.toLocaleString()}</td>
-                  </tr>
+                  <tr key={w}><td>{w}</td><td className="num">{d.sessions}</td><td className="num" style={{color:'var(--accent)'}}>{d.scored ? Math.round(d.totalQ/d.scored*100)+'%' : '–'}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -1079,11 +1224,11 @@ function AnalysePage({ sessions }) {
             <div className="card-title" style={{marginBottom:10}}>Jahre vergleichen</div>
             <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
               {years.map((y,i) => (
-                <button key={y} className={`analyse-tab ${compareYears.includes(y)||selectedYear===y?'active':''}`}
-                  style={{borderColor: (compareYears.includes(y)||selectedYear===y) ? YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))] : undefined,
-                         color: (compareYears.includes(y)||selectedYear===y) ? YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))] : undefined}}
+                <button key={y}
+                  className={`analyse-tab ${compareYears.includes(y)||selectedYear===y?'active':''}`}
+                  style={{borderColor:(compareYears.includes(y)||selectedYear===y)?YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))]:undefined,color:(compareYears.includes(y)||selectedYear===y)?YEAR_COLORS[([selectedYear,...compareYears].indexOf(y))]:undefined}}
                   onClick={()=>{ if(y===selectedYear) return; toggleCompareYear(y); }}>
-                  {y} {selectedYear===y ? '(Basis)' : ''}
+                  {y}{selectedYear===y?' (Basis)':''}
                 </button>
               ))}
             </div>
@@ -1091,10 +1236,9 @@ function AnalysePage({ sessions }) {
           <div className="card">
             <canvas ref={canvasRef} style={{width:'100%',height:'200px',display:'block'}} />
             <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:10}}>
-              {[selectedYear,...compareYears].filter(y=>y!=='alle').map((y,i) => (
+              {[selectedYear,...compareYears].filter(y=>y!=='alle').map((y,i)=>(
                 <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                  <div style={{width:16,height:3,background:YEAR_COLORS[i],borderRadius:2}}/>
-                  <span style={{color:YEAR_COLORS[i]}}>{y}</span>
+                  <div style={{width:16,height:3,background:YEAR_COLORS[i],borderRadius:2}}/><span style={{color:YEAR_COLORS[i]}}>{y}</span>
                 </div>
               ))}
             </div>
@@ -1104,7 +1248,6 @@ function AnalysePage({ sessions }) {
     </div>
   );
 }
-
 /* ════════════════════════════════════════════════════════════════
    SETTINGS PAGE
 ════════════════════════════════════════════════════════════════ */
