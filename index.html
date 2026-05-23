@@ -1379,10 +1379,32 @@ function AnalysePage({ sessions }) {
 /* ════════════════════════════════════════════════════════════════
    SETTINGS PAGE
 ════════════════════════════════════════════════════════════════ */
-function SettingsPage({ user, lists, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus }) {
+function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus }) {
   const [showLists, setShowLists] = useState(false);
   const name = user?.user_metadata?.name || '';
   const email = user?.email || '';
+
+  // New discipline form state
+  const [newName, setNewName] = useState('');
+  const [newMax, setNewMax] = useState('');
+
+  function addDisziplin() {
+    const n = newName.trim();
+    const m = parseInt(newMax);
+    if (!n) { alert('Bitte einen Namen eingeben.'); return; }
+    if (!m || m <= 0) { alert('Bitte ein gültiges Maximum eingeben.'); return; }
+    const fixed = DEFAULT_DISZIPLINEN;
+    if (fixed.includes(n) || customDisz.some(d=>d.name===n)) {
+      alert('Diese Disziplin existiert bereits.'); return;
+    }
+    onSaveCustomDisz([...customDisz, { name: n, scoreOnly: true, totalMax: m }]);
+    setNewName(''); setNewMax('');
+  }
+
+  function deleteDisziplin(name) {
+    if (!confirm(`"${name}" wirklich löschen?`)) return;
+    onSaveCustomDisz(customDisz.filter(d=>d.name!==name));
+  }
 
   function exportData(sessions) {
     onExport();
@@ -1401,6 +1423,49 @@ function SettingsPage({ user, lists, onSignOut, onSync, onExport, onClearData, o
           <input type="text" value={email} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
         </div>
         <button className="btn btn-ghost" style={{marginTop:8}} onClick={onSignOut}>🚪 Abmelden</button>
+      </div>
+
+      {/* ── CUSTOM DISZIPLINEN ── */}
+      <div className="card">
+        <div className="card-title" style={{marginBottom:12}}>🎯 Eigene Disziplinen</div>
+
+        {/* Existing custom disciplines */}
+        {customDisz.length > 0 && (
+          <div style={{marginBottom:14}}>
+            {customDisz.map(d => (
+              <div key={d.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginBottom:6}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:600}}>{d.name}</div>
+                  <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1}}>MAX {d.totalMax} · NUR GESAMTPUNKTZAHL</div>
+                </div>
+                <span style={{cursor:'pointer',color:'var(--red)',fontSize:20,padding:'0 4px'}} onClick={()=>deleteDisziplin(d.name)}>×</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add new discipline form */}
+        <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:14}}>
+          <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>NEUE DISZIPLIN</div>
+          <div className="input-row" style={{marginBottom:10}}>
+            <div className="form-group" style={{flex:2}}>
+              <label>Name</label>
+              <input type="text" value={newName} placeholder="z.B. DHSV Parcours"
+                onChange={e=>setNewName(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&addDisziplin()} />
+            </div>
+            <div className="form-group" style={{flex:1}}>
+              <label>Max. Punkte</label>
+              <input type="number" value={newMax} placeholder="100" min="1"
+                onChange={e=>setNewMax(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&addDisziplin()} />
+            </div>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:10,padding:'6px 8px',background:'var(--card)',borderRadius:6,letterSpacing:.5}}>
+            ℹ️ Eingabe nur als Gesamtpunktzahl (kein Passen-Grid)
+          </div>
+          <button className="btn btn-primary" style={{marginTop:0}} onClick={addDisziplin}>+ Disziplin hinzufügen</button>
+        </div>
       </div>
 
       <div className="card">
@@ -1440,7 +1505,7 @@ function SettingsPage({ user, lists, onSignOut, onSync, onExport, onClearData, o
         ))}
       </div>
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog React v1.0 · Supabase Cloud Sync</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog React v1.1 · Supabase Cloud Sync</p>
     </div>
   );
 }
@@ -1450,11 +1515,11 @@ function SettingsPage({ user, lists, onSignOut, onSync, onExport, onClearData, o
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
 const DISZ_CONFIG = {
-  Fitasc: { passen: 4, maxPro: 25 },
-  Compak: { passen: 4, maxPro: 25 },
-  Skeet:  { passen: 4, maxPro: 25 },
-  Universal: { passen: 6, maxPro: 25 },
-  Trap:   { passen: 5, maxPro: 25 },
+  Fitasc: { passen: 4, maxPro: 25, scoreOnly: false },
+  Compak: { passen: 4, maxPro: 25, scoreOnly: false },
+  Skeet:  { passen: 4, maxPro: 25, scoreOnly: false },
+  Universal: { passen: 6, maxPro: 25, scoreOnly: false },
+  Trap:   { passen: 5, maxPro: 25, scoreOnly: false },
 };
 
 function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose }) {
@@ -1486,18 +1551,32 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
     if (session?.id && session?.max) {
       const cfg = DISZ_CONFIG[session.disziplin];
       if (cfg) return cfg.maxPro;
-      // Custom
       const cd = customDisz.find(d=>d.name===session.disziplin);
       return cd ? cd.maxPro : 25;
     }
     return DISZ_CONFIG[disziplin]?.maxPro || 25;
   });
 
-  // When disziplin changes (wettkampf), update passen config
+  // scoreOnly state for custom disciplines with no passen
+  const [scoreOnlyVal, setScoreOnlyVal] = useState(() => session?.score || '');
+  const [scoreOnlyMax, setScoreOnlyMax] = useState(() => {
+    if (session?.max) return session.max;
+    const cd = customDisz.find(d=>d.name===session?.disziplin);
+    return cd?.scoreOnly ? (cd.totalMax || '') : '';
+  });
+
+  // Check if current disziplin is scoreOnly
+  const getCfg = (d) => DISZ_CONFIG[d] || customDisz.find(x=>x.name===d);
+  const isScoreOnly = getCfg(disziplin)?.scoreOnly === true;
+
+  // When disziplin changes, update passen config
   useEffect(() => {
-    if (type !== 'wettkampf') return;
-    const cfg = DISZ_CONFIG[disziplin] || customDisz.find(d=>d.name===disziplin);
-    if (cfg) {
+    const cfg = getCfg(disziplin);
+    if (!cfg) return;
+    if (cfg.scoreOnly) {
+      setScoreOnlyMax(cfg.totalMax || '');
+      setScoreOnlyVal('');
+    } else if (type === 'wettkampf' || hasScore) {
       const p = cfg.passen || 4;
       const mp = cfg.maxPro || 25;
       setPassen(p);
@@ -1522,14 +1601,22 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
   }
 
   function handleSave() {
+    let score, max, passenArr;
+    if (isScoreOnly) {
+      score = parseInt(scoreOnlyVal)||0;
+      max   = parseInt(scoreOnlyMax)||0;
+      passenArr = [];
+    } else {
+      score = (type==='wettkampf' || hasScore) ? totalScore : null;
+      max   = (type==='wettkampf' || hasScore) ? totalMax   : null;
+      passenArr = (type==='wettkampf' || hasScore) ? passenVals.map(v=>parseInt(v)||0) : [];
+    }
     const s = {
       id: session?.id || crypto.randomUUID(),
       type, disziplin, date, notes,
       munition: parseInt(munition)||0,
       ort, waffe, munition_typ: munitionTyp,
-      score: (type==='wettkampf' || hasScore) ? totalScore : null,
-      max:   (type==='wettkampf' || hasScore) ? totalMax : null,
-      passen: (type==='wettkampf' || hasScore) ? passenVals.map(v=>parseInt(v)||0) : [],
+      score, max, passen: passenArr,
     };
     onSave(s);
   }
@@ -1566,7 +1653,11 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
         <div className="divider"><div className="divider-line"/><div className="divider-text">ERGEBNIS</div><div className="divider-line"/></div>
 
         {/* Score section */}
-        {type === 'wettkampf' ? (
+        {isScoreOnly ? (
+          <ScoreOnlyInput
+            scoreVal={scoreOnlyVal} maxVal={scoreOnlyMax}
+            onChangeScore={setScoreOnlyVal} onChangeMax={setScoreOnlyMax} />
+        ) : type === 'wettkampf' ? (
           <WettkampfScore passen={passen} passenVals={passenVals} maxPro={maxPro}
             totalScore={totalScore} totalMax={totalMax}
             onChangePassen={handlePassen}
@@ -1625,6 +1716,33 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
         <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Abbrechen</button>
       </div>
     </div>
+  );
+}
+
+function ScoreOnlyInput({ scoreVal, maxVal, onChangeScore, onChangeMax }) {
+  const pct = maxVal > 0 ? Math.round(parseInt(scoreVal||0) / parseInt(maxVal) * 100) : null;
+  return (
+    <>
+      <div style={{display:'flex',gap:12,marginBottom:12}}>
+        <div className="form-group" style={{flex:1}}>
+          <label>Ergebnis</label>
+          <input type="number" value={scoreVal} min="0" placeholder="0"
+            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            onChange={e=>onChangeScore(e.target.value)} />
+        </div>
+        <div className="form-group" style={{flex:1}}>
+          <label>Maximum</label>
+          <input type="number" value={maxVal} min="0" placeholder="0"
+            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            onChange={e=>onChangeMax(e.target.value)} />
+        </div>
+      </div>
+      <div className="serie-total">
+        {parseInt(scoreVal)||0}
+        <span className="serie-max"> / {parseInt(maxVal)||0}</span>
+        {pct !== null && <span style={{fontSize:20,color:'var(--accent2)',fontFamily:'DM Mono,monospace',marginLeft:12}}>{pct}%</span>}
+      </div>
+    </>
   );
 }
 
@@ -1749,7 +1867,7 @@ function App() {
   const [sessions, setSessions] = useState([]);
   const [noteStates, setNoteStates] = useState({});
   const [lists, setLists] = useState({ waffe:[], ort:[], munition:[] });
-  const [customDisz, setCustomDisz] = useState([]);
+  const [customDisz, setCustomDisz] = useState(() => LS.get('claylog_customdisz', []));
   const [syncStatus, setSyncStatus] = useState('idle');
 
   // UI state
@@ -1881,6 +1999,11 @@ function App() {
     } catch {}
   }
 
+  function saveCustomDisz(arr) {
+    setCustomDisz(arr);
+    LS.set('claylog_customdisz', arr);
+  }
+
   function exportData() {
     const blob = new Blob([JSON.stringify({ sessions, lists, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -1932,6 +2055,8 @@ function App() {
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
+            customDisz={customDisz}
+            onSaveCustomDisz={saveCustomDisz}
             onSignOut={handleSignOut}
             onSync={() => loadData(authToken)}
             onExport={exportData}
