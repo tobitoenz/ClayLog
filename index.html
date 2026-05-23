@@ -700,12 +700,12 @@ function Dashboard({ sessions, onSessionClick }) {
           </div>
         </div>
         <div className="stat-box">
-          <div className="stat-val">{totalShots.toLocaleString()}</div>
-          <div className="stat-label">Schüsse {year}</div>
-        </div>
-        <div className="stat-box">
           <div className="stat-val">{compYear.length}</div>
           <div className="stat-label">🏆 Wettkämpfe</div>
+        </div>
+        <div className="stat-box">
+          <div className="stat-val">{quoteAll !== null ? quoteAll+'%' : '–'}</div>
+          <div className="stat-label">Ø Gesamt</div>
         </div>
       </div>
       <MunitionsChart sessions={sessions} year={year} />
