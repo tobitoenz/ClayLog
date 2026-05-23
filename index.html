@@ -1063,26 +1063,39 @@ function ResultateChart({ sessions }) {
 function JahresvergleichChart({ sessions }) {
   const canvasRef = useRef(null);
   const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
-  const years = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
 
-  // For each year: monthly avg % (all scored sessions)
+  const allYears = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
+  const allDisziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
+
+  const [activeYears, setActiveYears] = useState(allYears);
+  const [disziplin, setDisziplin] = useState('alle');
+
+  // Sync activeYears when new sessions load
+  useEffect(() => { setActiveYears(allYears); }, [sessions.length]);
+
+  function toggleYear(y) {
+    setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
+  }
+
   function getMonthlyAvg(year) {
+    const src = sessions.filter(s =>
+      s.date?.startsWith(year) && s.max > 0 &&
+      (disziplin === 'alle' || s.disziplin === disziplin)
+    );
     const monthly = {};
-    sessions.filter(s => s.date?.startsWith(year) && s.max > 0).forEach(s => {
-      const m = parseInt(s.date.slice(5,7)) - 1; // 0-11
+    src.forEach(s => {
+      const m = parseInt(s.date.slice(5,7)) - 1;
       if (!monthly[m]) monthly[m] = { total: 0, count: 0 };
       monthly[m].total += s.score/s.max*100;
       monthly[m].count++;
     });
-    // Overall avg for year
-    const allScored = sessions.filter(s => s.date?.startsWith(year) && s.max > 0);
-    const avg = allScored.length ? Math.round(allScored.reduce((a,s)=>a+s.score/s.max*100,0)/allScored.length*10)/10 : null;
+    const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
     return { monthly, avg };
   }
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !years.length) return;
+    if (!canvas || !allYears.length) return;
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.offsetWidth;
     const H = 220;
@@ -1092,7 +1105,7 @@ function JahresvergleichChart({ sessions }) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0,0,W,H);
 
-    const padL=32, padR=10, padT=14, padB=28;
+    const padL=36, padR=10, padT=14, padB=28;
     const chartW=W-padL-padR, chartH=H-padT-padB;
     const MONTH_LABELS=['J','F','M','A','M','J','J','A','S','O','N','D'];
 
@@ -1113,58 +1126,83 @@ function JahresvergleichChart({ sessions }) {
       ctx.fillText(MONTH_LABELS[i], x, H-8);
     }
 
-    // Draw one line per year
-    years.forEach((year, yi) => {
-      const { monthly, avg } = getMonthlyAvg(year);
+    // Draw one line per active year
+    allYears.forEach((year, yi) => {
+      if (!activeYears.includes(year)) return;
+      const { monthly } = getMonthlyAvg(year);
       const color = YEAR_COLORS[yi % YEAR_COLORS.length];
       const pts = [];
       for (let i=0;i<12;i++) {
         if (monthly[i]) {
-          pts.push({ i, x: padL+(i/11)*chartW, y: padT+chartH-(monthly[i].total/monthly[i].count/100)*chartH, val: Math.round(monthly[i].total/monthly[i].count) });
+          pts.push({ x: padL+(i/11)*chartW, y: padT+chartH-(monthly[i].total/monthly[i].count/100)*chartH, val: Math.round(monthly[i].total/monthly[i].count) });
         }
       }
       if (pts.length === 0) return;
 
-      // Line
-      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.beginPath();
+      ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.beginPath();
       pts.forEach((p,idx) => idx===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
       ctx.stroke();
 
-      // Dots + labels
       pts.forEach(p => {
         ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
         ctx.fillStyle='#13131a'; ctx.fill();
         ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
-        ctx.fillStyle=color; ctx.font='bold 8px DM Mono,monospace'; ctx.textAlign='center';
-        ctx.fillText(p.val+'%', p.x, p.y-8);
+        ctx.fillStyle=color; ctx.font='bold 9px DM Mono,monospace'; ctx.textAlign='center';
+        ctx.fillText(p.val+'%', p.x, p.y-9);
       });
     });
 
-  }, [sessions]);
+  }, [sessions, activeYears, disziplin]);
 
   return (
-    <div className="card">
-      <div className="card-title" style={{marginBottom:12}}>Jahresvergleich</div>
-      {years.length === 0 ? (
-        <div className="empty"><div className="empty-text">Keine Ergebnisse vorhanden.</div></div>
-      ) : (
-        <>
-          <canvas ref={canvasRef} style={{width:'100%',height:'220px',display:'block'}} />
-          {/* Legend with yearly avg */}
-          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
-            {years.map((y,i) => {
-              const { avg } = getMonthlyAvg(y);
-              return (
-                <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                  <div style={{width:16,height:3,background:YEAR_COLORS[i%YEAR_COLORS.length],borderRadius:2}}/>
-                  <span style={{color:YEAR_COLORS[i%YEAR_COLORS.length]}}>{y}</span>
-                  {avg !== null && <span style={{color:'var(--muted)'}}>Ø {avg}%</span>}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+    <div>
+      {/* Filters */}
+      <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+        {/* Year toggles */}
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          {allYears.map((y,i) => (
+            <button key={y}
+              className="analyse-tab"
+              style={{
+                background: activeYears.includes(y) ? 'rgba(255,255,255,0.05)' : 'transparent',
+                borderColor: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--border)',
+                color: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--muted)'
+              }}
+              onClick={()=>toggleYear(y)}>
+              {y}
+            </button>
+          ))}
+        </div>
+        {/* Disziplin filter */}
+        <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{flex:1,minWidth:120}}>
+          <option value="alle">Alle Disziplinen</option>
+          {allDisziplinen.map(d=><option key={d}>{d}</option>)}
+        </select>
+      </div>
+
+      <div className="card">
+        <div className="card-title" style={{marginBottom:12}}>Jahresvergleich</div>
+        {allYears.length === 0 ? (
+          <div className="empty"><div className="empty-text">Keine Ergebnisse vorhanden.</div></div>
+        ) : (
+          <>
+            <canvas ref={canvasRef} style={{width:'100%',height:'220px',display:'block'}} />
+            <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
+              {allYears.filter(y=>activeYears.includes(y)).map((y,i) => {
+                const { avg } = getMonthlyAvg(y);
+                const colorIdx = allYears.indexOf(y);
+                return avg !== null ? (
+                  <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                    <div style={{width:16,height:3,background:YEAR_COLORS[colorIdx%YEAR_COLORS.length],borderRadius:2}}/>
+                    <span style={{color:YEAR_COLORS[colorIdx%YEAR_COLORS.length]}}>{y}</span>
+                    <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1282,8 +1320,8 @@ function AnalysePage({ sessions }) {
         ))}
       </div>
 
-      {/* Year filter (not for resultate) */}
-      {tab !== 'resultate' && (
+      {/* Year filter for munition/waffen only */}
+      {(tab === 'munition' || tab === 'waffen') && (
         <div className="tab-row" style={{marginBottom:14}}>
           {['alle', ...years].map(y => (
             <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y}</button>
