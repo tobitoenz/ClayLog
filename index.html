@@ -669,8 +669,13 @@ function Dashboard({ sessions, onSessionClick }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
   const totalShots = yearSessions.reduce((a,s) => a + (s.munition||0), 0);
-  const scored = yearSessions.filter(s => s.max > 0);
-  const quote = scored.length ? Math.round(scored.reduce((a,s) => a + s.score/s.max, 0) / scored.length * 100) : 0;
+
+  // Quote nur aus Wettkampf
+  const compYear  = sessions.filter(s => s.type==='wettkampf' && s.max>0 && (s.date||'').startsWith(year));
+  const compAll   = sessions.filter(s => s.type==='wettkampf' && s.max>0);
+  const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
+  const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
+
   const recent = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
 
   return (
@@ -680,17 +685,27 @@ function Dashboard({ sessions, onSessionClick }) {
           <div className="stat-val">{yearSessions.length}</div>
           <div className="stat-label">Sessions {year}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-val">{quote}%</div>
-          <div className="stat-label">Ø Quote</div>
+        <div className="stat-box" style={{gridColumn:'span 1'}}>
+          <div style={{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
+            <div>
+              <div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div>
+              <div className="stat-label">🏆 {year}</div>
+            </div>
+            {quoteAll !== null && quoteYear !== quoteAll && (
+              <div style={{borderLeft:'1px solid var(--border)',paddingLeft:8}}>
+                <div style={{fontFamily:'Arial,sans-serif',fontSize:22,color:'var(--muted)',lineHeight:1}}>{quoteAll}%</div>
+                <div className="stat-label">Gesamt</div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="stat-box">
           <div className="stat-val">{totalShots.toLocaleString()}</div>
           <div className="stat-label">Schüsse {year}</div>
         </div>
         <div className="stat-box">
-          <div className="stat-val">{scored.length}</div>
-          <div className="stat-label">Mit Score</div>
+          <div className="stat-val">{compYear.length}</div>
+          <div className="stat-label">🏆 Wettkämpfe</div>
         </div>
       </div>
       <MunitionsChart sessions={sessions} year={year} />
