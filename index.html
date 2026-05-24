@@ -301,14 +301,21 @@ function getHeaders(token) {
 }
 
 async function sbFetch(method, table, body, filter, token, retry = true) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + (token || SUPABASE_KEY),
+    'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+  };
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${filter || ''}`, {
     method,
-    headers: getHeaders(token),
+    headers,
     body: body ? JSON.stringify(body) : null
   });
   if (res.status === 401 && retry) throw new Error('AUTH_EXPIRED');
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
-  return method === 'DELETE' || method === 'PATCH' ? null : res.json();
+  if (method === 'DELETE' || method === 'PATCH' || method === 'POST') return null;
+  return res.json();
 }
 
 async function authSignIn(email, password) {
@@ -2034,8 +2041,9 @@ function App() {
     setModal(null); setSelectedSession(null);
     // Supabase upsert
     try {
-      await sbFetch('POST', 'sessions', [session], '', authToken);
-    } catch {}
+      const row = { ...session, user_id: currentUser?.id };
+      await sbFetch('POST', 'sessions', [row], '', authToken);
+    } catch(e) { console.error('saveSession error:', e); }
   }
 
   async function deleteSession(id) {
@@ -2044,7 +2052,7 @@ function App() {
     LS.set('claylog_sessions', newSessions);
     setModal(null); setSelectedSession(null);
     try {
-      await sbFetch('DELETE', 'sessions', null, `?id=eq.${id}`, authToken);
+      await sbFetch('DELETE', 'sessions', null, `?id=eq.${id}&user_id=eq.${currentUser?.id}`, authToken);
     } catch {}
   }
 
@@ -2091,7 +2099,7 @@ function App() {
     setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]);
     LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists'); LS.del('claylog_customdisz');
     try {
-      await sbFetch('DELETE', 'sessions', null, '', authToken);
+      await sbFetch('DELETE', 'sessions', null, `?user_id=eq.${currentUser?.id}`, authToken);
     } catch {}
   }
 
