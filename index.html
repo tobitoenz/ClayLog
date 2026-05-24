@@ -1515,7 +1515,7 @@ const DISZ_CONFIG = {
   Trap:   { passen: 5, maxPro: 25, scoreOnly: false },
 };
 
-function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose }) {
+function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
 
@@ -1524,9 +1524,26 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
   const [date, setDate] = useState(session?.date || todayStr());
   const [notes, setNotes] = useState(session?.notes || '');
   const [munition, setMunition] = useState(session?.munition || '');
-  const [ort, setOrt] = useState(session?.ort || '');
-  const [waffe, setWaffe] = useState(session?.waffe || '');
-  const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ || '');
+  const [ort, setOrt] = useState(session?.ort ?? lastSession?.ort ?? '');
+  const [waffe, setWaffe] = useState(session?.waffe ?? lastSession?.waffe ?? '');
+  const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ ?? lastSession?.munition_typ ?? '');
+  const [newOrtVal, setNewOrtVal] = useState('');
+  const [newWaffeVal, setNewWaffeVal] = useState('');
+  const [newMunVal, setNewMunVal] = useState('');
+  const [showNewOrt, setShowNewOrt] = useState(false);
+  const [showNewWaffe, setShowNewWaffe] = useState(false);
+  const [showNewMun, setShowNewMun] = useState(false);
+
+  function addToList(key, val, setter) {
+    const v = val.trim();
+    if (!v) return;
+    const updated = { ...lists, [key]: [...(lists[key]||[]).filter(x=>x!==v), v] };
+    onSaveLists(updated);
+    setter(v);
+    if (key==='ort') { setNewOrtVal(''); setShowNewOrt(false); }
+    if (key==='waffe') { setNewWaffeVal(''); setShowNewWaffe(false); }
+    if (key==='munition') { setNewMunVal(''); setShowNewMun(false); }
+  }
 
   // Score state
   const [hasScore, setHasScore] = useState(session?.max > 0 || false);
@@ -1682,7 +1699,16 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
                 <option value="">– Location –</option>
                 {(lists.ort||[]).map(o=><option key={o}>{o}</option>)}
               </select>
+              <button className="add-btn" onClick={()=>setShowNewOrt(v=>!v)} title="Add location">+</button>
             </div>
+            {showNewOrt && (
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                <input autoFocus placeholder="New location…" value={newOrtVal} onChange={e=>setNewOrtVal(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&addToList('ort',newOrtVal,setOrt)}
+                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
+                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('ort',newOrtVal,setOrt)}>Add</button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1690,17 +1716,39 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose })
         <div className="input-row">
           <div className="form-group">
             <label>Ammo</label>
-            <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
-              <option value="">– Ammo –</option>
-              {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
-            </select>
+            <div className="select-row">
+              <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
+                <option value="">– Ammo –</option>
+                {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
+              </select>
+              <button className="add-btn" onClick={()=>setShowNewMun(v=>!v)} title="Add ammo">+</button>
+            </div>
+            {showNewMun && (
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                <input autoFocus placeholder="New ammo…" value={newMunVal} onChange={e=>setNewMunVal(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&addToList('munition',newMunVal,setMunitionTyp)}
+                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
+                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('munition',newMunVal,setMunitionTyp)}>Add</button>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label>Gun</label>
-            <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
-              <option value="">– Gun –</option>
-              {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
-            </select>
+            <div className="select-row">
+              <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
+                <option value="">– Gun –</option>
+                {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
+              </select>
+              <button className="add-btn" onClick={()=>setShowNewWaffe(v=>!v)} title="Add gun">+</button>
+            </div>
+            {showNewWaffe && (
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                <input autoFocus placeholder="New gun…" value={newWaffeVal} onChange={e=>setNewWaffeVal(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&addToList('waffe',newWaffeVal,setWaffe)}
+                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
+                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('waffe',newWaffeVal,setWaffe)}>Add</button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2160,7 +2208,9 @@ function App() {
           customDisz={customDisz}
           onSave={saveSession}
           onDelete={deleteSession}
-          onClose={closeModal} />
+          onClose={closeModal}
+          onSaveLists={saveLists}
+          lastSession={modal === 'new' ? (sessions[0] || null) : null} />
       )}
       {modal === 'detail' && selectedSession && (
         <DetailModal
