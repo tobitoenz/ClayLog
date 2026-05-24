@@ -1917,7 +1917,16 @@ function App() {
 
   /* ── AUTH ── */
   useEffect(() => {
-    // Check for password recovery token in URL hash
+    // Show URL debug info on screen if any auth params detected
+    if (window.location.hash || window.location.search) {
+      const dbg = document.createElement('div');
+      dbg.id = 'url-debug';
+      dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1a1a2e;color:#00ff88;font-family:monospace;font-size:11px;padding:10px;z-index:99999;word-break:break-all;white-space:pre-wrap;max-height:40vh;overflow:auto;border-bottom:2px solid #00ff88;';
+      dbg.textContent = 'HASH: ' + (window.location.hash || '(empty)') + '\n\nSEARCH: ' + (window.location.search || '(empty)');
+      document.body.appendChild(dbg);
+    }
+    // Check for password recovery — Supabase sends either hash or query params
+    // Format 1 (older): #access_token=...&type=recovery
     const hash = window.location.hash;
     if (hash) {
       const params = new URLSearchParams(hash.replace('#', ''));
@@ -1927,6 +1936,24 @@ function App() {
         setRecoveryToken(token);
         return;
       }
+    }
+    // Format 2 (newer PKCE): ?token_hash=...&type=recovery  → exchange for session
+    const searchParams = new URLSearchParams(window.location.search);
+    const qType = searchParams.get('type');
+    const tokenHash = searchParams.get('token_hash');
+    if (qType === 'recovery' && tokenHash) {
+      // Exchange token_hash for a real access_token via Supabase
+      fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ token_hash: tokenHash, type: 'recovery' })
+      }).then(r => r.json()).then(data => {
+        if (data.access_token) {
+          setRecoveryToken(data.access_token);
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }).catch(() => {});
+      return;
     }
     const saved = LS.get('claylog_auth', null);
     if (saved?.token) {
