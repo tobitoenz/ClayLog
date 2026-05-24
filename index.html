@@ -1705,8 +1705,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
               <div style={{display:'flex',gap:6,marginTop:6}}>
                 <input autoFocus placeholder="New location…" value={newOrtVal} onChange={e=>setNewOrtVal(e.target.value)}
                   onKeyDown={e=>e.key==='Enter'&&addToList('ort',newOrtVal,setOrt)}
-                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
-                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('ort',newOrtVal,setOrt)}>Add</button>
+                  style={{flex:1}} />
+                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('ort',newOrtVal,setOrt)}>Add</button>
               </div>
             )}
           </div>
@@ -1727,8 +1727,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
               <div style={{display:'flex',gap:6,marginTop:6}}>
                 <input autoFocus placeholder="New ammo…" value={newMunVal} onChange={e=>setNewMunVal(e.target.value)}
                   onKeyDown={e=>e.key==='Enter'&&addToList('munition',newMunVal,setMunitionTyp)}
-                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
-                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('munition',newMunVal,setMunitionTyp)}>Add</button>
+                  style={{flex:1}} />
+                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('munition',newMunVal,setMunitionTyp)}>Add</button>
               </div>
             )}
           </div>
@@ -1745,8 +1745,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
               <div style={{display:'flex',gap:6,marginTop:6}}>
                 <input autoFocus placeholder="New gun…" value={newWaffeVal} onChange={e=>setNewWaffeVal(e.target.value)}
                   onKeyDown={e=>e.key==='Enter'&&addToList('waffe',newWaffeVal,setWaffe)}
-                  style={{flex:1,height:38,borderRadius:8,border:'1px solid var(--border)',background:'var(--card)',color:'var(--text)',padding:'0 10px',fontSize:14}} />
-                <button className="btn btn-primary" style={{height:38,padding:'0 14px',marginTop:0}} onClick={()=>addToList('waffe',newWaffeVal,setWaffe)}>Add</button>
+                  style={{flex:1}} />
+                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('waffe',newWaffeVal,setWaffe)}>Add</button>
               </div>
             )}
           </div>
