@@ -1839,6 +1839,27 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
           )}
         </div>
 
+        {hasScore && session.passen?.length > 0 && (
+          <>
+            {/* Progress bar */}
+            <div style={{height:4,background:'var(--border)',borderRadius:2,marginBottom:16,overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${quote}%`,background:'var(--accent)',borderRadius:2,transition:'width .4s'}} />
+            </div>
+            {/* Passen grid */}
+            <div style={{marginBottom:16}}>
+              <div className="detail-label" style={{marginBottom:8}}>Passen</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+                {session.passen.map((v,i) => (
+                  <div key={i} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 6px',textAlign:'center'}}>
+                    <div style={{fontSize:22,fontWeight:700,color:'var(--accent)',fontFamily:'DM Mono,monospace'}}>{v}</div>
+                    <div style={{fontSize:11,color:'var(--muted)',letterSpacing:1,marginTop:2}}>P{i+1}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         {session.notes && (
           <div className="detail-section">
             <div className="detail-label">Notes</div>
