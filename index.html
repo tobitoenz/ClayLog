@@ -1540,11 +1540,11 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
   const [hasScore, setHasScore] = useState(session?.max > 0 || false);
   const [passen, setPassen] = useState(() => {
     if (session?.passen?.length) return session.passen.length;
-    const cfg = DISZ_CONFIG[session?.disziplin] || DISZ_CONFIG['Fitasc'];
+    const cfg = DISZ_CONFIG[session?.disziplin] || customDisz.find(d=>d.name===session?.disziplin) || DISZ_CONFIG['Fitasc'];
     return cfg.passen;
   });
   const [passenVals, setPassenVals] = useState(() => {
-    if (session?.passen?.length) return session.passen;
+    if (session?.passen?.length) return session.passen.map(v => v === 0 || v === null ? '' : String(v));
     const cfg = DISZ_CONFIG[session?.disziplin] || DISZ_CONFIG['Fitasc'];
     return Array(cfg.passen).fill('');
   });
