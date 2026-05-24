@@ -1977,8 +1977,9 @@ function App() {
 
   function handleSignOut() {
     setAuthToken(null); setCurrentUser(null);
-    setSessions([]); setNoteStates({});
+    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]);
     LS.del('claylog_auth'); LS.del('claylog_sessions'); LS.del('claylog_notestates');
+    LS.del('claylog_lists'); LS.del('claylog_customdisz');
   }
 
   /* ── DATA ── */
@@ -2087,8 +2088,8 @@ function App() {
 
   async function clearAllData() {
     if (!confirm('Delete ALL data? This cannot be undone!')) return;
-    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] });
-    LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists');
+    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]);
+    LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists'); LS.del('claylog_customdisz');
     try {
       await sbFetch('DELETE', 'sessions', null, '', authToken);
     } catch {}
