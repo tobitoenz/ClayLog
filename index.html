@@ -1527,22 +1527,13 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
   const [ort, setOrt] = useState(session?.ort ?? lastSession?.ort ?? '');
   const [waffe, setWaffe] = useState(session?.waffe ?? lastSession?.waffe ?? '');
   const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ ?? lastSession?.munition_typ ?? '');
-  const [newOrtVal, setNewOrtVal] = useState('');
-  const [newWaffeVal, setNewWaffeVal] = useState('');
-  const [newMunVal, setNewMunVal] = useState('');
-  const [showNewOrt, setShowNewOrt] = useState(false);
-  const [showNewWaffe, setShowNewWaffe] = useState(false);
-  const [showNewMun, setShowNewMun] = useState(false);
-
-  function addToList(key, val, setter) {
-    const v = val.trim();
-    if (!v) return;
-    const updated = { ...lists, [key]: [...(lists[key]||[]).filter(x=>x!==v), v] };
+  function addToList(key, label, setter) {
+    const v = prompt(`Add new ${label}:`, '');
+    if (!v || !v.trim()) return;
+    const val = v.trim();
+    const updated = { ...lists, [key]: [...(lists[key]||[]).filter(x=>x!==val), val] };
     onSaveLists(updated);
-    setter(v);
-    if (key==='ort') { setNewOrtVal(''); setShowNewOrt(false); }
-    if (key==='waffe') { setNewWaffeVal(''); setShowNewWaffe(false); }
-    if (key==='munition') { setNewMunVal(''); setShowNewMun(false); }
+    setter(val);
   }
 
   // Score state
@@ -1699,16 +1690,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
                 <option value="">– Location –</option>
                 {(lists.ort||[]).map(o=><option key={o}>{o}</option>)}
               </select>
-              <button className="add-btn" onClick={()=>setShowNewOrt(v=>!v)} title="Add location">+</button>
+              <button className="add-btn" onClick={()=>addToList('ort','location',setOrt)} title="Add location">+</button>
             </div>
-            {showNewOrt && (
-              <div style={{display:'flex',gap:6,marginTop:6}}>
-                <input autoFocus placeholder="New location…" value={newOrtVal} onChange={e=>setNewOrtVal(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&addToList('ort',newOrtVal,setOrt)}
-                  style={{flex:1}} />
-                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('ort',newOrtVal,setOrt)}>Add</button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1721,16 +1704,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
                 <option value="">– Ammo –</option>
                 {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
               </select>
-              <button className="add-btn" onClick={()=>setShowNewMun(v=>!v)} title="Add ammo">+</button>
+              <button className="add-btn" onClick={()=>addToList('munition','ammo',setMunitionTyp)} title="Add ammo">+</button>
             </div>
-            {showNewMun && (
-              <div style={{display:'flex',gap:6,marginTop:6}}>
-                <input autoFocus placeholder="New ammo…" value={newMunVal} onChange={e=>setNewMunVal(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&addToList('munition',newMunVal,setMunitionTyp)}
-                  style={{flex:1}} />
-                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('munition',newMunVal,setMunitionTyp)}>Add</button>
-              </div>
-            )}
           </div>
           <div className="form-group">
             <label>Gun</label>
@@ -1739,16 +1714,8 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
                 <option value="">– Gun –</option>
                 {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
               </select>
-              <button className="add-btn" onClick={()=>setShowNewWaffe(v=>!v)} title="Add gun">+</button>
+              <button className="add-btn" onClick={()=>addToList('waffe','gun',setWaffe)} title="Add gun">+</button>
             </div>
-            {showNewWaffe && (
-              <div style={{display:'flex',gap:6,marginTop:6}}>
-                <input autoFocus placeholder="New gun…" value={newWaffeVal} onChange={e=>setNewWaffeVal(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&addToList('waffe',newWaffeVal,setWaffe)}
-                  style={{flex:1}} />
-                <button className="btn btn-primary" style={{width:'auto',padding:'0 16px',marginTop:0}} onClick={()=>addToList('waffe',newWaffeVal,setWaffe)}>Add</button>
-              </div>
-            )}
           </div>
         </div>
 
