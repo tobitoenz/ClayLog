@@ -1999,11 +1999,16 @@ function App() {
       setNoteStates(ns);
       LS.set('claylog_notestates', ns);
 
-      // Lists
+      // Lists + custom disciplines
       if (listData?.length) {
         const ld = listData[0]?.data || { waffe:[], ort:[], munition:[] };
-        setLists(ld);
-        LS.set('claylog_lists', ld);
+        const { customDisz: cdFromSb, ...listsOnly } = ld;
+        setLists(listsOnly);
+        LS.set('claylog_lists', listsOnly);
+        if (cdFromSb?.length) {
+          setCustomDisz(cdFromSb);
+          LS.set('claylog_customdisz', cdFromSb);
+        }
       } else {
         const saved = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
         setLists(saved);
@@ -2057,13 +2062,19 @@ function App() {
     setLists(newLists);
     LS.set('claylog_lists', newLists);
     try {
-      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: newLists }], '', authToken);
+      const cd = LS.get('claylog_customdisz', []);
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...newLists, customDisz: cd } }], '', authToken);
     } catch {}
   }
 
-  function saveCustomDisz(arr) {
+  async function saveCustomDisz(arr) {
     setCustomDisz(arr);
     LS.set('claylog_customdisz', arr);
+    // Sync to Supabase alongside lists
+    try {
+      const currentLists = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: arr } }], '', authToken);
+    } catch {}
   }
 
   function exportData() {
