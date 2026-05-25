@@ -1539,12 +1539,17 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
   // Score state
   const [hasScore, setHasScore] = useState(session?.max > 0 || false);
   const [passen, setPassen] = useState(() => {
-    if (session?.passen?.length) return session.passen.length;
+    const p = session?.passen;
+    if (Array.isArray(p) && p.length > 0) return p.length;
     const cfg = DISZ_CONFIG[session?.disziplin] || customDisz.find(d=>d.name===session?.disziplin) || DISZ_CONFIG['Fitasc'];
-    return cfg.passen;
+    return cfg?.passen || 4;
   });
   const [passenVals, setPassenVals] = useState(() => {
-    if (session?.passen?.length) return session.passen.map(v => v === 0 || v === null ? '' : String(v));
+    const p = session?.passen;
+    // Handle array from Supabase (numbers or strings)
+    if (Array.isArray(p) && p.length > 0) {
+      return p.map(v => (v === null || v === undefined || v === '') ? '' : String(v));
+    }
     const cfg = DISZ_CONFIG[session?.disziplin] || DISZ_CONFIG['Fitasc'];
     return Array(cfg.passen).fill('');
   });
@@ -1610,7 +1615,7 @@ function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, o
     } else {
       score = (type==='wettkampf' || hasScore) ? totalScore : null;
       max   = (type==='wettkampf' || hasScore) ? totalMax   : null;
-      passenArr = (type==='wettkampf' || hasScore) ? passenVals.map(v=>parseInt(v)||0) : [];
+      passenArr = (type==='wettkampf' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
     const s = {
       id: session?.id || crypto.randomUUID(),
@@ -2191,6 +2196,7 @@ function App() {
 
       {(modal === 'new' || modal === 'edit') && (
         <SessionModal
+          key={modal === 'edit' ? selectedSession?.id : 'new'}
           session={modal === 'edit' ? selectedSession : null}
           lists={lists}
           customDisz={customDisz}
