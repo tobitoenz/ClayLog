@@ -1780,7 +1780,8 @@ function WettkampfScore({ passen, passenVals, maxPro, totalScore, totalMax, onCh
         {passenVals.map((v,i) => (
           <input key={i} type="number" className="passen-input" value={v} min="0" max={maxPro}
             placeholder={`P${i+1}`}
-            onChange={e=>onChangeVal(i,e.target.value)} />
+            onChange={e=>onChangeVal(i,e.target.value)}
+            onFocus={e=>{ const val=e.target.value; e.target.value=''; e.target.value=val; }} />
         ))}
       </div>
       <div className="serie-total">{totalScore}<span className="serie-max"> / {totalMax}</span></div>
@@ -1811,7 +1812,8 @@ function TrainingScore({ hasScore, onToggle, passen, passenVals, maxPro, totalSc
           <div className="passen-grid">
             {passenVals.map((v,i) => (
               <input key={i} type="number" className="passen-input" value={v} min="0" max={maxPro}
-                placeholder={`P${i+1}`} onChange={e=>onChangeVal(i,e.target.value)} />
+                placeholder={`P${i+1}`} onChange={e=>onChangeVal(i,e.target.value)}
+                onFocus={e=>{ const val=e.target.value; e.target.value=''; e.target.value=val; }} />
             ))}
           </div>
           <div className="serie-total">{totalScore}<span className="serie-max"> / {totalMax}</span></div>
