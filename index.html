@@ -486,7 +486,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v27';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -590,7 +590,14 @@ function MunitionsChart({ sessions, year }) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
 
-    const padL = 36, padR = 8, padT = 8, padB = 28;
+    // Responsive font sizes: larger on PC, smaller on mobile
+    const isMobile = W < 500;
+    const valueFontSize = isMobile ? 10 : 13;
+    const labelFontSize = isMobile ? 9  : 11;
+    const axisFontSize  = isMobile ? 9  : 11;
+
+    // padT dynamisch: genug Platz für Zahl über dem grössten Balken
+    const padL = 36, padR = 8, padT = valueFontSize + 10, padB = 28;
     const chartW = W - padL - padR;
     const chartH = H - padT - padB;
     const barW = chartW / 12;
@@ -602,7 +609,7 @@ function MunitionsChart({ sessions, year }) {
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + chartW, y); ctx.stroke();
       if (v > 0) {
         ctx.fillStyle = '#6a6a88';
-        ctx.font = `9px DM Mono, monospace`;
+        ctx.font = `${axisFontSize}px DM Mono, monospace`;
         ctx.textAlign = 'right';
         ctx.fillText(Math.round(maxVal * v), padL - 4, y + 3);
       }
@@ -613,7 +620,7 @@ function MunitionsChart({ sessions, year }) {
       if (val === 0) {
         // Month label only
         ctx.fillStyle = '#3a3a4a';
-        ctx.font = '9px DM Mono, monospace';
+        ctx.font = `${labelFontSize}px DM Mono, monospace`;
         ctx.textAlign = 'center';
         ctx.fillText(MONTHS[i].slice(0,1), padL + i * barW + barW/2, H - 10);
         return;
@@ -642,17 +649,18 @@ function MunitionsChart({ sessions, year }) {
       ctx.roundRect(x, y, w, barH, [3, 3, 0, 0]);
       ctx.fill();
 
-      // Value label on top
+      // Value label on top — nie über Canvas-Rand
       if (val > 0) {
         ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
-        ctx.font = `bold 8px DM Mono, monospace`;
+        ctx.font = `bold ${valueFontSize}px DM Mono, monospace`;
         ctx.textAlign = 'center';
-        ctx.fillText(val, x + w/2, y - 3);
+        const labelY = Math.max(padT - 3, y - 4);
+        ctx.fillText(val, x + w/2, labelY);
       }
 
       // Month label
       ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
-      ctx.font = '9px DM Mono, monospace';
+      ctx.font = `${labelFontSize}px DM Mono, monospace`;
       ctx.textAlign = 'center';
       ctx.fillText(MONTHS[i].slice(0,1), x + w/2, H - 10);
     });
@@ -824,7 +832,7 @@ function SessionsPage({ sessions, onSessionClick }) {
       ) : groupKeys.map(key => (
         <div key={key} style={{marginBottom:16}}>
           <div style={{fontSize:11,letterSpacing:2,textTransform:'uppercase',color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:8,paddingLeft:2}}>
-            {grouped[key].label} <span style={{color:'var(--border)'}}>·</span> <span style={{color:'var(--accent)'}}>{grouped[key].sessions.length}</span>
+            {grouped[key].label}
           </div>
           <div className="card" style={{padding:'0 16px'}}>
             {grouped[key].sessions.map(s => <SessionItem key={s.id} s={s} onClick={() => onSessionClick(s)} />)}
