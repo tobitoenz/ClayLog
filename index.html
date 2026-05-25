@@ -486,7 +486,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v27';
+const APP_VERSION = 'v28';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -901,12 +901,13 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 ════════════════════════════════════════════════════════════════ */
 function ResultateChart({ sessions }) {
   const canvasRef = useRef(null);
-  const [typeFilter, setTypeFilter] = useState('wettkampf'); // beide | wettkampf | training
+  const [typeFilter, setTypeFilter] = useState('wettkampf');
   const [disziplin, setDisziplin] = useState('alle');
+  const [tooltip, setTooltip] = useState(null); // { x, y, label, color }
+  const allPtsRef = useRef([]); // store drawn pts for hit-testing
 
   const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
 
-  // Filter sessions
   const base = sessions.filter(s => s.max > 0)
     .filter(s => disziplin === 'alle' || s.disziplin === disziplin)
     .sort((a,b) => a.date > b.date ? 1 : -1);
@@ -914,21 +915,36 @@ function ResultateChart({ sessions }) {
   const wettkampf = base.filter(s => s.type === 'wettkampf');
   const training  = base.filter(s => s.type === 'training');
 
-  // Stats
   const currentYear = String(new Date().getFullYear());
   function avgQuote(arr) {
     const v = arr.filter(s=>s.max>0);
     return v.length ? Math.round(v.reduce((a,s)=>a+s.score/s.max*100,0)/v.length*10)/10 : null;
   }
-  const showComp = typeFilter !== 'training';
+  const showComp  = typeFilter !== 'training';
   const showTrain = typeFilter !== 'wettkampf';
-
   const compYear  = avgQuote(wettkampf.filter(s=>s.date?.startsWith(currentYear)));
   const compTotal = avgQuote(wettkampf);
   const trainYear  = avgQuote(training.filter(s=>s.date?.startsWith(currentYear)));
   const trainTotal = avgQuote(training);
 
-  useEffect(() => {
+  // Build monthly averages: { key:'2026-03', avg:82.3, count:4, label:'Mar 2026' }
+  function monthlyAvg(data) {
+    const map = {};
+    data.forEach(s => {
+      const key = s.date.slice(0,7); // "YYYY-MM"
+      if (!map[key]) map[key] = { sum:0, count:0 };
+      map[key].sum += s.score/s.max*100;
+      map[key].count++;
+    });
+    return Object.entries(map).sort(([a],[b])=>a>b?1:-1).map(([key,v]) => ({
+      key,
+      avg: Math.round(v.sum/v.count*10)/10,
+      count: v.count,
+      label: new Date(key+'-15').toLocaleDateString('en-GB',{month:'short',year:'numeric'})
+    }));
+  }
+
+  const drawChart = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
@@ -944,31 +960,30 @@ function ResultateChart({ sessions }) {
     const chartW = W - padL - padR;
     const chartH = H - padT - padB;
 
-    // Collect all data points sorted by date
     const lines = [];
-    if (showComp && wettkampf.length > 0) lines.push({ data: wettkampf, color: '#4ae8c8', fill: 'rgba(74,232,200,0.12)' });
-    if (showTrain && training.length > 0)  lines.push({ data: training,  color: '#e8c84a', fill: 'rgba(232,200,74,0.10)' });
+    if (showComp && wettkampf.length > 0) lines.push({ pts: monthlyAvg(wettkampf), color: '#4ae8c8', fill: 'rgba(74,232,200,0.12)' });
+    if (showTrain && training.length > 0)  lines.push({ pts: monthlyAvg(training),  color: '#e8c84a', fill: 'rgba(232,200,74,0.10)' });
 
-    if (!lines.length || !lines.some(l=>l.data.length>0)) return;
+    if (!lines.length || !lines.some(l=>l.pts.length>0)) return;
 
-    // Determine x range (all dates)
-    const allDates = lines.flatMap(l => l.data.map(s => s.date)).sort();
-    const minDate = new Date(allDates[0]);
-    const maxDate = new Date(allDates[allDates.length-1]);
+    // X range: all month keys
+    const allKeys = lines.flatMap(l=>l.pts.map(p=>p.key)).sort();
+    const minKey = allKeys[0], maxKey = allKeys[allKeys.length-1];
+    const minDate = new Date(minKey+'-01');
+    const maxDate = new Date(maxKey+'-01'); maxDate.setMonth(maxDate.getMonth()+1);
     const dateRange = Math.max(maxDate - minDate, 1);
 
     // Y range
-    const allVals = lines.flatMap(l => l.data.map(s => Math.round(s.score/s.max*100)));
+    const allVals = lines.flatMap(l=>l.pts.map(p=>p.avg));
     const minY = Math.max(0, Math.min(...allVals) - 10);
     const maxY = Math.min(100, Math.max(...allVals) + 5);
     const yRange = maxY - minY || 1;
 
-    function toX(dateStr) {
-      return padL + ((new Date(dateStr) - minDate) / dateRange) * chartW;
+    function toX(key) {
+      const d = new Date(key+'-15');
+      return padL + ((d - minDate) / dateRange) * chartW;
     }
-    function toY(pct) {
-      return padT + chartH - ((pct - minY) / yRange) * chartH;
-    }
+    function toY(pct) { return padT + chartH - ((pct - minY) / yRange) * chartH; }
 
     // Grid
     const gridVals = [];
@@ -976,16 +991,16 @@ function ResultateChart({ sessions }) {
     gridVals.forEach(v => {
       const y = toY(v);
       ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
-      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+chartW, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'right';
       ctx.fillText(v+'%', padL-4, y+3);
     });
 
     // Year separators
-    const years = [...new Set(lines.flatMap(l=>l.data.map(s=>s.date.slice(0,4))))].sort();
+    const years = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
     years.forEach(yr => {
-      const x = toX(yr+'-01-01');
+      const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
       if (x > padL+10 && x < padL+chartW-10) {
         ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
         ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
@@ -995,54 +1010,91 @@ function ResultateChart({ sessions }) {
       }
     });
 
-    // X axis month labels (sample a few)
+    // X axis labels (every ~3 months)
     const monthDates = [];
     let d = new Date(minDate); d.setDate(1);
     while (d <= maxDate) { monthDates.push(new Date(d)); d.setMonth(d.getMonth()+3); }
     monthDates.forEach(md => {
-      const x = toX(md.toISOString().slice(0,10));
+      const key = md.toISOString().slice(0,7);
+      const x = padL + ((md - minDate) / dateRange) * chartW;
       ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
-      const lbl = md.toLocaleDateString('en-GB',{month:'short'});
-      ctx.fillText(lbl, x, H-8);
+      ctx.fillText(md.toLocaleDateString('en-GB',{month:'short'}), x, H-8);
     });
 
-    // Draw each line
-    lines.forEach(({ data, color, fill }) => {
-      if (data.length === 0) return;
-      const pts = data.map(s => ({ x: toX(s.date), y: toY(Math.round(s.score/s.max*100)), pct: Math.round(s.score/s.max*100) }));
+    // Store all drawn pts for hit-testing
+    const allDrawnPts = [];
 
-      // Fill area
+    // Draw lines
+    lines.forEach(({ pts, color, fill }) => {
+      if (pts.length === 0) return;
+      const mapped = pts.map(p => ({ x: toX(p.key), y: toY(p.avg), avg: p.avg, count: p.count, label: p.label, color }));
+
+      // Fill
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, padT+chartH);
-      pts.forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.lineTo(pts[pts.length-1].x, padT+chartH);
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.fill();
+      ctx.moveTo(mapped[0].x, padT+chartH);
+      mapped.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(mapped[mapped.length-1].x, padT+chartH);
+      ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
 
-      // Line
+      // Line (smooth)
       ctx.beginPath();
       ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-      pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      mapped.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
       ctx.stroke();
 
-      // Dots + labels
-      pts.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      // Dots only (no labels)
+      mapped.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
         ctx.fillStyle = '#13131a'; ctx.fill();
         ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = color; ctx.font = 'bold 9px DM Mono,monospace'; ctx.textAlign = 'center';
-        ctx.fillText(p.pct+'%', p.x, p.y - 8);
+        allDrawnPts.push(p);
       });
     });
 
-  }, [sessions, typeFilter, disziplin]);
+    allPtsRef.current = allDrawnPts;
+  }, [sessions, typeFilter, disziplin, showComp, showTrain]);
+
+  useEffect(() => { drawChart(); }, [drawChart]);
+
+  // Hit-test: find nearest point within 30px
+  function findNearest(canvasX, canvasY) {
+    let best = null, bestDist = 30;
+    allPtsRef.current.forEach(p => {
+      const dist = Math.hypot(p.x - canvasX, p.y - canvasY);
+      if (dist < bestDist) { bestDist = dist; best = p; }
+    });
+    return best;
+  }
+
+  function handlePointer(e) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const cx = (clientX - rect.left) * (canvas.width / rect.width / (window.devicePixelRatio||1));
+    const cy = (clientY - rect.top)  * (canvas.height / rect.height / (window.devicePixelRatio||1));
+    const pt = findNearest(cx, cy);
+    if (pt) {
+      // Position tooltip relative to card
+      const cardRect = canvas.parentElement.getBoundingClientRect();
+      setTooltip({
+        x: clientX - cardRect.left,
+        y: clientY - cardRect.top - 50,
+        label: `${pt.label}: ${pt.avg}% (${pt.count} session${pt.count>1?'s':''})`,
+        color: pt.color
+      });
+    } else {
+      setTooltip(null);
+    }
+  }
+
+  function handleLeave() { setTooltip(null); }
 
   return (
     <div className="card">
       <div className="card-title" style={{marginBottom:12}}>Score</div>
 
-      {/* Type filter */}
       <div style={{display:'flex',gap:6,marginBottom:12}}>
         {[['wettkampf','🏆 Competition'],['training','🏋️ Practice'],['beide','Both']].map(([v,l]) => (
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`} onClick={()=>setTypeFilter(v)}>{l}</button>
@@ -1070,13 +1122,34 @@ function ResultateChart({ sessions }) {
           <div className="empty-text">No results yet.</div>
         </div>
       ) : (
-        <>
-          <canvas ref={canvasRef} style={{width:'100%',height:'240px',display:'block',marginTop:8}} />
+        <div style={{position:'relative'}}>
+          {tooltip && (
+            <div style={{
+              position:'absolute', left: tooltip.x, top: tooltip.y,
+              transform:'translate(-50%,-100%)',
+              background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
+              borderRadius:8, padding:'6px 10px', pointerEvents:'none',
+              fontFamily:'DM Mono,monospace', fontSize:11, color: tooltip.color,
+              whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
+            }}>{tooltip.label}</div>
+          )}
+          <canvas
+            ref={canvasRef}
+            style={{width:'100%',height:'240px',display:'block',marginTop:8,cursor:'crosshair'}}
+            onMouseMove={handlePointer}
+            onMouseLeave={handleLeave}
+            onTouchStart={handlePointer}
+            onTouchMove={handlePointer}
+            onTouchEnd={handleLeave}
+          />
           <div style={{display:'flex',gap:16,marginTop:10,flexWrap:'wrap'}}>
             {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#4ae8c8',borderRadius:2}}/><span style={{color:'#4ae8c8'}}>Competition</span></div>}
             {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#e8c84a',borderRadius:2}}/><span style={{color:'#e8c84a'}}>Practice</span></div>}
           </div>
-        </>
+          <div style={{fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--muted)',marginTop:6,opacity:0.6}}>
+            Tap a point to see details
+          </div>
+        </div>
       )}
     </div>
   );
