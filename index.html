@@ -486,14 +486,18 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
+const APP_VERSION = 'v25';
+
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
   const dateStr = new Date().toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' }).toUpperCase();
   const statusIcon = syncStatus === 'syncing' ? '⟳' : syncStatus === 'ok' ? '✓' : syncStatus === 'error' ? '✗' : '';
   const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : 'var(--muted)';
+  // Version badge - center top of header
 
   return (
     <header className="header">
+      <div style={{position:'absolute',top:6,left:'50%',transform:'translateX(-50%)',fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:0.6,letterSpacing:1}}>{APP_VERSION}</div>
       <div>
         <div className="header-logo-row">
           <img src="logo.png" style={{width:'32px',height:'32px',objectFit:'contain'}} alt="logo" />
@@ -2014,12 +2018,23 @@ function App() {
   function scheduleRefresh(refreshTok, expiresAt) {
     if (!refreshTok) return;
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    const delay = Math.max(0, (expiresAt||Date.now()) - Date.now() - 120000);
+    // Refresh 3 minutes before expiry
+    const delay = Math.max(0, (expiresAt||Date.now()) - Date.now() - 180000);
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const data = await authRefresh(refreshTok);
         saveAuth(data);
-      } catch { handleSignOut(); }
+        setSyncStatus('ok');
+      } catch {
+        // Retry once after 30 seconds before giving up
+        setTimeout(async () => {
+          try {
+            const data = await authRefresh(refreshTok);
+            saveAuth(data);
+            setSyncStatus('ok');
+          } catch { handleSignOut(); }
+        }, 30000);
+      }
     }, delay);
   }
 
@@ -2102,9 +2117,14 @@ function App() {
     setModal(null); setSelectedSession(null);
     // Supabase upsert
     try {
+      setSyncStatus('syncing');
       const row = { ...session, user_id: currentUser?.id };
       await sbFetch('POST', 'sessions', [row], '', authToken);
-    } catch(e) { console.error('saveSession error:', e); }
+      setSyncStatus('ok');
+    } catch(e) {
+      console.error('saveSession error:', e);
+      setSyncStatus('error');
+    }
   }
 
   async function deleteSession(id) {
@@ -2113,8 +2133,10 @@ function App() {
     LS.set('claylog_sessions', newSessions);
     setModal(null); setSelectedSession(null);
     try {
+      setSyncStatus('syncing');
       await sbFetch('DELETE', 'sessions', null, `?id=eq.${id}&user_id=eq.${currentUser?.id}`, authToken);
-    } catch {}
+      setSyncStatus('ok');
+    } catch { setSyncStatus('error'); }
   }
 
   async function toggleNote(sessionId, newState) {
