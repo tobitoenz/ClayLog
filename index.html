@@ -486,7 +486,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v28';
+const APP_VERSION = 'v29';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -997,7 +997,7 @@ function ResultateChart({ sessions }) {
       ctx.fillText(v+'%', padL-4, y+3);
     });
 
-    // Year separators
+    // Year separators + prominent year label at bottom (no top label)
     const years = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
     years.forEach(yr => {
       const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
@@ -1005,20 +1005,9 @@ function ResultateChart({ sessions }) {
         ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
         ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#4a4a6a'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
-        ctx.fillText(yr, x, padT-4);
+        ctx.fillStyle = '#9a9abb'; ctx.font = 'bold 11px DM Mono,monospace'; ctx.textAlign = 'center';
+        ctx.fillText(yr, x, H-8);
       }
-    });
-
-    // X axis labels (every ~3 months)
-    const monthDates = [];
-    let d = new Date(minDate); d.setDate(1);
-    while (d <= maxDate) { monthDates.push(new Date(d)); d.setMonth(d.getMonth()+3); }
-    monthDates.forEach(md => {
-      const key = md.toISOString().slice(0,7);
-      const x = padL + ((md - minDate) / dateRange) * chartW;
-      ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'center';
-      ctx.fillText(md.toLocaleDateString('en-GB',{month:'short'}), x, H-8);
     });
 
     // Store all drawn pts for hit-testing
@@ -1042,11 +1031,10 @@ function ResultateChart({ sessions }) {
       mapped.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
       ctx.stroke();
 
-      // Dots only (no labels)
+      // Small filled dots
       mapped.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
-        ctx.fillStyle = '#13131a'; ctx.fill();
-        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+        ctx.fillStyle = color; ctx.fill();
         allDrawnPts.push(p);
       });
     });
