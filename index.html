@@ -2038,7 +2038,22 @@ function App() {
         sbFetch('GET', 'sessions', null, '?order=date.desc', token),
         sbFetch('GET', 'lists', null, '', token).catch(()=>[])
       ]);
-      const s = Array.isArray(sessionData) ? sessionData : [];
+      const raw = Array.isArray(sessionData) ? sessionData : [];
+      const s = raw.map(r => ({
+        id: r.id,
+        type: r.type || 'training',
+        disziplin: r.disziplin || 'Fitasc',
+        date: r.date || '',
+        score: r.score ?? null,
+        max: r.max ?? null,
+        passen: Array.isArray(r.passen) ? r.passen : [],
+        notes: r.notes || '',
+        waffe: r.waffe || '',
+        ort: r.ort || '',
+        munition: r.munition || 0,
+        munition_typ: r.munition_typ || '',
+        note_state: r.note_state || 'normal',
+      }));
       setSessions(s);
       LS.set('claylog_sessions', s);
 
