@@ -486,7 +486,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v32';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -966,12 +966,13 @@ function ResultateChart({ sessions }) {
 
     if (!lines.length || !lines.some(l=>l.pts.length>0)) return;
 
-    // X range: start from Jan of earliest data year, end after last data month
+    // X range: Jan 1 of earliest year → Dec 31 of latest year (data-driven only)
     const allKeys = lines.flatMap(l=>l.pts.map(p=>p.key)).sort();
     const minKey = allKeys[0], maxKey = allKeys[allKeys.length-1];
     const minYear = minKey.slice(0,4);
-    const minDate = new Date(minYear+'-01-01'); // always start at Jan 1 of first year
-    const maxDate = new Date(maxKey+'-01'); maxDate.setMonth(maxDate.getMonth()+1);
+    const maxYear = maxKey.slice(0,4);
+    const minDate = new Date(minYear+'-01-01');
+    const maxDate = new Date(maxYear+'-12-31');
     const dateRange = Math.max(maxDate - minDate, 1);
 
     // Y range
@@ -999,10 +1000,8 @@ function ResultateChart({ sessions }) {
     });
 
     // Year separators + prominent year label at bottom
-    // Show ALL years from minYear up to current year
-    const currentYearNum = new Date().getFullYear();
-    const allYearNums = [];
-    for (let y = parseInt(minYear); y <= currentYearNum; y++) allYearNums.push(String(y));
+    // Show only years that have data
+    const allYearNums = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
     allYearNums.forEach(yr => {
       const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
       // Show label if within chart bounds; first year label goes at left edge
