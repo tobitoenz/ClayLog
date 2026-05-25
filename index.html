@@ -486,7 +486,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -966,10 +966,11 @@ function ResultateChart({ sessions }) {
 
     if (!lines.length || !lines.some(l=>l.pts.length>0)) return;
 
-    // X range: all month keys
+    // X range: start from Jan of earliest data year, end after last data month
     const allKeys = lines.flatMap(l=>l.pts.map(p=>p.key)).sort();
     const minKey = allKeys[0], maxKey = allKeys[allKeys.length-1];
-    const minDate = new Date(minKey+'-01');
+    const minYear = minKey.slice(0,4);
+    const minDate = new Date(minYear+'-01-01'); // always start at Jan 1 of first year
     const maxDate = new Date(maxKey+'-01'); maxDate.setMonth(maxDate.getMonth()+1);
     const dateRange = Math.max(maxDate - minDate, 1);
 
@@ -997,16 +998,24 @@ function ResultateChart({ sessions }) {
       ctx.fillText(v+'%', padL-4, y+3);
     });
 
-    // Year separators + prominent year label at bottom (no top label)
-    const years = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
-    years.forEach(yr => {
+    // Year separators + prominent year label at bottom
+    // Show ALL years from minYear up to current year
+    const currentYearNum = new Date().getFullYear();
+    const allYearNums = [];
+    for (let y = parseInt(minYear); y <= currentYearNum; y++) allYearNums.push(String(y));
+    allYearNums.forEach(yr => {
       const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
-      if (x > padL+10 && x < padL+chartW-10) {
-        ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
-        ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
-        ctx.setLineDash([]);
+      // Show label if within chart bounds; first year label goes at left edge
+      const labelX = yr === minYear ? Math.max(x, padL + 16) : x;
+      if (x <= padL+chartW+10) {
+        if (x > padL+2 && x < padL+chartW-2) {
+          // Draw separator line only if not at edge
+          ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
+          ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
+          ctx.setLineDash([]);
+        }
         ctx.fillStyle = '#9a9abb'; ctx.font = 'bold 11px DM Mono,monospace'; ctx.textAlign = 'center';
-        ctx.fillText(yr, x, H-8);
+        ctx.fillText(yr, labelX, H-8);
       }
     });
 
