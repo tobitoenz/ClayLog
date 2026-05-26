@@ -34,6 +34,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; max-width: 100vw; }
+@keyframes wiggle { 0% { transform: rotate(-1.2deg); } 100% { transform: rotate(1.2deg); } }
 
 /* ─── APP SHELL ─────────────────────────────────────────────── */
 #root { height: 100%; }
@@ -514,7 +515,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v35';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -714,52 +715,199 @@ function MunitionsChart({ sessions, year }) {
   );
 }
 
+// ── Dashboard block definitions ──────────────────────────────
+const DEFAULT_BLOCKS = [
+  { id: 'stats',   label: 'Stats',        visible: true },
+  { id: 'shells',  label: 'Shells Fired', visible: true },
+  { id: 'recent',  label: 'Recent',       visible: true },
+];
+
+function loadBlocks() {
+  try {
+    const s = localStorage.getItem('claylog_blocks');
+    if (!s) return DEFAULT_BLOCKS;
+    const saved = JSON.parse(s);
+    // merge: keep order/visibility from saved, add any new blocks
+    const merged = saved.filter(b => DEFAULT_BLOCKS.find(d => d.id === b.id));
+    DEFAULT_BLOCKS.forEach(d => { if (!merged.find(b => b.id === d.id)) merged.push(d); });
+    return merged;
+  } catch { return DEFAULT_BLOCKS; }
+}
+
+function saveBlocks(blocks) {
+  localStorage.setItem('claylog_blocks', JSON.stringify(blocks));
+}
+
 function Dashboard({ sessions, onSessionClick }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
-  const totalShots = yearSessions.reduce((a,s) => a + (s.munition||0), 0);
 
   const compYear  = sessions.filter(s => s.type==='wettkampf' && s.max>0 && (s.date||'').startsWith(year));
   const compAll   = sessions.filter(s => s.type==='wettkampf' && s.max>0);
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
+  const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
 
-  const recent = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
+  const [blocks, setBlocks]     = useState(() => loadBlocks());
+  const [editMode, setEditMode] = useState(false);
+  const [dragging, setDragging] = useState(null);   // id of dragged block
+  const [dragOver, setDragOver] = useState(null);   // id of hovered target
+  const longPressTimer           = useRef(null);
 
-  return (
-    <div>
+  function updateBlocks(next) { setBlocks(next); saveBlocks(next); }
+
+  function toggleVisible(id) {
+    updateBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b));
+  }
+
+  function moveBlock(fromId, toId) {
+    if (fromId === toId) return;
+    const next = [...blocks];
+    const fi = next.findIndex(b => b.id === fromId);
+    const ti = next.findIndex(b => b.id === toId);
+    const [item] = next.splice(fi, 1);
+    next.splice(ti, 0, item);
+    updateBlocks(next);
+  }
+
+  // Long-press to enter edit mode on mobile
+  function handleTouchStart() {
+    longPressTimer.current = setTimeout(() => setEditMode(true), 600);
+  }
+  function handleTouchEnd() {
+    clearTimeout(longPressTimer.current);
+  }
+
+  // Drag handlers (desktop)
+  function onDragStart(id) { setDragging(id); }
+  function onDragEnd()     { setDragging(null); setDragOver(null); }
+  function onDragOver(e, id) { e.preventDefault(); setDragOver(id); }
+  function onDrop(e, id)   { e.preventDefault(); if (dragging) moveBlock(dragging, id); setDragging(null); setDragOver(null); }
+
+  // Touch drag (mobile)
+  const touchDragId = useRef(null);
+  function onTouchStartDrag(e, id) {
+    touchDragId.current = id;
+  }
+  function onTouchMoveDrag(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const blockEl = el?.closest('[data-block-id]');
+    if (blockEl) setDragOver(blockEl.dataset.blockId);
+  }
+  function onTouchEndDrag() {
+    if (touchDragId.current && dragOver && touchDragId.current !== dragOver) {
+      moveBlock(touchDragId.current, dragOver);
+    }
+    touchDragId.current = null;
+    setDragOver(null);
+  }
+
+  const blockContent = {
+    stats: (
       <div className="stat-grid">
-        <div className="stat-box">
-          <div className="stat-val">{yearSessions.length}</div>
-          <div className="stat-label">Sessions {year}</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div>
-          <div className="stat-label">🏆 Ø {year}</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-val">{compYear.length}</div>
-          <div className="stat-label">🏆 Competitions</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-val">{quoteAll !== null ? quoteAll+'%' : '–'}</div>
-          <div className="stat-label">Ø All time</div>
-        </div>
+        <div className="stat-box"><div className="stat-val">{yearSessions.length}</div><div className="stat-label">Sessions {year}</div></div>
+        <div className="stat-box"><div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div><div className="stat-label">🏆 Ø {year}</div></div>
+        <div className="stat-box"><div className="stat-val">{compYear.length}</div><div className="stat-label">🏆 Competitions</div></div>
+        <div className="stat-box"><div className="stat-val">{quoteAll !== null ? quoteAll+'%' : '–'}</div><div className="stat-label">Ø All time</div></div>
       </div>
-      <MunitionsChart sessions={sessions} year={year} />
+    ),
+    shells: <MunitionsChart sessions={sessions} year={year} />,
+    recent: (
       <div className="card">
-        <div className="card-header">
-          <span className="card-title">Recent</span>
-        </div>
+        <div className="card-header"><span className="card-title">Recent</span></div>
         {recent.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">🎯</div>
-            <div className="empty-text">No entries yet.<br/>Tap + to get started.</div>
-          </div>
+          <div className="empty"><div className="empty-icon">🎯</div><div className="empty-text">No entries yet.<br/>Tap + to get started.</div></div>
         ) : (
-          recent.map(s => <SessionItem key={s.id} s={s} compact onClick={() => onSessionClick(s)} />)
+          recent.map(s => <SessionItem key={s.id} s={s} compact onClick={() => editMode ? null : onSessionClick(s)} />)
         )}
       </div>
+    ),
+  };
+
+  return (
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {/* Edit mode toolbar */}
+      {editMode && (
+        <div style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          background:'var(--surface)', border:'1px solid var(--accent)',
+          borderRadius:12, padding:'10px 14px', marginBottom:12,
+          fontFamily:'DM Mono,monospace', fontSize:12
+        }}>
+          <span style={{color:'var(--accent)'}}>✎ Edit Layout</span>
+          <button className="btn btn-primary" style={{padding:'4px 14px',fontSize:12}} onClick={() => setEditMode(false)}>Done</button>
+        </div>
+      )}
+
+      {/* Blocks */}
+      {blocks.map(block => {
+        const isDraggingThis = dragging === block.id;
+        const isDragTarget   = dragOver === block.id && dragging !== block.id;
+        return (
+          <div
+            key={block.id}
+            data-block-id={block.id}
+            draggable={editMode}
+            onDragStart={() => onDragStart(block.id)}
+            onDragEnd={onDragEnd}
+            onDragOver={e => onDragOver(e, block.id)}
+            onDrop={e => onDrop(e, block.id)}
+            onTouchStart={editMode ? e => onTouchStartDrag(e, block.id) : undefined}
+            onTouchMove={editMode ? onTouchMoveDrag : undefined}
+            onTouchEnd={editMode ? onTouchEndDrag : undefined}
+            style={{
+              opacity: isDraggingThis ? 0.4 : 1,
+              transform: isDragTarget ? 'scale(1.02)' : 'scale(1)',
+              transition: 'transform .15s, opacity .15s',
+              outline: isDragTarget ? '2px solid var(--accent)' : 'none',
+              borderRadius: 12,
+              display: (!editMode && !block.visible) ? 'none' : 'block',
+              position: 'relative',
+            }}>
+            {/* Edit overlay */}
+            {editMode && (
+              <div style={{
+                position:'absolute', top:8, right:8, zIndex:10,
+                display:'flex', gap:6, alignItems:'center'
+              }}>
+                {/* Visibility toggle */}
+                <div onClick={() => toggleVisible(block.id)} style={{
+                  cursor:'pointer', background:'var(--card)',
+                  border:'1px solid var(--border)', borderRadius:8,
+                  padding:'4px 8px', fontSize:11,
+                  fontFamily:'DM Mono,monospace',
+                  color: block.visible ? 'var(--accent)' : 'var(--muted)'
+                }}>
+                  {block.visible ? '● Show' : '○ Hide'}
+                </div>
+                {/* Drag handle */}
+                <div style={{
+                  cursor:'grab', background:'var(--card)',
+                  border:'1px solid var(--border)', borderRadius:8,
+                  padding:'4px 8px', fontSize:16, lineHeight:1,
+                  color:'var(--muted)', userSelect:'none'
+                }}>⠿</div>
+              </div>
+            )}
+            {/* Wackeln im Edit-Modus */}
+            <div style={{
+              animation: editMode ? 'wiggle .4s infinite alternate' : 'none',
+              opacity: editMode && !block.visible ? 0.4 : 1,
+            }}>
+              {blockContent[block.id]}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Long-press hint */}
+      {!editMode && (
+        <div style={{textAlign:'center',color:'var(--muted)',fontSize:10,fontFamily:'DM Mono,monospace',opacity:.4,marginTop:4,marginBottom:8}}>
+          Hold to rearrange
+        </div>
+      )}
     </div>
   );
 }
