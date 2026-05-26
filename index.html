@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v38';
+const APP_VERSION = 'v39';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -629,18 +629,23 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
   const total = monthlyData.reduce((a,v) => a+v, 0);
 
   const isMini = variant === 'mini';
-  const H = isMini ? 80 : 130;
-  const padL = isMini ? 0 : 28, padR = 4, padT = isMini ? 8 : 20, padB = isMini ? 14 : 22;
-  const W = 300; // viewBox units, scales automatically
+  const scale = loadFontScale().factor;
 
-  const chartW = W - padL - padR;
+  // Fixed bar width regardless of screen — chart scrolls horizontally
+  const BAR_SLOT = 28;         // px per month in viewBox units
+  const H = isMini ? 80 : 150;
+  const padL = isMini ? 0 : 32, padR = 8, padT = isMini ? 8 : 22, padB = isMini ? 14 : 24;
+  const W = padL + 12 * BAR_SLOT + padR;  // total viewBox width
   const chartH = H - padT - padB;
-  const barSlot = chartW / 12;
-  const barW = barSlot * 0.65;
+  const barW = BAR_SLOT * 0.62;
 
-  function barX(i) { return padL + i * barSlot + (barSlot - barW) / 2; }
+  function barX(i) { return padL + i * BAR_SLOT + (BAR_SLOT - barW) / 2; }
   function barH(val) { return (val / maxVal) * chartH; }
   function barY(val) { return padT + chartH - barH(val); }
+
+  // Render at a fixed pixel width so it overflows and scrolls
+  const PX_PER_UNIT = isMini ? 1.8 : 2.6 * scale;
+  const svgPxWidth = W * PX_PER_UNIT;
 
   return (
     <div className="card" style={{marginBottom: isMini ? 0 : 12}}>
@@ -655,7 +660,7 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
           <div className="empty-text">No shell data for {year}.</div>
         </div>
       ) : (
-        <div style={{position:'relative'}}>
+        <div style={{overflowX:'auto', overflowY:'visible', WebkitOverflowScrolling:'touch', position:'relative', paddingBottom: 2}}>
           {tooltip && (
             <div style={{
               position:'absolute', left:tooltip.x, top:tooltip.y,
@@ -666,7 +671,11 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
               whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
             }}>{tooltip.label}</div>
           )}
-          <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            width={svgPxWidth}
+            height={H * PX_PER_UNIT}
+            style={{display:'block', minWidth: svgPxWidth, overflow:'visible'}}
             onMouseLeave={() => setTooltip(null)}
             onTouchEnd={() => setTooltip(null)}>
 
@@ -676,7 +685,7 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
                 <line x1={padL} y1={padT + chartH - v*chartH} x2={W-padR} y2={padT + chartH - v*chartH}
                   stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
                 <text x={padL-3} y={padT + chartH - v*chartH + 3}
-                  textAnchor="end" fill="#6a6a88" fontSize={8 * (loadFontScale().factor)} fontFamily="DM Mono,monospace">
+                  textAnchor="end" fill="#6a6a88" fontSize={9} fontFamily="DM Mono,monospace">
                   {Math.round(maxVal * v)}
                 </text>
               </g>
@@ -693,23 +702,24 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
               const labelColor = isCur ? 'var(--accent)' : '#6a6a88';
               return (
                 <g key={i}
-                  onMouseEnter={e => val > 0 && setTooltip({ x: e.clientX - e.currentTarget.closest('svg').getBoundingClientRect().left, y: by - 2, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
-                  onTouchStart={e => val > 0 && setTooltip({ x: barX(i) + barW/2, y: by - 2, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
+                  onMouseEnter={() => val > 0 && setTooltip({ x: (bx + barW/2) * PX_PER_UNIT, y: by * PX_PER_UNIT, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
+                  onTouchStart={() => val > 0 && setTooltip({ x: (bx + barW/2) * PX_PER_UNIT, y: by * PX_PER_UNIT, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
                   style={{cursor: val > 0 ? 'pointer' : 'default'}}>
                   {val > 0 && (
                     <>
                       <rect x={bx} y={by} width={barW} height={bh} fill={color} rx="2"/>
                       {!isMini && (
-                        <text x={bx + barW/2} y={Math.min(by - 2, padT - 1)}
+                        <text x={bx + barW/2} y={Math.min(by - 3, padT - 2)}
                           textAnchor="middle" fill={labelColor}
-                          fontSize={9 * (loadFontScale().factor)} fontFamily="DM Mono,monospace" fontWeight="bold">
-                          {val}
+                          fontSize={10} fontFamily="DM Mono,monospace" fontWeight="bold">
+                          {val.toLocaleString()}
                         </text>
                       )}
                     </>
                   )}
-                  <text x={bx + barW/2} y={H - 4}
-                    textAnchor="middle" fill={labelColor} fontSize={isMini ? 7 : 8 * (loadFontScale().factor)} fontFamily="DM Mono,monospace">
+                  <text x={bx + barW/2} y={H - 5}
+                    textAnchor="middle" fill={labelColor}
+                    fontSize={isMini ? 7 : 9} fontFamily="DM Mono,monospace">
                     {MONTHS[i]}
                   </text>
                 </g>
