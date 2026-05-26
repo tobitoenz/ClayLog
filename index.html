@@ -515,7 +515,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v36';
+const APP_VERSION = 'v37';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1276,119 +1276,63 @@ function ResultateChart({ sessions, variant = 'full' }) {
 }
 
 function JahresvergleichChart({ sessions }) {
-  const canvasRef = useRef(null);
   const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
+  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
   const allYears = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
   const allDisziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
-
   const [activeYears, setActiveYears] = useState(allYears);
   const [disziplin, setDisziplin] = useState('alle');
+  const [tooltip, setTooltip] = useState(null);
 
-  // Sync activeYears when new sessions load
   useEffect(() => { setActiveYears(allYears); }, [sessions.length]);
 
   function toggleYear(y) {
     setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
   }
 
-  function getMonthlyAvg(year) {
+  function getMonthlyPts(year) {
     const src = sessions.filter(s =>
       s.date?.startsWith(year) && s.max > 0 &&
       (disziplin === 'alle' || s.disziplin === disziplin)
     );
-    const monthly = {};
+    const map = {};
     src.forEach(s => {
       const m = parseInt(s.date.slice(5,7)) - 1;
-      if (!monthly[m]) monthly[m] = { total: 0, count: 0 };
-      monthly[m].total += s.score/s.max*100;
-      monthly[m].count++;
+      if (!map[m]) map[m] = { total:0, count:0 };
+      map[m].total += s.score/s.max*100;
+      map[m].count++;
     });
     const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
-    return { monthly, avg };
+    const pts = Object.entries(map).map(([m,v]) => ({
+      m: parseInt(m),
+      avg: Math.round(v.total/v.count*10)/10
+    })).sort((a,b)=>a.m-b.m);
+    return { pts, avg };
   }
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !allYears.length) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth;
-    const H = 220;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0,0,W,H);
-
-    const padL=36, padR=10, padT=14, padB=28;
-    const chartW=W-padL-padR, chartH=H-padT-padB;
-    const MONTH_LABELS=['J','F','M','A','M','J','J','A','S','O','N','D'];
-
-    // Grid
-    [0,25,50,75,100].forEach(v => {
-      const y = padT + chartH - (v/100)*chartH;
-      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
-      ctx.fillText(v+'%', padL-4, y+3);
-    });
-
-    // Month labels
-    for (let i=0;i<12;i++) {
-      const x = padL + (i/11)*chartW;
-      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
-      ctx.fillText(MONTH_LABELS[i], x, H-8);
-    }
-
-    // Draw one line per active year
-    allYears.forEach((year, yi) => {
-      if (!activeYears.includes(year)) return;
-      const { monthly } = getMonthlyAvg(year);
-      const color = YEAR_COLORS[yi % YEAR_COLORS.length];
-      const pts = [];
-      for (let i=0;i<12;i++) {
-        if (monthly[i]) {
-          pts.push({ x: padL+(i/11)*chartW, y: padT+chartH-(monthly[i].total/monthly[i].count/100)*chartH, val: Math.round(monthly[i].total/monthly[i].count) });
-        }
-      }
-      if (pts.length === 0) return;
-
-      ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.beginPath();
-      pts.forEach((p,idx) => idx===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
-      ctx.stroke();
-
-      pts.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
-        ctx.fillStyle='#13131a'; ctx.fill();
-        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
-        ctx.fillStyle=color; ctx.font='bold 9px DM Mono,monospace'; ctx.textAlign='center';
-        ctx.fillText(p.val+'%', p.x, p.y-9);
-      });
-    });
-
-  }, [sessions, activeYears, disziplin]);
+  const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
+  const chartW=W-padL-padR, chartH=H-padT-padB;
+  function toX(m) { return padL + (m/11)*chartW; }
+  function toY(v) { return padT + chartH - (v/100)*chartH; }
+  function lineD(pts) {
+    return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.m).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
+  }
 
   return (
     <div>
-      {/* Filters */}
       <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
-        {/* Year toggles */}
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
           {allYears.map((y,i) => (
-            <button key={y}
-              className="analyse-tab"
+            <button key={y} className="analyse-tab"
               style={{
                 background: activeYears.includes(y) ? 'rgba(255,255,255,0.05)' : 'transparent',
                 borderColor: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--border)',
                 color: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--muted)'
               }}
-              onClick={()=>toggleYear(y)}>
-              {y}
-            </button>
+              onClick={()=>toggleYear(y)}>{y}</button>
           ))}
         </div>
-        {/* Disziplin filter */}
         <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{flex:1,minWidth:120}}>
           <option value="alle">All disciplines</option>
           {allDisziplinen.map(d=><option key={d}>{d}</option>)}
@@ -1401,15 +1345,75 @@ function JahresvergleichChart({ sessions }) {
           <div className="empty"><div className="empty-text">No results yet.</div></div>
         ) : (
           <>
-            <canvas ref={canvasRef} style={{width:'100%',height:'220px',display:'block'}} />
+            <div style={{position:'relative'}}>
+              {tooltip && (
+                <div style={{
+                  position:'absolute', left:tooltip.x+'px', top:(tooltip.y-8)+'px',
+                  transform:'translate(-50%,-100%)',
+                  background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
+                  borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+                  fontFamily:'DM Mono,monospace', fontSize:11, color:tooltip.color,
+                  whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,.5)'
+                }}>{tooltip.label}</div>
+              )}
+              <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
+                onMouseLeave={()=>setTooltip(null)} onTouchEnd={()=>setTooltip(null)}>
+
+                {/* Y grid */}
+                {[0,25,50,75,100].map(v => (
+                  <g key={v}>
+                    <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
+                      stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+                    <text x={padL-3} y={toY(v)+3} textAnchor="end"
+                      fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+                  </g>
+                ))}
+
+                {/* X month labels */}
+                {MONTHS.map((lbl,i) => (
+                  <text key={i} x={toX(i)} y={H-4} textAnchor="middle"
+                    fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>
+                ))}
+
+                {/* Lines + dots per year */}
+                {allYears.map((year, yi) => {
+                  if (!activeYears.includes(year)) return null;
+                  const { pts } = getMonthlyPts(year);
+                  if (!pts.length) return null;
+                  const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+                  return (
+                    <g key={year}>
+                      <path d={lineD(pts)} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
+                      {pts.map(p => (
+                        <circle key={p.m} cx={toX(p.m)} cy={toY(p.avg)} r="4"
+                          fill={color} style={{cursor:'pointer'}}
+                          onMouseEnter={e => {
+                            const rect = e.currentTarget.closest('svg').getBoundingClientRect();
+                            setTooltip({
+                              x: toX(p.m)/W*rect.width,
+                              y: toY(p.avg)/H*rect.height,
+                              color,
+                              label: `${year} ${MONTHS[p.m]}: ${p.avg}%`
+                            });
+                          }}
+                          onTouchStart={() => setTooltip({ x: toX(p.m), y: toY(p.avg), color, label:`${year} ${MONTHS[p.m]}: ${p.avg}%` })}
+                        />
+                      ))}
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Legend */}
             <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
               {allYears.filter(y=>activeYears.includes(y)).map((y,i) => {
-                const { avg } = getMonthlyAvg(y);
-                const colorIdx = allYears.indexOf(y);
+                const { avg } = getMonthlyPts(y);
+                const ci = allYears.indexOf(y);
                 return avg !== null ? (
                   <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                    <div style={{width:16,height:3,background:YEAR_COLORS[colorIdx%YEAR_COLORS.length],borderRadius:2}}/>
-                    <span style={{color:YEAR_COLORS[colorIdx%YEAR_COLORS.length]}}>{y}</span>
+                    <div style={{width:16,height:3,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
+                    <span style={{color:YEAR_COLORS[ci%YEAR_COLORS.length]}}>{y}</span>
                     <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
                   </div>
                 ) : null;
@@ -1421,7 +1425,6 @@ function JahresvergleichChart({ sessions }) {
     </div>
   );
 }
-
 function AnalysePage({ sessions }) {
   const [tab, setTab] = useState('resultate');
   const currentYear = new Date().getFullYear();
@@ -1465,63 +1468,7 @@ function AnalysePage({ sessions }) {
     setCompareYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
   };
 
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    if (tab !== 'jahresvergleich') return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth;
-    const H = 200;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0,0,W,H);
-
-    const activeYears = [selectedYear, ...compareYears].filter(y => y !== 'alle');
-    if (!activeYears.length) return;
-
-    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const monthLabels = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-    const padL=32, padR=10, padT=10, padB=24;
-    const chartW=W-padL-padR, chartH=H-padT-padB;
-
-    [0,25,50,75,100].forEach(v => {
-      const y = padT + chartH - (v/100)*chartH;
-      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
-      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right';
-      ctx.fillText(v+'%', padL-4, y+3);
-    });
-
-    months.forEach((m,i) => {
-      const x = padL + (i/(months.length-1))*chartW;
-      ctx.fillStyle='#6a6a88'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='center';
-      ctx.fillText(monthLabels[i], x, H-6);
-    });
-
-    activeYears.forEach((year, yi) => {
-      const data = getMonthlyData(year);
-      const color = YEAR_COLORS[yi % YEAR_COLORS.length];
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
-      let started = false;
-      months.forEach((m, i) => {
-        if (!data[m]) return;
-        const x = padL + (i/(months.length-1))*chartW;
-        const y = padT + chartH - (data[m].total/data[m].count/100)*chartH;
-        if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
-      });
-      ctx.stroke();
-      months.forEach((m, i) => {
-        if (!data[m]) return;
-        const x = padL + (i/(months.length-1))*chartW;
-        const y = padT + chartH - (data[m].total/data[m].count/100)*chartH;
-        ctx.fillStyle = color;
-        ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
-      });
-    });
-  }, [tab, selectedYear, compareYears, sessions]);
+  // (inline canvas removed — JahresvergleichChart is now SVG)
 
   return (
     <div>
