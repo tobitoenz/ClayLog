@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v43';
+const APP_VERSION = 'v44';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -640,18 +640,13 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
     ? `M${toX(0)},${padT+chartH} ` + pts.map(p=>`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${toX(lastIdx)},${padT+chartH} Z`
     : '';
 
-  // Y axis: exactly 3 clean grid lines (25%, 50%, 75% of max, rounded nicely)
-  function niceGridVals(max) {
-    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
-    const step = magnitude >= max / 3 ? magnitude / 2 : magnitude;
-    const vals = [];
-    for (let v = step; v < max * 0.95; v += step) {
-      vals.push(Math.round(v / step) * step);
-      if (vals.length >= 3) break;
-    }
-    return vals;
+  // Y axis: 3 evenly spaced lines at 25%, 50%, 75% of cumMax, rounded to nice numbers
+  function niceRound(v) {
+    if (v === 0) return 0;
+    const mag = Math.pow(10, Math.floor(Math.log10(v)));
+    return Math.round(v / mag) * mag;
   }
-  const gridVals = niceGridVals(cumMax);
+  const gridVals = [0.25, 0.5, 0.75].map(f => niceRound(cumMax * f)).filter((v,i,a) => a.indexOf(v) === i && v > 0);
 
   return (
     <div style={{position:'relative'}}>
