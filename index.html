@@ -515,7 +515,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -592,13 +592,12 @@ function SessionItem({ s, compact, onClick }) {
 /* ════════════════════════════════════════════════════════════════
    DASHBOARD
 ════════════════════════════════════════════════════════════════ */
-function MunitionsChart({ sessions, year }) {
-  const canvasRef = useRef(null);
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function MunitionsChart({ sessions, year, variant = 'full' }) {
+  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  const [tooltip, setTooltip] = useState(null);
 
   const monthlyData = Array(12).fill(0);
-  sessions
-    .filter(s => (s.date||'').startsWith(year))
+  sessions.filter(s => (s.date||'').startsWith(year))
     .forEach(s => {
       const m = parseInt((s.date||'').slice(5,7)) - 1;
       if (m >= 0 && m < 12) monthlyData[m] += s.munition || 0;
@@ -606,110 +605,102 @@ function MunitionsChart({ sessions, year }) {
 
   const maxVal = Math.max(...monthlyData, 1);
   const currentMonth = new Date().getMonth();
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth;
-    const H = 140;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, W, H);
-
-    // Responsive font sizes: larger on PC, smaller on mobile
-    const isMobile = W < 500;
-    const valueFontSize = isMobile ? 10 : 13;
-    const labelFontSize = isMobile ? 9  : 11;
-    const axisFontSize  = isMobile ? 9  : 11;
-
-    // padT dynamisch: genug Platz für Zahl über dem grössten Balken
-    const padL = 36, padR = 8, padT = valueFontSize + 10, padB = 28;
-    const chartW = W - padL - padR;
-    const chartH = H - padT - padB;
-    const barW = chartW / 12;
-
-    // Grid lines
-    [0, 0.5, 1].forEach(v => {
-      const y = padT + chartH - v * chartH;
-      ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + chartW, y); ctx.stroke();
-      if (v > 0) {
-        ctx.fillStyle = '#6a6a88';
-        ctx.font = `${axisFontSize}px DM Mono, monospace`;
-        ctx.textAlign = 'right';
-        ctx.fillText(Math.round(maxVal * v), padL - 4, y + 3);
-      }
-    });
-
-    // Bars
-    monthlyData.forEach((val, i) => {
-      if (val === 0) {
-        // Month label only
-        ctx.fillStyle = '#3a3a4a';
-        ctx.font = `${labelFontSize}px DM Mono, monospace`;
-        ctx.textAlign = 'center';
-        ctx.fillText(MONTHS[i].slice(0,1), padL + i * barW + barW/2, H - 10);
-        return;
-      }
-      const barH = (val / maxVal) * chartH;
-      const x = padL + i * barW + barW * 0.15;
-      const w = barW * 0.7;
-      const y = padT + chartH - barH;
-
-      // Bar color: current month = accent, past = muted, future = border
-      const isCurrentMonth = i === currentMonth;
-      const isPast = i < currentMonth;
-      
-      if (isCurrentMonth) {
-        const grad = ctx.createLinearGradient(0, y, 0, y + barH);
-        grad.addColorStop(0, '#f0d060');
-        grad.addColorStop(1, '#c8a030');
-        ctx.fillStyle = grad;
-      } else if (isPast) {
-        ctx.fillStyle = '#3a4a5a';
-      } else {
-        ctx.fillStyle = '#2a2a3a';
-      }
-
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, barH, [3, 3, 0, 0]);
-      ctx.fill();
-
-      // Value label on top — nie über Canvas-Rand
-      if (val > 0) {
-        ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
-        ctx.font = `bold ${valueFontSize}px DM Mono, monospace`;
-        ctx.textAlign = 'center';
-        const labelY = Math.max(padT - 3, y - 4);
-        ctx.fillText(val, x + w/2, labelY);
-      }
-
-      // Month label
-      ctx.fillStyle = isCurrentMonth ? '#e8c84a' : '#6a6a88';
-      ctx.font = `${labelFontSize}px DM Mono, monospace`;
-      ctx.textAlign = 'center';
-      ctx.fillText(MONTHS[i].slice(0,1), x + w/2, H - 10);
-    });
-
-  }, [sessions, year]);
-
   const total = monthlyData.reduce((a,v) => a+v, 0);
 
+  const isMini = variant === 'mini';
+  const H = isMini ? 80 : 130;
+  const padL = isMini ? 0 : 28, padR = 4, padT = isMini ? 8 : 20, padB = isMini ? 14 : 22;
+  const W = 300; // viewBox units, scales automatically
+
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const barSlot = chartW / 12;
+  const barW = barSlot * 0.65;
+
+  function barX(i) { return padL + i * barSlot + (barSlot - barW) / 2; }
+  function barH(val) { return (val / maxVal) * chartH; }
+  function barY(val) { return padT + chartH - barH(val); }
+
   return (
-    <div className="card" style={{marginBottom:12}}>
-      <div className="card-header">
-        <span className="card-title">Shells fired {year}</span>
-        <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)'}}>{total.toLocaleString()} shells</span>
-      </div>
-      {total === 0 ? (
+    <div className="card" style={{marginBottom: isMini ? 0 : 12}}>
+      {!isMini && (
+        <div className="card-header">
+          <span className="card-title">Shells fired {year}</span>
+          <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)'}}>{total.toLocaleString()} shells</span>
+        </div>
+      )}
+      {total === 0 && !isMini ? (
         <div className="empty" style={{padding:'20px 0'}}>
           <div className="empty-text">No shell data for {year}.</div>
         </div>
       ) : (
-        <canvas ref={canvasRef} style={{width:'100%',height:'140px',display:'block'}} />
+        <div style={{position:'relative'}}>
+          {tooltip && (
+            <div style={{
+              position:'absolute', left:tooltip.x, top:tooltip.y,
+              transform:'translate(-50%,-110%)',
+              background:'#1e1e2e', border:'1px solid var(--accent)',
+              borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+              fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--accent)',
+              whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
+            }}>{tooltip.label}</div>
+          )}
+          <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
+            onMouseLeave={() => setTooltip(null)}
+            onTouchEnd={() => setTooltip(null)}>
+
+            {/* Grid lines */}
+            {!isMini && [0.5, 1].map(v => (
+              <g key={v}>
+                <line x1={padL} y1={padT + chartH - v*chartH} x2={W-padR} y2={padT + chartH - v*chartH}
+                  stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+                <text x={padL-3} y={padT + chartH - v*chartH + 3}
+                  textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">
+                  {Math.round(maxVal * v)}
+                </text>
+              </g>
+            ))}
+
+            {/* Bars */}
+            {monthlyData.map((val, i) => {
+              const isCur = i === currentMonth;
+              const isPast = i < currentMonth;
+              const bh = barH(val);
+              const bx = barX(i);
+              const by = barY(val);
+              const color = isCur ? 'var(--accent)' : isPast ? '#3a4a5a' : '#232330';
+              const labelColor = isCur ? 'var(--accent)' : '#6a6a88';
+              return (
+                <g key={i}
+                  onMouseEnter={e => val > 0 && setTooltip({ x: e.clientX - e.currentTarget.closest('svg').getBoundingClientRect().left, y: by - 2, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
+                  onTouchStart={e => val > 0 && setTooltip({ x: barX(i) + barW/2, y: by - 2, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
+                  style={{cursor: val > 0 ? 'pointer' : 'default'}}>
+                  {val > 0 && (
+                    <>
+                      <rect x={bx} y={by} width={barW} height={bh} fill={color} rx="2"/>
+                      {!isMini && (
+                        <text x={bx + barW/2} y={Math.min(by - 2, padT - 1)}
+                          textAnchor="middle" fill={labelColor}
+                          fontSize="7" fontFamily="DM Mono,monospace" fontWeight="bold">
+                          {val}
+                        </text>
+                      )}
+                    </>
+                  )}
+                  <text x={bx + barW/2} y={H - 4}
+                    textAnchor="middle" fill={labelColor} fontSize={isMini ? "7" : "8"} fontFamily="DM Mono,monospace">
+                    {MONTHS[i]}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          {isMini && (
+            <div style={{textAlign:'right',fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--accent)',marginTop:2}}>
+              {total.toLocaleString()} shells
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -719,6 +710,7 @@ function MunitionsChart({ sessions, year }) {
 const DEFAULT_BLOCKS = [
   { id: 'stats',   label: 'Stats',        visible: true },
   { id: 'shells',  label: 'Shells Fired', visible: true },
+  { id: 'score',   label: 'Score (mini)', visible: false },
   { id: 'recent',  label: 'Recent',       visible: true },
 ];
 
@@ -805,6 +797,7 @@ function Dashboard({ sessions, onSessionClick }) {
   }
 
   const blockContent = {
+    score: <ResultateChart sessions={sessions} variant="mini" />,
     stats: (
       <div className="stat-grid">
         <div className="stat-box"><div className="stat-val">{yearSessions.length}</div><div className="stat-label">Sessions {year}</div></div>
@@ -1075,253 +1068,208 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 /* ════════════════════════════════════════════════════════════════
    ANALYSE PAGE
 ════════════════════════════════════════════════════════════════ */
-function ResultateChart({ sessions }) {
-  const canvasRef = useRef(null);
+function useMonthlyAvg(data) {
+  const map = {};
+  data.forEach(s => {
+    const key = s.date.slice(0,7);
+    if (!map[key]) map[key] = { sum:0, count:0 };
+    map[key].sum += s.score/s.max*100;
+    map[key].count++;
+  });
+  return Object.entries(map).sort(([a],[b])=>a>b?1:-1).map(([key,v]) => ({
+    key,
+    avg: Math.round(v.sum/v.count*10)/10,
+    count: v.count,
+    label: new Date(key+'-15').toLocaleDateString('en-GB',{month:'short',year:'numeric'})
+  }));
+}
+
+function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'full' }) {
+  const [tooltip, setTooltip] = useState(null);
+  const isMini = variant === 'mini';
+
+  const W = 300, H = isMini ? 80 : 220;
+  const padL = isMini ? 0 : 30, padR = 8, padT = 12, padB = isMini ? 16 : 28;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  const allPts = [...(showComp ? compPts : []), ...(showTrain ? trainPts : [])];
+  if (allPts.length === 0) return null;
+
+  const allKeys = allPts.map(p=>p.key).sort();
+  const minYear = allKeys[0].slice(0,4);
+  const maxYear = allKeys[allKeys.length-1].slice(0,4);
+  const minDate = new Date(minYear+'-01-01');
+  const maxDate = new Date(maxYear+'-12-31');
+  const dateRange = Math.max(maxDate - minDate, 1);
+
+  const allVals = allPts.map(p=>p.avg);
+  const minY = Math.max(0, Math.min(...allVals) - 8);
+  const maxY = Math.min(100, Math.max(...allVals) + 4);
+  const yRange = maxY - minY || 1;
+
+  function toX(key) { return padL + ((new Date(key+'-15') - minDate) / dateRange) * chartW; }
+  function toY(v)   { return padT + chartH - ((v - minY) / yRange) * chartH; }
+
+  const allYears = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
+  const gridVals = [];
+  for (let v = Math.ceil(minY/25)*25; v <= maxY; v += 25) gridVals.push(v);
+
+  function lineD(pts) {
+    return pts.map((p,i) => `${i===0?'M':'L'}${toX(p.key).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
+  }
+  function areaD(pts) {
+    const base = padT + chartH;
+    return `M${toX(pts[0].key).toFixed(1)},${base} ` +
+      pts.map(p=>`L${toX(p.key).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ') +
+      ` L${toX(pts[pts.length-1].key).toFixed(1)},${base} Z`;
+  }
+
+  const lines = [
+    showComp && compPts.length > 0 && { pts: compPts, color: 'var(--accent2,#4ae8c8)', fill: 'rgba(74,232,200,0.10)' },
+    showTrain && trainPts.length > 0 && { pts: trainPts, color: 'var(--accent,#e8c84a)',  fill: 'rgba(232,200,74,0.08)'  },
+  ].filter(Boolean);
+
+  return (
+    <div style={{position:'relative'}}>
+      {tooltip && (
+        <div style={{
+          position:'absolute', left:tooltip.x+'px', top:(tooltip.y-8)+'px',
+          transform:'translate(-50%,-100%)',
+          background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
+          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, color:tooltip.color,
+          whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,.5)'
+        }}>{tooltip.label}</div>
+      )}
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
+        onMouseLeave={() => setTooltip(null)} onTouchEnd={() => setTooltip(null)}>
+
+        {/* Y grid + labels */}
+        {!isMini && gridVals.map(v => (
+          <g key={v}>
+            <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
+              stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+            <text x={padL-3} y={toY(v)+3} textAnchor="end"
+              fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+          </g>
+        ))}
+
+        {/* Year separators + labels */}
+        {allYears.map(yr => {
+          const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
+          const labelX = yr === minYear ? Math.max(x, padL+14) : x;
+          return (
+            <g key={yr}>
+              {x > padL+2 && x < W-padR-2 && (
+                <line x1={x} y1={padT} x2={x} y2={padT+chartH}
+                  stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/>
+              )}
+              <text x={labelX} y={H-4} textAnchor="middle"
+                fill="#9a9abb" fontSize={isMini?"7":"10"} fontWeight="bold" fontFamily="DM Mono,monospace">{yr}</text>
+            </g>
+          );
+        })}
+
+        {/* Area fills */}
+        {lines.map(({pts, fill}) => (
+          <path key={fill} d={areaD(pts)} fill={fill}/>
+        ))}
+
+        {/* Lines */}
+        {lines.map(({pts, color}) => (
+          <path key={color} d={lineD(pts)} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
+        ))}
+
+        {/* Dots + hit targets */}
+        {lines.map(({pts, color}) => pts.map(p => (
+          <circle key={p.key} cx={toX(p.key)} cy={toY(p.avg)} r={isMini ? 2 : 3.5}
+            fill={color} style={{cursor:'pointer'}}
+            onMouseEnter={e => {
+              const rect = e.currentTarget.closest('svg').getBoundingClientRect();
+              setTooltip({ x: toX(p.key) / W * rect.width, y: toY(p.avg) / H * rect.height, color, label:`${p.label}: ${p.avg}% (${p.count})` });
+            }}
+            onTouchStart={() => setTooltip({ x: toX(p.key), y: toY(p.avg), color, label:`${p.label}: ${p.avg}%` })}
+          />
+        )))}
+      </svg>
+      {!isMini && (
+        <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:.5,marginTop:2}}>Tap a point for details</div>
+      )}
+    </div>
+  );
+}
+
+function ResultateChart({ sessions, variant = 'full' }) {
   const [typeFilter, setTypeFilter] = useState('wettkampf');
-  const [disziplin, setDisziplin] = useState('alle');
-  const [tooltip, setTooltip] = useState(null); // { x, y, label, color }
-  const allPtsRef = useRef([]); // store drawn pts for hit-testing
+  const [disziplin, setDisziplin]   = useState('alle');
+  const isMini = variant === 'mini';
 
   const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
+  const base = sessions.filter(s=>s.max>0)
+    .filter(s=>disziplin==='alle'||s.disziplin===disziplin)
+    .sort((a,b)=>a.date>b.date?1:-1);
 
-  const base = sessions.filter(s => s.max > 0)
-    .filter(s => disziplin === 'alle' || s.disziplin === disziplin)
-    .sort((a,b) => a.date > b.date ? 1 : -1);
+  const wettkampf = base.filter(s=>s.type==='wettkampf');
+  const training  = base.filter(s=>s.type==='training');
+  const compPts   = useMonthlyAvg(wettkampf);
+  const trainPts  = useMonthlyAvg(training);
 
-  const wettkampf = base.filter(s => s.type === 'wettkampf');
-  const training  = base.filter(s => s.type === 'training');
-
+  const showComp  = typeFilter !== 'training';
+  const showTrain = typeFilter !== 'wettkampf';
   const currentYear = String(new Date().getFullYear());
-  function avgQuote(arr) {
+
+  function avgQ(arr) {
     const v = arr.filter(s=>s.max>0);
     return v.length ? Math.round(v.reduce((a,s)=>a+s.score/s.max*100,0)/v.length*10)/10 : null;
   }
-  const showComp  = typeFilter !== 'training';
-  const showTrain = typeFilter !== 'wettkampf';
-  const compYear  = avgQuote(wettkampf.filter(s=>s.date?.startsWith(currentYear)));
-  const compTotal = avgQuote(wettkampf);
-  const trainYear  = avgQuote(training.filter(s=>s.date?.startsWith(currentYear)));
-  const trainTotal = avgQuote(training);
+  const compYear  = avgQ(wettkampf.filter(s=>s.date?.startsWith(currentYear)));
+  const compTotal = avgQ(wettkampf);
+  const trainYear = avgQ(training.filter(s=>s.date?.startsWith(currentYear)));
+  const trainTotal= avgQ(training);
 
-  // Build monthly averages: { key:'2026-03', avg:82.3, count:4, label:'Mar 2026' }
-  function monthlyAvg(data) {
-    const map = {};
-    data.forEach(s => {
-      const key = s.date.slice(0,7); // "YYYY-MM"
-      if (!map[key]) map[key] = { sum:0, count:0 };
-      map[key].sum += s.score/s.max*100;
-      map[key].count++;
-    });
-    return Object.entries(map).sort(([a],[b])=>a>b?1:-1).map(([key,v]) => ({
-      key,
-      avg: Math.round(v.sum/v.count*10)/10,
-      count: v.count,
-      label: new Date(key+'-15').toLocaleDateString('en-GB',{month:'short',year:'numeric'})
-    }));
-  }
-
-  const drawChart = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth;
-    const H = 240;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, W, H);
-
-    const padL = 36, padR = 12, padT = 20, padB = 32;
-    const chartW = W - padL - padR;
-    const chartH = H - padT - padB;
-
-    const lines = [];
-    if (showComp && wettkampf.length > 0) lines.push({ pts: monthlyAvg(wettkampf), color: '#4ae8c8', fill: 'rgba(74,232,200,0.12)' });
-    if (showTrain && training.length > 0)  lines.push({ pts: monthlyAvg(training),  color: '#e8c84a', fill: 'rgba(232,200,74,0.10)' });
-
-    if (!lines.length || !lines.some(l=>l.pts.length>0)) return;
-
-    // X range: Jan 1 of earliest year → Dec 31 of latest year (data-driven only)
-    const allKeys = lines.flatMap(l=>l.pts.map(p=>p.key)).sort();
-    const minKey = allKeys[0], maxKey = allKeys[allKeys.length-1];
-    const minYear = minKey.slice(0,4);
-    const maxYear = maxKey.slice(0,4);
-    const minDate = new Date(minYear+'-01-01');
-    const maxDate = new Date(maxYear+'-12-31');
-    const dateRange = Math.max(maxDate - minDate, 1);
-
-    // Y range
-    const allVals = lines.flatMap(l=>l.pts.map(p=>p.avg));
-    const minY = Math.max(0, Math.min(...allVals) - 10);
-    const maxY = Math.min(100, Math.max(...allVals) + 5);
-    const yRange = maxY - minY || 1;
-
-    function toX(key) {
-      const d = new Date(key+'-15');
-      return padL + ((d - minDate) / dateRange) * chartW;
-    }
-    function toY(pct) { return padT + chartH - ((pct - minY) / yRange) * chartH; }
-
-    // Grid
-    const gridVals = [];
-    for (let v = Math.ceil(minY/25)*25; v <= maxY; v += 25) gridVals.push(v);
-    gridVals.forEach(v => {
-      const y = toY(v);
-      ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#6a6a88'; ctx.font = '9px DM Mono,monospace'; ctx.textAlign = 'right';
-      ctx.fillText(v+'%', padL-4, y+3);
-    });
-
-    // Year separators + prominent year label at bottom
-    // Show only years that have data
-    const allYearNums = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
-    allYearNums.forEach(yr => {
-      const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
-      // Show label if within chart bounds; first year label goes at left edge
-      const labelX = yr === minYear ? Math.max(x, padL + 16) : x;
-      if (x <= padL+chartW+10) {
-        if (x > padL+2 && x < padL+chartW-2) {
-          // Draw separator line only if not at edge
-          ctx.strokeStyle = '#3a3a5a'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
-          ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+chartH); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-        ctx.fillStyle = '#9a9abb'; ctx.font = 'bold 11px DM Mono,monospace'; ctx.textAlign = 'center';
-        ctx.fillText(yr, labelX, H-8);
-      }
-    });
-
-    // Store all drawn pts for hit-testing
-    const allDrawnPts = [];
-
-    // Draw lines
-    lines.forEach(({ pts, color, fill }) => {
-      if (pts.length === 0) return;
-      const mapped = pts.map(p => ({ x: toX(p.key), y: toY(p.avg), avg: p.avg, count: p.count, label: p.label, color }));
-
-      // Fill
-      ctx.beginPath();
-      ctx.moveTo(mapped[0].x, padT+chartH);
-      mapped.forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.lineTo(mapped[mapped.length-1].x, padT+chartH);
-      ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
-
-      // Line (smooth)
-      ctx.beginPath();
-      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-      mapped.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
-      ctx.stroke();
-
-      // Small filled dots
-      mapped.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
-        ctx.fillStyle = color; ctx.fill();
-        allDrawnPts.push(p);
-      });
-    });
-
-    allPtsRef.current = allDrawnPts;
-  }, [sessions, typeFilter, disziplin, showComp, showTrain]);
-
-  useEffect(() => { drawChart(); }, [drawChart]);
-
-  // Hit-test: find nearest point within 30px
-  function findNearest(canvasX, canvasY) {
-    let best = null, bestDist = 30;
-    allPtsRef.current.forEach(p => {
-      const dist = Math.hypot(p.x - canvasX, p.y - canvasY);
-      if (dist < bestDist) { bestDist = dist; best = p; }
-    });
-    return best;
-  }
-
-  function handlePointer(e) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const cx = (clientX - rect.left) * (canvas.width / rect.width / (window.devicePixelRatio||1));
-    const cy = (clientY - rect.top)  * (canvas.height / rect.height / (window.devicePixelRatio||1));
-    const pt = findNearest(cx, cy);
-    if (pt) {
-      // Position tooltip relative to card
-      const cardRect = canvas.parentElement.getBoundingClientRect();
-      setTooltip({
-        x: clientX - cardRect.left,
-        y: clientY - cardRect.top - 50,
-        label: `${pt.label}: ${pt.avg}% (${pt.count} session${pt.count>1?'s':''})`,
-        color: pt.color
-      });
-    } else {
-      setTooltip(null);
-    }
-  }
-
-  function handleLeave() { setTooltip(null); }
+  if (isMini) return (
+    <div className="card" style={{marginBottom:0}}>
+      <div className="card-header" style={{marginBottom:4}}>
+        <span className="card-title" style={{fontSize:12}}>Score</span>
+        {compTotal && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--accent2,#4ae8c8)'}}>{compYear??'–'}%</span>}
+      </div>
+      <ScoreLineChart compPts={compPts} trainPts={trainPts} showComp={true} showTrain={false} variant="mini"/>
+    </div>
+  );
 
   return (
     <div className="card">
       <div className="card-title" style={{marginBottom:12}}>Score</div>
-
       <div style={{display:'flex',gap:6,marginBottom:12}}>
         {[['wettkampf','🏆 Competition'],['training','🏋️ Practice'],['beide','Both']].map(([v,l]) => (
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`} onClick={()=>setTypeFilter(v)}>{l}</button>
         ))}
       </div>
-
       <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{marginBottom:12}}>
         <option value="alle">All disciplines</option>
         {disziplinen.map(d=><option key={d}>{d}</option>)}
       </select>
-
       {showComp && compTotal !== null && (
-        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent2)',marginBottom:6}}>
-          🏆 Ø {currentYear}: {compYear !== null ? compYear+'%' : '–'} | Ø All: {compTotal}%
+        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent2,#4ae8c8)',marginBottom:6}}>
+          🏆 Ø {currentYear}: {compYear??'–'}% | Ø All: {compTotal}%
         </div>
       )}
       {showTrain && trainTotal !== null && (
         <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)',marginBottom:6}}>
-          🏋️ Ø {currentYear}: {trainYear !== null ? trainYear+'%' : '–'} | Ø All: {trainTotal}%
+          🏋️ Ø {currentYear}: {trainYear??'–'}% | Ø All: {trainTotal}%
         </div>
       )}
-
       {base.length === 0 ? (
-        <div className="empty" style={{padding:'20px 0'}}>
-          <div className="empty-text">No results yet.</div>
-        </div>
+        <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>
       ) : (
-        <div style={{position:'relative'}}>
-          {tooltip && (
-            <div style={{
-              position:'absolute', left: tooltip.x, top: tooltip.y,
-              transform:'translate(-50%,-100%)',
-              background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
-              borderRadius:8, padding:'6px 10px', pointerEvents:'none',
-              fontFamily:'DM Mono,monospace', fontSize:11, color: tooltip.color,
-              whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
-            }}>{tooltip.label}</div>
-          )}
-          <canvas
-            ref={canvasRef}
-            style={{width:'100%',height:'240px',display:'block',marginTop:8,cursor:'crosshair'}}
-            onMouseMove={handlePointer}
-            onMouseLeave={handleLeave}
-            onTouchStart={handlePointer}
-            onTouchMove={handlePointer}
-            onTouchEnd={handleLeave}
-          />
-          <div style={{display:'flex',gap:16,marginTop:10,flexWrap:'wrap'}}>
-            {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#4ae8c8',borderRadius:2}}/><span style={{color:'#4ae8c8'}}>Competition</span></div>}
-            {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:20,height:3,background:'#e8c84a',borderRadius:2}}/><span style={{color:'#e8c84a'}}>Practice</span></div>}
+        <>
+          <ScoreLineChart compPts={compPts} trainPts={trainPts} showComp={showComp} showTrain={showTrain} variant="full"/>
+          <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
+            {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:'var(--accent2,#4ae8c8)',borderRadius:2}}/><span style={{color:'var(--accent2,#4ae8c8)'}}>Competition</span></div>}
+            {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:'var(--accent)',borderRadius:2}}/><span style={{color:'var(--accent)'}}>Practice</span></div>}
           </div>
-          <div style={{fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--muted)',marginTop:6,opacity:0.6}}>
-            Tap a point to see details
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
