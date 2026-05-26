@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v39';
+const APP_VERSION = 'v41';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -613,9 +613,157 @@ function SessionItem({ s, compact, onClick }) {
 /* ════════════════════════════════════════════════════════════════
    DASHBOARD
 ════════════════════════════════════════════════════════════════ */
+function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, year, scale }) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [tooltip, setTooltip] = useState(null);
+  const H = 14; // height per row in viewBox units
+  const GAP = 3;
+  const ROW = H + GAP;
+  const W = 260;
+  const padL = 28, padR = 50, padT = 4, padB = 4;
+  const chartW = W - padL - padR;
+  const totalH = padT + 12 * ROW + padB;
+
+  return (
+    <div style={{position:'relative'}}>
+      {tooltip && (
+        <div style={{
+          position:'absolute', left:tooltip.x, top:tooltip.y,
+          transform:'translate(-50%,-110%)',
+          background:'#1e1e2e', border:'1px solid var(--accent)',
+          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--accent)',
+          whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
+        }}>{tooltip.label}</div>
+      )}
+      <svg viewBox={`0 0 ${W} ${totalH}`} style={{width:'100%',display:'block'}}>
+        {monthlyData.map((val, i) => {
+          const isCur = i === currentMonth;
+          const isPast = i <= currentMonth;
+          const bw = maxVal > 0 ? (val / maxVal) * chartW : 0;
+          const y = padT + i * ROW;
+          const color = isCur ? 'var(--accent)' : isPast ? '#3a4a5a' : '#1e1e2a';
+          const labelColor = isCur ? 'var(--accent)' : val > 0 ? '#9a9abb' : '#3a3a4a';
+          return (
+            <g key={i} style={{cursor: val>0?'pointer':'default'}}
+              onMouseEnter={() => val>0 && setTooltip({x: (padL+bw/2)*1, y: y*1, label:`${MONTHS[i]}: ${val.toLocaleString()}`})}
+              onTouchStart={() => val>0 && setTooltip({x: padL+bw/2, y, label:`${MONTHS[i]}: ${val.toLocaleString()}`})}
+              onMouseLeave={() => setTooltip(null)}>
+              {/* Month label */}
+              <text x={padL-3} y={y + H*0.75} textAnchor="end"
+                fill={labelColor} fontSize={8.5} fontFamily="DM Mono,monospace"
+                fontWeight={isCur ? 'bold' : 'normal'}>
+                {MONTHS[i]}
+              </text>
+              {/* Background track */}
+              <rect x={padL} y={y+1} width={chartW} height={H-2} fill="#1a1a24" rx="3"/>
+              {/* Bar */}
+              {val > 0 && <rect x={padL} y={y+1} width={bw} height={H-2} fill={color} rx="3"/>}
+              {/* Value */}
+              <text x={padL + chartW + 4} y={y + H*0.75} textAnchor="start"
+                fill={labelColor} fontSize={8.5} fontFamily="DM Mono,monospace" fontWeight="bold">
+                {val > 0 ? val.toLocaleString() : '–'}
+              </text>
+              {/* Current month dot */}
+              {isCur && <circle cx={padL - 12} cy={y + H/2} r="2.5" fill="var(--accent)"/>}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year, scale }) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [active, setActive] = useState(null);
+
+  // 4 cols × 3 rows grid
+  const COLS = 4, ROWS = 3;
+  const W = 260, H = 140;
+  const padL = 4, padR = 4, padT = 4, padB = 4;
+  const cellW = (W - padL - padR) / COLS;
+  const cellH = (H - padT - padB) / ROWS;
+
+  function getColor(val) {
+    if (val === 0) return '#1a1a24';
+    const intensity = val / maxVal;
+    // interpolate from dim to accent
+    const r1=26,g1=26,b1=36; // dark base
+    // parse accent color — use a fixed warm gold as fallback
+    const r2=240,g2=180,b2=50;
+    const r = Math.round(r1 + (r2-r1)*intensity);
+    const g = Math.round(g1 + (g2-g1)*intensity);
+    const b = Math.round(b1 + (b2-b1)*intensity);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  return (
+    <div style={{position:'relative'}}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block'}}>
+        {monthlyData.map((val, i) => {
+          const col = i % COLS;
+          const row = Math.floor(i / COLS);
+          const x = padL + col * cellW;
+          const y = padT + row * cellH;
+          const isCur = i === currentMonth;
+          const isActive = active === i;
+          const fillColor = getColor(val);
+          const textColor = val/maxVal > 0.5 ? '#0a0a0c' : '#9a9abb';
+
+          return (
+            <g key={i}
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              onTouchStart={() => setActive(active===i ? null : i)}
+              style={{cursor:'pointer'}}>
+              {/* Cell background */}
+              <rect x={x+2} y={y+2} width={cellW-4} height={cellH-4}
+                fill={fillColor} rx="6"
+                stroke={isCur ? 'var(--accent)' : 'transparent'}
+                strokeWidth="1.5"/>
+              {/* Month label */}
+              <text x={x + cellW/2} y={y + cellH*0.38}
+                textAnchor="middle" fill={val>0 ? textColor : '#3a3a5a'}
+                fontSize="8" fontFamily="DM Mono,monospace">
+                {MONTHS[i]}
+              </text>
+              {/* Value or placeholder */}
+              <text x={x + cellW/2} y={y + cellH*0.72}
+                textAnchor="middle"
+                fill={val>0 ? (val/maxVal>0.5 ? '#0a0a0c' : 'var(--accent)') : '#2a2a3a'}
+                fontSize={isActive ? "9" : "8"} fontWeight="bold"
+                fontFamily="DM Mono,monospace">
+                {val > 0 ? val.toLocaleString() : '·'}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      {/* Colour scale legend */}
+      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,justifyContent:'flex-end'}}>
+        <span style={{fontSize:9,color:'#6a6a88',fontFamily:'DM Mono,monospace'}}>0</span>
+        <svg width="60" height="8" style={{borderRadius:4,overflow:'hidden'}}>
+          <defs>
+            <linearGradient id="heatGrad" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#1a1a24"/>
+              <stop offset="100%" stopColor="rgb(240,180,50)"/>
+            </linearGradient>
+          </defs>
+          <rect width="60" height="8" fill="url(#heatGrad)" rx="2"/>
+        </svg>
+        <span style={{fontSize:9,color:'#6a6a88',fontFamily:'DM Mono,monospace'}}>{maxVal.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
 function MunitionsChart({ sessions, year, variant = 'full' }) {
   const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
   const [tooltip, setTooltip] = useState(null);
+  const [chartType, setChartType] = useState(() => {
+    try { return localStorage.getItem('claylog_shellchart') || 'horizontal'; } catch { return 'horizontal'; }
+  });
 
   const monthlyData = Array(12).fill(0);
   sessions.filter(s => (s.date||'').startsWith(year))
@@ -627,116 +775,56 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
   const maxVal = Math.max(...monthlyData, 1);
   const currentMonth = new Date().getMonth();
   const total = monthlyData.reduce((a,v) => a+v, 0);
-
-  const isMini = variant === 'mini';
   const scale = loadFontScale().factor;
+  const isMini = variant === 'mini';
 
-  // Fixed bar width regardless of screen — chart scrolls horizontally
-  const BAR_SLOT = 28;         // px per month in viewBox units
-  const H = isMini ? 80 : 150;
-  const padL = isMini ? 0 : 32, padR = 8, padT = isMini ? 8 : 22, padB = isMini ? 14 : 24;
-  const W = padL + 12 * BAR_SLOT + padR;  // total viewBox width
-  const chartH = H - padT - padB;
-  const barW = BAR_SLOT * 0.62;
+  function setType(t) {
+    setChartType(t);
+    try { localStorage.setItem('claylog_shellchart', t); } catch {}
+  }
 
-  function barX(i) { return padL + i * BAR_SLOT + (BAR_SLOT - barW) / 2; }
-  function barH(val) { return (val / maxVal) * chartH; }
-  function barY(val) { return padT + chartH - barH(val); }
-
-  // Render at a fixed pixel width so it overflows and scrolls
-  const PX_PER_UNIT = isMini ? 1.8 : 2.6 * scale;
-  const svgPxWidth = W * PX_PER_UNIT;
+  if (isMini) {
+    // Mini: simple heatmap, no controls
+    return (
+      <div className="card" style={{marginBottom:0}}>
+        <div className="card-header" style={{marginBottom:4}}>
+          <span className="card-title" style={{fontSize:12}}>Shells {year}</span>
+          <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--accent)'}}>{total.toLocaleString()}</span>
+        </div>
+        <MunitionsChartHeatmap monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year} scale={scale}/>
+      </div>
+    );
+  }
 
   return (
-    <div className="card" style={{marginBottom: isMini ? 0 : 12}}>
-      {!isMini && (
-        <div className="card-header">
-          <span className="card-title">Shells fired {year}</span>
-          <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)'}}>{total.toLocaleString()} shells</span>
-        </div>
-      )}
-      {total === 0 && !isMini ? (
+    <div className="card" style={{marginBottom:12}}>
+      <div className="card-header">
+        <span className="card-title">Shells fired {year}</span>
+        <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)'}}>{total.toLocaleString()} shells</span>
+      </div>
+
+      {/* Chart type toggle */}
+      <div style={{display:'flex',gap:6,marginBottom:10}}>
+        {[['horizontal','≡ Bars'],['heatmap','⬛ Heatmap']].map(([t,l]) => (
+          <button key={t}
+            className={`analyse-tab ${chartType===t?'active':''}`}
+            style={{fontSize:11,padding:'4px 10px'}}
+            onClick={() => setType(t)}>{l}</button>
+        ))}
+      </div>
+
+      {total === 0 ? (
         <div className="empty" style={{padding:'20px 0'}}>
           <div className="empty-text">No shell data for {year}.</div>
         </div>
+      ) : chartType === 'horizontal' ? (
+        <MunitionsChartHorizontal monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year} scale={scale}/>
       ) : (
-        <div style={{overflowX:'auto', overflowY:'visible', WebkitOverflowScrolling:'touch', position:'relative', paddingBottom: 2}}>
-          {tooltip && (
-            <div style={{
-              position:'absolute', left:tooltip.x, top:tooltip.y,
-              transform:'translate(-50%,-110%)',
-              background:'#1e1e2e', border:'1px solid var(--accent)',
-              borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-              fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--accent)',
-              whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
-            }}>{tooltip.label}</div>
-          )}
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            width={svgPxWidth}
-            height={H * PX_PER_UNIT}
-            style={{display:'block', minWidth: svgPxWidth, overflow:'visible'}}
-            onMouseLeave={() => setTooltip(null)}
-            onTouchEnd={() => setTooltip(null)}>
-
-            {/* Grid lines */}
-            {!isMini && [0.5, 1].map(v => (
-              <g key={v}>
-                <line x1={padL} y1={padT + chartH - v*chartH} x2={W-padR} y2={padT + chartH - v*chartH}
-                  stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-                <text x={padL-3} y={padT + chartH - v*chartH + 3}
-                  textAnchor="end" fill="#6a6a88" fontSize={9} fontFamily="DM Mono,monospace">
-                  {Math.round(maxVal * v)}
-                </text>
-              </g>
-            ))}
-
-            {/* Bars */}
-            {monthlyData.map((val, i) => {
-              const isCur = i === currentMonth;
-              const isPast = i < currentMonth;
-              const bh = barH(val);
-              const bx = barX(i);
-              const by = barY(val);
-              const color = isCur ? 'var(--accent)' : isPast ? '#3a4a5a' : '#232330';
-              const labelColor = isCur ? 'var(--accent)' : '#6a6a88';
-              return (
-                <g key={i}
-                  onMouseEnter={() => val > 0 && setTooltip({ x: (bx + barW/2) * PX_PER_UNIT, y: by * PX_PER_UNIT, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
-                  onTouchStart={() => val > 0 && setTooltip({ x: (bx + barW/2) * PX_PER_UNIT, y: by * PX_PER_UNIT, label: `${MONTHS[i]}: ${val.toLocaleString()}` })}
-                  style={{cursor: val > 0 ? 'pointer' : 'default'}}>
-                  {val > 0 && (
-                    <>
-                      <rect x={bx} y={by} width={barW} height={bh} fill={color} rx="2"/>
-                      {!isMini && (
-                        <text x={bx + barW/2} y={Math.min(by - 3, padT - 2)}
-                          textAnchor="middle" fill={labelColor}
-                          fontSize={10} fontFamily="DM Mono,monospace" fontWeight="bold">
-                          {val.toLocaleString()}
-                        </text>
-                      )}
-                    </>
-                  )}
-                  <text x={bx + barW/2} y={H - 5}
-                    textAnchor="middle" fill={labelColor}
-                    fontSize={isMini ? 7 : 9} fontFamily="DM Mono,monospace">
-                    {MONTHS[i]}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-          {isMini && (
-            <div style={{textAlign:'right',fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--accent)',marginTop:2}}>
-              {total.toLocaleString()} shells
-            </div>
-          )}
-        </div>
+        <MunitionsChartHeatmap monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year} scale={scale}/>
       )}
     </div>
   );
 }
-
 // ── Dashboard block definitions ──────────────────────────────
 const DEFAULT_BLOCKS = [
   { id: 'stats',   label: 'Stats',        visible: true },
