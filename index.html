@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v42';
+const APP_VERSION = 'v43';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -622,8 +622,8 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
   const cumData = monthlyData.map(v => { cum += v; return cum; });
   const cumMax = Math.max(cumData[cumData.length-1], 1);
 
-  // Only draw up to current month (or last month with data)
-  const lastIdx = Math.min(currentMonth, 11);
+  // Draw up to last month that has any data
+  const lastIdx = monthlyData.reduce((last, v, i) => v > 0 ? i : last, 0);
 
   const W = 280, H = 130;
   const padL = 8, padR = 8, padT = 16, padB = 22;
@@ -640,11 +640,15 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
     ? `M${toX(0)},${padT+chartH} ` + pts.map(p=>`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${toX(lastIdx)},${padT+chartH} Z`
     : '';
 
-  // Y axis: 3-4 nice round grid lines
+  // Y axis: exactly 3 clean grid lines (25%, 50%, 75% of max, rounded nicely)
   function niceGridVals(max) {
-    const step = Math.pow(10, Math.floor(Math.log10(max))) / 2;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+    const step = magnitude >= max / 3 ? magnitude / 2 : magnitude;
     const vals = [];
-    for (let v = step; v < max; v += step) vals.push(Math.round(v));
+    for (let v = step; v < max * 0.95; v += step) {
+      vals.push(Math.round(v / step) * step);
+      if (vals.length >= 3) break;
+    }
     return vals;
   }
   const gridVals = niceGridVals(cumMax);
