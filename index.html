@@ -298,8 +298,8 @@ const THEMES = [
 function loadTheme() {
   try {
     const saved = localStorage.getItem('claylog_theme');
-    return saved ? JSON.parse(saved) : { id:'mint', accent:'#4ae8c8', accent2:'#e8c84a' };
-  } catch { return { id:'mint', accent:'#4ae8c8', accent2:'#e8c84a' }; }
+    return saved ? JSON.parse(saved) : { id:'gold', accent:'#f0c030', accent2:'#e87a4a' };
+  } catch { return { id:'gold', accent:'#f0c030', accent2:'#e87a4a' }; }
 }
 
 function applyTheme(accent, accent2) {
@@ -514,7 +514,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
