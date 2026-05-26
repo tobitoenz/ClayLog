@@ -21,6 +21,7 @@
 <style>
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 :root {
+  --font-scale: 1;
   --bg: #0a0a0c;
   --surface: #13131a;
   --card: #1a1a24;
@@ -286,6 +287,26 @@ canvas { width: 100% !important; }
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
+// ── Font scale system ────────────────────────────────────────
+const FONT_SCALES = [
+  { id:'normal', label:'Normal', factor:1.0 },
+  { id:'large',  label:'Large',  factor:1.25 },
+  { id:'xlarge', label:'X-Large',factor:1.5 },
+];
+
+function loadFontScale() {
+  try { return JSON.parse(localStorage.getItem('claylog_fontscale') || '{"id":"normal","factor":1.0}'); }
+  catch { return { id:'normal', factor:1.0 }; }
+}
+
+function applyFontScale(factor) {
+  // Scale body font and SVG chart labels via CSS custom property
+  document.documentElement.style.setProperty('--font-scale', factor);
+  document.documentElement.style.fontSize = (16 * factor) + 'px';
+}
+
+(function() { applyFontScale(loadFontScale().factor); })();
+
 // ── Theme system ──────────────────────────────────────────────
 const THEMES = [
   { id:'mint',   label:'Mint',   accent:'#4ae8c8', accent2:'#e8c84a' },
@@ -515,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v37';
+const APP_VERSION = 'v38';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -655,7 +676,7 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
                 <line x1={padL} y1={padT + chartH - v*chartH} x2={W-padR} y2={padT + chartH - v*chartH}
                   stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
                 <text x={padL-3} y={padT + chartH - v*chartH + 3}
-                  textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">
+                  textAnchor="end" fill="#6a6a88" fontSize={8 * (loadFontScale().factor)} fontFamily="DM Mono,monospace">
                   {Math.round(maxVal * v)}
                 </text>
               </g>
@@ -681,14 +702,14 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
                       {!isMini && (
                         <text x={bx + barW/2} y={Math.min(by - 2, padT - 1)}
                           textAnchor="middle" fill={labelColor}
-                          fontSize="7" fontFamily="DM Mono,monospace" fontWeight="bold">
+                          fontSize={9 * (loadFontScale().factor)} fontFamily="DM Mono,monospace" fontWeight="bold">
                           {val}
                         </text>
                       )}
                     </>
                   )}
                   <text x={bx + barW/2} y={H - 4}
-                    textAnchor="middle" fill={labelColor} fontSize={isMini ? "7" : "8"} fontFamily="DM Mono,monospace">
+                    textAnchor="middle" fill={labelColor} fontSize={isMini ? 7 : 8 * (loadFontScale().factor)} fontFamily="DM Mono,monospace">
                     {MONTHS[i]}
                   </text>
                 </g>
@@ -1100,7 +1121,10 @@ function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'ful
   const minYear = allKeys[0].slice(0,4);
   const maxYear = allKeys[allKeys.length-1].slice(0,4);
   const minDate = new Date(minYear+'-01-01');
-  const maxDate = new Date(maxYear+'-12-31');
+  // Extend just 1 month past last data point (no big empty right gap)
+  const lastKey = allKeys[allKeys.length-1];
+  const maxDate = new Date(lastKey+'-15');
+  maxDate.setMonth(maxDate.getMonth()+1);
   const dateRange = Math.max(maxDate - minDate, 1);
 
   const allVals = allPts.map(p=>p.avg);
@@ -1531,6 +1555,34 @@ function AnalysePage({ sessions }) {
 /* ════════════════════════════════════════════════════════════════
    SETTINGS PAGE
 ════════════════════════════════════════════════════════════════ */
+function FontScaleSettings() {
+  const [current, setCurrent] = useState(() => loadFontScale());
+  function select(scale) {
+    setCurrent(scale);
+    applyFontScale(scale.factor);
+    localStorage.setItem('claylog_fontscale', JSON.stringify(scale));
+    // Force re-render of charts by triggering a small state change
+    window.dispatchEvent(new Event('fontscalechange'));
+  }
+  return (
+    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      {FONT_SCALES.map(s => (
+        <div key={s.id} onClick={() => select(s)} style={{
+          cursor:'pointer', borderRadius:10, padding:'8px 16px',
+          border: current.id===s.id ? '2px solid var(--accent)' : '2px solid var(--border)',
+          background: current.id===s.id ? 'rgba(255,255,255,0.06)' : 'var(--surface)',
+          fontSize: s.id==='normal' ? 13 : s.id==='large' ? 15 : 18,
+          fontFamily:'DM Sans,sans-serif',
+          color: current.id===s.id ? 'var(--accent)' : 'var(--text)',
+          fontWeight:600, transition:'all .15s'
+        }}>
+          {s.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AppearanceSettings() {
   const [current, setCurrent] = useState(() => loadTheme());
 
@@ -1572,7 +1624,10 @@ function AppearanceSettings() {
         ))}
       </div>
 
-      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>CUSTOM COLORS</div>
+      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10,marginTop:4}}>TEXT SIZE</div>
+      <FontScaleSettings />
+
+      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10,marginTop:16}}>CUSTOM COLORS</div>
       <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <label style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',margin:0}}>Primary</label>
