@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v46';
+const APP_VERSION = 'v47';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -915,7 +915,7 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
     <div className="card" style={{marginBottom:12}}>
       <div className="card-header">
         <span className="card-title">Shells fired {year}</span>
-        <span style={{fontFamily:'DM Mono,monospace',fontSize:24,fontWeight:700,color:'var(--accent)',letterSpacing:0.5}}>{total.toLocaleString()} shells</span>
+        <span style={{fontFamily:'DM Mono,monospace',fontSize:20,fontWeight:400,color:'var(--accent)',letterSpacing:0.5}}>{total.toLocaleString()} shells</span>
       </div>
 
       {/* Chart type toggle */}
