@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v55';
+const APP_VERSION = 'v56';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1281,8 +1281,8 @@ function useIndividualPts(data) {
 
 function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const isMini = variant === 'mini';
-  const [viewMode, setViewMode] = useState('overlapped'); // 'overlapped' | 'timeline'
-  const [typeFilter, setTypeFilter] = useState('alle');   // 'alle' | 'wettkampf' | 'training'
+  const [viewMode, setViewMode] = useState('overlapped');
+  const [typeFilter, setTypeFilter] = useState('wettkampf');
   const [disziplin, setDisziplin] = useState('alle');
 
   const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
@@ -1294,8 +1294,14 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const currentYear = String(new Date().getFullYear());
   const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
   const allYears = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
-  const [activeYears, setActiveYears] = useState(allYears);
-  useEffect(() => { setActiveYears(prev => allYears.filter(y => prev.includes(y) || prev.length===0)); }, [sessions.length]);
+  const [activeYears, setActiveYears] = useState([currentYear]);
+  useEffect(() => {
+    setActiveYears(prev => {
+      // Keep existing selection, but ensure currentYear is included if it exists
+      const valid = allYears.filter(y => prev.includes(y));
+      return valid.length > 0 ? valid : [currentYear];
+    });
+  }, [sessions.length]);
 
   function toggleYear(y) {
     setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
