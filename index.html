@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v47';
+const APP_VERSION = 'v48';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -615,7 +615,6 @@ function SessionItem({ s, compact, onClick }) {
 ════════════════════════════════════════════════════════════════ */
 function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, year }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const [tooltip, setTooltip] = useState(null);
 
   // Build cumulative data
   let cum = 0;
@@ -650,18 +649,7 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
 
   return (
     <div style={{position:'relative'}}>
-      {tooltip && (
-        <div style={{
-          position:'absolute', left:tooltip.x, top:tooltip.y,
-          transform:'translate(-50%,-120%)',
-          background:'#1e1e2e', border:'1px solid var(--accent)',
-          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-          fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--accent)',
-          whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
-        }}>{tooltip.label}</div>
-      )}
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
-        onMouseLeave={() => setTooltip(null)} onTouchEnd={() => setTooltip(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
 
         {/* Grid lines */}
         {gridVals.map(v => (
@@ -700,16 +688,6 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
           return (
             <circle key={i} cx={p.x} cy={p.y} r={isCur ? 4 : 3}
               fill={isCur ? 'var(--accent)' : 'var(--accent2,#4ae8c8)'}
-              style={{cursor:'pointer'}}
-              onMouseEnter={e => {
-                const rect = e.currentTarget.closest('svg').getBoundingClientRect();
-                setTooltip({
-                  x: p.x / W * rect.width,
-                  y: p.y / H * rect.height,
-                  label: `${MONTHS[p.i]}: ${p.v.toLocaleString()} total`
-                });
-              }}
-              onTouchStart={() => setTooltip({ x: p.x/W*200, y: p.y/H*100, label:`${MONTHS[p.i]}: ${p.v.toLocaleString()} total`})}
             />
           );
         })}
@@ -730,7 +708,6 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
 
 function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, year, scale }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const [tooltip, setTooltip] = useState(null);
   const H = 14; // height per row in viewBox units
   const GAP = 3;
   const ROW = H + GAP;
@@ -741,16 +718,6 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
 
   return (
     <div style={{position:'relative'}}>
-      {tooltip && (
-        <div style={{
-          position:'absolute', left:tooltip.x, top:tooltip.y,
-          transform:'translate(-50%,-110%)',
-          background:'#1e1e2e', border:'1px solid var(--accent)',
-          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-          fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--accent)',
-          whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,0.5)'
-        }}>{tooltip.label}</div>
-      )}
       <svg viewBox={`0 0 ${W} ${totalH}`} style={{width:'100%',display:'block'}}>
         {monthlyData.map((val, i) => {
           const isCur = i === currentMonth;
@@ -760,10 +727,7 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
           const color = isCur ? 'var(--accent)' : isPast ? '#3a4a5a' : '#1e1e2a';
           const labelColor = isCur ? 'var(--accent)' : val > 0 ? '#9a9abb' : '#3a3a4a';
           return (
-            <g key={i} style={{cursor: val>0?'pointer':'default'}}
-              onMouseEnter={() => val>0 && setTooltip({x: (padL+bw/2)*1, y: y*1, label:`${MONTHS[i]}: ${val.toLocaleString()}`})}
-              onTouchStart={() => val>0 && setTooltip({x: padL+bw/2, y, label:`${MONTHS[i]}: ${val.toLocaleString()}`})}
-              onMouseLeave={() => setTooltip(null)}>
+            <g key={i}>
               {/* Month label */}
               <text x={padL-3} y={y + H*0.75} textAnchor="end"
                 fill={labelColor} fontSize={8.5} fontFamily="DM Mono,monospace"
@@ -875,7 +839,6 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year,
 
 function MunitionsChart({ sessions, year, variant = 'full' }) {
   const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-  const [tooltip, setTooltip] = useState(null);
   const [chartType, setChartType] = useState(() => {
     try { return localStorage.getItem('claylog_shellchart') || 'cumulative'; } catch { return 'cumulative'; }
   });
@@ -1321,7 +1284,6 @@ function useMonthlyAvg(data) {
 }
 
 function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'full' }) {
-  const [tooltip, setTooltip] = useState(null);
   const isMini = variant === 'mini';
 
   const W = 300, H = isMini ? 80 : 220;
@@ -1371,18 +1333,7 @@ function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'ful
 
   return (
     <div style={{position:'relative'}}>
-      {tooltip && (
-        <div style={{
-          position:'absolute', left:tooltip.x+'px', top:(tooltip.y-8)+'px',
-          transform:'translate(-50%,-100%)',
-          background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
-          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-          fontFamily:'DM Mono,monospace', fontSize:11, color:tooltip.color,
-          whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,.5)'
-        }}>{tooltip.label}</div>
-      )}
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
-        onMouseLeave={() => setTooltip(null)} onTouchEnd={() => setTooltip(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
 
         {/* Y grid + labels */}
         {!isMini && gridVals.map(v => (
@@ -1423,17 +1374,12 @@ function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'ful
         {/* Dots + hit targets */}
         {lines.map(({pts, color}) => pts.map(p => (
           <circle key={p.key} cx={toX(p.key)} cy={toY(p.avg)} r={isMini ? 2 : 3.5}
-            fill={color} style={{cursor:'pointer'}}
-            onMouseEnter={e => {
-              const rect = e.currentTarget.closest('svg').getBoundingClientRect();
-              setTooltip({ x: toX(p.key) / W * rect.width, y: toY(p.avg) / H * rect.height, color, label:`${p.label}: ${p.avg}% (${p.count})` });
-            }}
-            onTouchStart={() => setTooltip({ x: toX(p.key), y: toY(p.avg), color, label:`${p.label}: ${p.avg}%` })}
+            fill={color}
           />
         )))}
       </svg>
       {!isMini && (
-        <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:.5,marginTop:2}}>Tap a point for details</div>
+        <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:.5,marginTop:2}}></div>
       )}
     </div>
   );
@@ -1522,7 +1468,6 @@ function JahresvergleichChart({ sessions }) {
   const allDisziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
   const [activeYears, setActiveYears] = useState(allYears);
   const [disziplin, setDisziplin] = useState('alle');
-  const [tooltip, setTooltip] = useState(null);
 
   useEffect(() => { setActiveYears(allYears); }, [sessions.length]);
 
@@ -1585,18 +1530,7 @@ function JahresvergleichChart({ sessions }) {
         ) : (
           <>
             <div style={{position:'relative'}}>
-              {tooltip && (
-                <div style={{
-                  position:'absolute', left:tooltip.x+'px', top:(tooltip.y-8)+'px',
-                  transform:'translate(-50%,-100%)',
-                  background:'#1e1e2e', border:`1px solid ${tooltip.color}`,
-                  borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-                  fontFamily:'DM Mono,monospace', fontSize:11, color:tooltip.color,
-                  whiteSpace:'nowrap', zIndex:10, boxShadow:'0 4px 16px rgba(0,0,0,.5)'
-                }}>{tooltip.label}</div>
-              )}
-              <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}
-                onMouseLeave={()=>setTooltip(null)} onTouchEnd={()=>setTooltip(null)}>
+              <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
 
                 {/* Y grid */}
                 {[0,25,50,75,100].map(v => (
@@ -1625,17 +1559,7 @@ function JahresvergleichChart({ sessions }) {
                       <path d={lineD(pts)} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
                       {pts.map(p => (
                         <circle key={p.m} cx={toX(p.m)} cy={toY(p.avg)} r="4"
-                          fill={color} style={{cursor:'pointer'}}
-                          onMouseEnter={e => {
-                            const rect = e.currentTarget.closest('svg').getBoundingClientRect();
-                            setTooltip({
-                              x: toX(p.m)/W*rect.width,
-                              y: toY(p.avg)/H*rect.height,
-                              color,
-                              label: `${year} ${MONTHS[p.m]}: ${p.avg}%`
-                            });
-                          }}
-                          onTouchStart={() => setTooltip({ x: toX(p.m), y: toY(p.avg), color, label:`${year} ${MONTHS[p.m]}: ${p.avg}%` })}
+                          fill={color}
                         />
                       ))}
                     </g>
