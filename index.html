@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v52';
+const APP_VERSION = 'v53';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1787,9 +1787,6 @@ function AppearanceSettings() {
         ))}
       </div>
 
-      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10,marginTop:4}}>TEXT SIZE</div>
-      <FontScaleSettings />
-
       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10,marginTop:16}}>CUSTOM COLORS</div>
       <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -1854,18 +1851,6 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
   return (
     <div>
       <AppearanceSettings />
-      <div className="card">
-        <div className="card-title" style={{marginBottom:16}}>Account</div>
-        <div className="form-group">
-          <label>Name</label>
-          <input type="text" value={name} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
-        </div>
-        <div className="form-group">
-          <label>Email</label>
-          <input type="text" value={email} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
-        </div>
-        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onSignOut}>🚪 Sign out</button>
-      </div>
 
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>🎯 Custom Disciplines</div>
@@ -1942,6 +1927,19 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card">
+        <div className="card-title" style={{marginBottom:16}}>Account</div>
+        <div className="form-group">
+          <label>Name</label>
+          <input type="text" value={name} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
+        </div>
+        <div className="form-group">
+          <label>Email</label>
+          <input type="text" value={email} readOnly style={{background:'var(--surface)',borderLeftColor:'var(--border)',color:'var(--muted)',cursor:'default'}} />
+        </div>
+        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onSignOut}>🚪 Sign out</button>
       </div>
 
       <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v1.2 · Cloud sync</p>
