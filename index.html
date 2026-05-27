@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v56';
+const APP_VERSION = 'v57';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1328,9 +1328,9 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const trainYear = avgQ(trainAll.filter(p=>p.year===currentYear));
   const trainTotal= avgQ(trainAll);
 
-  // Mini variant — just a small timeline chart, comp only
+  // Mini variant — current year only, comp only
   if (isMini) {
-    const pts = compAll;
+    const pts = compAll.filter(p => p.year === currentYear);
     if (!pts.length) return null;
     const W=300, H=80, padL=0, padR=4, padT=6, padB=14;
     const cW=W-padL-padR, cH=H-padT-padB;
@@ -1342,22 +1342,13 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     const minY=Math.max(0,Math.min(...vals)-8), maxY=Math.min(100,Math.max(...vals)+4), yR=maxY-minY||1;
     const tx = d => padL + ((new Date(d)-minD)/range)*cW;
     const ty = v => padT + cH - ((v-minY)/yR)*cH;
-    const years = [...new Set(pts.map(p=>p.year))].sort();
     return (
       <div className="card" style={{marginBottom:0}}>
         <div className="card-header" style={{marginBottom:4}}>
-          <span className="card-title" style={{fontSize:12}}>Score</span>
-          {compTotal && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear??'–'}%</span>}
+          <span className="card-title" style={{fontSize:12}}>Score {currentYear}</span>
+          {compYear && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear}%</span>}
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
-          {years.map(yr => {
-            const x = padL+((new Date(yr+'-01-01')-minD)/range)*cW;
-            return x>2&&x<W-2 ? <line key={yr} x1={x} y1={padT} x2={x} y2={padT+cH} stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/> : null;
-          })}
-          {years.map(yr => {
-            const x = padL+((new Date(yr+'-01-01')-minD)/range)*cW;
-            return <text key={yr} x={Math.max(x,8)} y={H-2} textAnchor="middle" fill="#6a6a88" fontSize="7" fontFamily="DM Mono,monospace">{yr}</text>;
-          })}
           <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
             fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>
           {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2" fill={COMP_COLOR}/>)}
