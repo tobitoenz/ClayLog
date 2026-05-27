@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v57';
+const APP_VERSION = 'v58';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1332,7 +1332,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   if (isMini) {
     const pts = compAll.filter(p => p.year === currentYear);
     if (!pts.length) return null;
-    const W=300, H=80, padL=0, padR=4, padT=6, padB=14;
+    const W=300, H=80, padL=4, padR=4, padT=4, padB=4;
     const cW=W-padL-padR, cH=H-padT-padB;
     const dates = pts.map(p=>new Date(p.date));
     const minD = new Date(Math.min(...dates)); minD.setDate(1);
@@ -1350,8 +1350,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
           <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
-            fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>
-          {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2" fill={COMP_COLOR}/>)}
+            fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.6"/>
+          {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2.5" fill={COMP_COLOR}/>)}
         </svg>
       </div>
     );
