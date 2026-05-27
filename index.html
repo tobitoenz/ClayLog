@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v49';
+const APP_VERSION = 'v50';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1449,6 +1449,7 @@ function JahresvergleichChart({ sessions }) {
   const allDisziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
   const [activeYears, setActiveYears] = useState(allYears);
   const [disziplin, setDisziplin] = useState('alle');
+  const [typeFilter, setTypeFilter] = useState('alle');
 
   useEffect(() => { setActiveYears(allYears); }, [sessions.length]);
 
@@ -1459,7 +1460,8 @@ function JahresvergleichChart({ sessions }) {
   function getIndividualPts(year) {
     const src = sessions.filter(s =>
       s.date?.startsWith(year) && s.max > 0 &&
-      (disziplin === 'alle' || s.disziplin === disziplin)
+      (disziplin === 'alle' || s.disziplin === disziplin) &&
+      (typeFilter === 'alle' || s.type === typeFilter)
     ).sort((a,b) => a.date > b.date ? 1 : -1);
     const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
     const pts = src.map(s => ({
@@ -1485,7 +1487,7 @@ function JahresvergleichChart({ sessions }) {
 
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+      <div style={{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap',alignItems:'center'}}>
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
           {allYears.map((y,i) => (
             <button key={y} className="analyse-tab"
@@ -1501,6 +1503,13 @@ function JahresvergleichChart({ sessions }) {
           <option value="alle">All disciplines</option>
           {allDisziplinen.map(d=><option key={d}>{d}</option>)}
         </select>
+      </div>
+      <div style={{display:'flex',gap:6,marginBottom:12}}>
+        {[['alle','All'],['wettkampf','🏆 Competition'],['training','🏋️ Practice']].map(([v,l]) => (
+          <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`}
+            style={{fontSize:11,padding:'4px 10px'}}
+            onClick={()=>setTypeFilter(v)}>{l}</button>
+        ))}
       </div>
 
       <div className="card">
