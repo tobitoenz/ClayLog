@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v58';
+const APP_VERSION = 'v59';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1332,7 +1332,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   if (isMini) {
     const pts = compAll.filter(p => p.year === currentYear);
     if (!pts.length) return null;
-    const W=300, H=80, padL=4, padR=4, padT=4, padB=4;
+    const W=300, H=80, padL=24, padR=4, padT=6, padB=14;
     const cW=W-padL-padR, cH=H-padT-padB;
     const dates = pts.map(p=>new Date(p.date));
     const minD = new Date(Math.min(...dates)); minD.setDate(1);
@@ -1349,6 +1349,23 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           {compYear && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear}%</span>}
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+          {/* Y grid + labels */}
+          {[minY, maxY].map(v => (
+            <g key={v}>
+              <line x1={padL} y1={ty(v)} x2={W-padR} y2={ty(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+              <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#6a6a88" fontSize="7" fontFamily="DM Mono,monospace">{Math.round(v)}%</text>
+            </g>
+          ))}
+          {/* Month markers — every 2 months */}
+          {[0,2,4,6,8,10].map(m => {
+            const d = new Date(currentYear+'-'+String(m+1).padStart(2,'0')+'-01');
+            const x = padL+((d-minD)/range)*cW;
+            return x>=padL&&x<=W-padR ? (
+              <text key={m} x={x} y={H-1} textAnchor="middle" fill="#6a6a88" fontSize="6" fontFamily="DM Mono,monospace">
+                {['J','F','M','A','M','J','J','A','S','O','N','D'][m]}
+              </text>
+            ) : null;
+          })}
           <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
             fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.6"/>
           {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2.5" fill={COMP_COLOR}/>)}
