@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v53';
+const APP_VERSION = 'v54';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1478,12 +1478,19 @@ function JahresvergleichChart({ sessions }) {
 
   const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
   const chartW=W-padL-padR, chartH=H-padT-padB;
+
+  // Normalized X: day-of-year mapped to fixed Jan–Dec axis (0–364 → 0–chartW)
   function toX(dateStr) {
     const d = new Date(dateStr);
-    const dayOfYear = (d - new Date(d.getFullYear()+'-01-01')) / (1000*60*60*24);
-    return padL + (dayOfYear / 365) * chartW;
+    const start = new Date(d.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((d - start) / (1000*60*60*24));
+    return padL + (dayOfYear / 364) * chartW;
   }
-  function toXMonth(m) { return padL + (m / 11) * chartW; }
+  function toXMonth(m) {
+    // Approx day-of-year for start of each month (non-leap)
+    const days = [0,31,59,90,120,151,181,212,243,273,304,334];
+    return padL + (days[m] / 364) * chartW;
+  }
   function toY(v) { return padT + chartH - (v/100)*chartH; }
   function lineD(pts) {
     return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
@@ -1617,7 +1624,6 @@ function AnalysePage({ sessions }) {
   const currentYear = new Date().getFullYear();
   const years = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
-  const [compareYears, setCompareYears] = useState([]);
 
   const filtered = selectedYear === 'alle' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
 
@@ -1639,34 +1645,35 @@ function AnalysePage({ sessions }) {
   });
   const munRows = Object.entries(munMap).sort((a,b) => b[1].sessions - a[1].sessions);
 
-  const YEAR_COLORS = ['#e8c84a','#4ae8c8','#e84a4a','#c84ae8','#4a8ce8'];
-  function getMonthlyData(year) {
-    const monthly = {};
-    sessions.filter(s => s.date?.startsWith(year) && s.max > 0).forEach(s => {
-      const m = s.date.slice(5,7);
-      if (!monthly[m]) monthly[m] = { total: 0, count: 0 };
-      monthly[m].total += s.score/s.max*100;
-      monthly[m].count++;
-    });
-    return monthly;
-  }
-
-  const toggleCompareYear = (y) => {
-    setCompareYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
-  };
-
-  // (inline canvas removed — JahresvergleichChart is now SVG)
+  const isEquipTab = tab === 'munition' || tab === 'waffen';
 
   return (
     <div>
-      <div className="tab-row">
-        {[['resultate','📈 Score'],['jahresvergleich','📅 Years'],['munition','🔴 Ammo'],['waffen','🔫 Guns']].map(([t,l]) => (
-          <button key={t} className={`analyse-tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>{l}</button>
+      {/* Primary tab group: Score / Years / Ammo / Guns */}
+      <div style={{display:'flex',gap:0,marginBottom:0,borderBottom:'1px solid var(--border)'}}>
+        {[
+          ['resultate',     '📈', 'Score'],
+          ['jahresvergleich','📅', 'Years'],
+          ['munition',      '🔴', 'Ammo'],
+          ['waffen',        '🔫', 'Guns'],
+        ].map(([t, icon, label]) => (
+          <button key={t} onClick={()=>setTab(t)} style={{
+            flex:1, padding:'10px 4px', background:'transparent', border:'none',
+            borderBottom: tab===t ? '2px solid var(--accent)' : '2px solid transparent',
+            color: tab===t ? 'var(--accent)' : 'var(--muted)',
+            fontFamily:'DM Mono,monospace', fontSize:11, fontWeight:600,
+            cursor:'pointer', transition:'all .15s', display:'flex', flexDirection:'column',
+            alignItems:'center', gap:3, letterSpacing:.5
+          }}>
+            <span style={{fontSize:16}}>{icon}</span>
+            <span>{label}</span>
+          </button>
         ))}
       </div>
 
-      {(tab === 'munition' || tab === 'waffen') && (
-        <div className="tab-row" style={{marginBottom:14}}>
+      {/* Year filter — only for equipment tabs */}
+      {isEquipTab && (
+        <div className="tab-row" style={{marginTop:10,marginBottom:4}}>
           {['alle', ...years].map(y => (
             <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y==='alle'?'All':y}</button>
           ))}
@@ -1675,8 +1682,10 @@ function AnalysePage({ sessions }) {
 
       {tab === 'resultate' && <ResultateChart sessions={sessions} />}
 
+      {tab === 'jahresvergleich' && <JahresvergleichChart sessions={sessions} />}
+
       {tab === 'munition' && (
-        <div className="card">
+        <div className="card" style={{marginTop:10}}>
           {munRows.length === 0 ? (
             <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">No ammo data.</div></div>
           ) : (
@@ -1693,7 +1702,7 @@ function AnalysePage({ sessions }) {
       )}
 
       {tab === 'waffen' && (
-        <div className="card">
+        <div className="card" style={{marginTop:10}}>
           {waffenRows.length === 0 ? (
             <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">No gun data.</div></div>
           ) : (
@@ -1707,10 +1716,6 @@ function AnalysePage({ sessions }) {
             </table>
           )}
         </div>
-      )}
-
-      {tab === 'jahresvergleich' && (
-        <JahresvergleichChart sessions={sessions} />
       )}
     </div>
   );
