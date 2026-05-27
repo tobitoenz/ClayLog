@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v48';
+const APP_VERSION = 'v49';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1267,20 +1267,16 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
 /* ════════════════════════════════════════════════════════════════
    ANALYSE PAGE
 ════════════════════════════════════════════════════════════════ */
-function useMonthlyAvg(data) {
-  const map = {};
-  data.forEach(s => {
-    const key = s.date.slice(0,7);
-    if (!map[key]) map[key] = { sum:0, count:0 };
-    map[key].sum += s.score/s.max*100;
-    map[key].count++;
-  });
-  return Object.entries(map).sort(([a],[b])=>a>b?1:-1).map(([key,v]) => ({
-    key,
-    avg: Math.round(v.sum/v.count*10)/10,
-    count: v.count,
-    label: new Date(key+'-15').toLocaleDateString('en-GB',{month:'short',year:'numeric'})
-  }));
+function useIndividualPts(data) {
+  return data
+    .filter(s => s.date && s.max > 0)
+    .sort((a,b) => a.date > b.date ? 1 : -1)
+    .map(s => ({
+      key: s.id || s.date,   // unique per session
+      date: s.date,
+      avg: Math.round(s.score/s.max*1000)/10,
+      label: new Date(s.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+    }));
 }
 
 function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'full' }) {
@@ -1294,41 +1290,34 @@ function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'ful
   const allPts = [...(showComp ? compPts : []), ...(showTrain ? trainPts : [])];
   if (allPts.length === 0) return null;
 
-  const allKeys = allPts.map(p=>p.key).sort();
-  const minYear = allKeys[0].slice(0,4);
-  const maxYear = allKeys[allKeys.length-1].slice(0,4);
-  const minDate = new Date(minYear+'-01-01');
-  // Extend just 1 month past last data point (no big empty right gap)
-  const lastKey = allKeys[allKeys.length-1];
-  const maxDate = new Date(lastKey+'-15');
-  maxDate.setMonth(maxDate.getMonth()+1);
-  const dateRange = Math.max(maxDate - minDate, 1);
+  const allDates = allPts.map(p=>p.date).sort();
+  const minYear = allDates[0].slice(0,4);
+  const maxYear = allDates[allDates.length-1].slice(0,4);
+  const minDate = new Date(allDates[0]);
+  minDate.setDate(1); // start of first month
+  const lastDate = new Date(allDates[allDates.length-1]);
+  lastDate.setMonth(lastDate.getMonth()+1);
+  const dateRange = Math.max(lastDate - minDate, 1);
 
   const allVals = allPts.map(p=>p.avg);
   const minY = Math.max(0, Math.min(...allVals) - 8);
   const maxY = Math.min(100, Math.max(...allVals) + 4);
   const yRange = maxY - minY || 1;
 
-  function toX(key) { return padL + ((new Date(key+'-15') - minDate) / dateRange) * chartW; }
+  function toX(dateStr) { return padL + ((new Date(dateStr) - minDate) / dateRange) * chartW; }
   function toY(v)   { return padT + chartH - ((v - minY) / yRange) * chartH; }
 
-  const allYears = [...new Set(allKeys.map(k=>k.slice(0,4)))].sort();
+  const allYears = [...new Set(allDates.map(k=>k.slice(0,4)))].sort();
   const gridVals = [];
   for (let v = Math.ceil(minY/25)*25; v <= maxY; v += 25) gridVals.push(v);
 
   function lineD(pts) {
-    return pts.map((p,i) => `${i===0?'M':'L'}${toX(p.key).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
-  }
-  function areaD(pts) {
-    const base = padT + chartH;
-    return `M${toX(pts[0].key).toFixed(1)},${base} ` +
-      pts.map(p=>`L${toX(p.key).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ') +
-      ` L${toX(pts[pts.length-1].key).toFixed(1)},${base} Z`;
+    return pts.map((p,i) => `${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
   }
 
   const lines = [
-    showComp && compPts.length > 0 && { pts: compPts, color: 'var(--accent2,#4ae8c8)', fill: 'rgba(74,232,200,0.10)' },
-    showTrain && trainPts.length > 0 && { pts: trainPts, color: 'var(--accent,#e8c84a)',  fill: 'rgba(232,200,74,0.08)'  },
+    showComp && compPts.length > 0 && { pts: compPts, color: 'var(--accent2,#4ae8c8)' },
+    showTrain && trainPts.length > 0 && { pts: trainPts, color: 'var(--accent,#e8c84a)' },
   ].filter(Boolean);
 
   return (
@@ -1361,26 +1350,18 @@ function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'ful
           );
         })}
 
-        {/* Area fills */}
-        {lines.map(({pts, fill}) => (
-          <path key={fill} d={areaD(pts)} fill={fill}/>
-        ))}
-
         {/* Lines */}
         {lines.map(({pts, color}) => (
-          <path key={color} d={lineD(pts)} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
+          <path key={color} d={lineD(pts)} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>
         ))}
 
-        {/* Dots + hit targets */}
+        {/* Dots — one per session */}
         {lines.map(({pts, color}) => pts.map(p => (
-          <circle key={p.key} cx={toX(p.key)} cy={toY(p.avg)} r={isMini ? 2 : 3.5}
+          <circle key={p.key} cx={toX(p.date)} cy={toY(p.avg)} r={isMini ? 2 : 3}
             fill={color}
           />
         )))}
       </svg>
-      {!isMini && (
-        <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:.5,marginTop:2}}></div>
-      )}
     </div>
   );
 }
@@ -1397,8 +1378,8 @@ function ResultateChart({ sessions, variant = 'full' }) {
 
   const wettkampf = base.filter(s=>s.type==='wettkampf');
   const training  = base.filter(s=>s.type==='training');
-  const compPts   = useMonthlyAvg(wettkampf);
-  const trainPts  = useMonthlyAvg(training);
+  const compPts   = useIndividualPts(wettkampf);
+  const trainPts  = useIndividualPts(training);
 
   const showComp  = typeFilter !== 'training';
   const showTrain = typeFilter !== 'wettkampf';
@@ -1475,32 +1456,31 @@ function JahresvergleichChart({ sessions }) {
     setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
   }
 
-  function getMonthlyPts(year) {
+  function getIndividualPts(year) {
     const src = sessions.filter(s =>
       s.date?.startsWith(year) && s.max > 0 &&
       (disziplin === 'alle' || s.disziplin === disziplin)
-    );
-    const map = {};
-    src.forEach(s => {
-      const m = parseInt(s.date.slice(5,7)) - 1;
-      if (!map[m]) map[m] = { total:0, count:0 };
-      map[m].total += s.score/s.max*100;
-      map[m].count++;
-    });
+    ).sort((a,b) => a.date > b.date ? 1 : -1);
     const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
-    const pts = Object.entries(map).map(([m,v]) => ({
-      m: parseInt(m),
-      avg: Math.round(v.total/v.count*10)/10
-    })).sort((a,b)=>a.m-b.m);
+    const pts = src.map(s => ({
+      id: s.id,
+      date: s.date,
+      avg: Math.round(s.score/s.max*1000)/10
+    }));
     return { pts, avg };
   }
 
   const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
   const chartW=W-padL-padR, chartH=H-padT-padB;
-  function toX(m) { return padL + (m/11)*chartW; }
+  // X axis: Jan 1 to Dec 31 within the year (all years share same 0-11 month scale)
+  function toX(dateStr) {
+    const d = new Date(dateStr);
+    const dayOfYear = (d - new Date(d.getFullYear()+'-01-01')) / (1000*60*60*24);
+    return padL + (dayOfYear / 365) * chartW;
+  }
   function toY(v) { return padT + chartH - (v/100)*chartH; }
   function lineD(pts) {
-    return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.m).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
+    return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
   }
 
   return (
@@ -1551,14 +1531,14 @@ function JahresvergleichChart({ sessions }) {
                 {/* Lines + dots per year */}
                 {allYears.map((year, yi) => {
                   if (!activeYears.includes(year)) return null;
-                  const { pts } = getMonthlyPts(year);
+                  const { pts } = getIndividualPts(year);
                   if (!pts.length) return null;
                   const color = YEAR_COLORS[yi % YEAR_COLORS.length];
                   return (
                     <g key={year}>
-                      <path d={lineD(pts)} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
-                      {pts.map(p => (
-                        <circle key={p.m} cx={toX(p.m)} cy={toY(p.avg)} r="4"
+                      <path d={lineD(pts)} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>
+                      {pts.map((p,pi) => (
+                        <circle key={p.id || p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3"
                           fill={color}
                         />
                       ))}
@@ -1571,7 +1551,7 @@ function JahresvergleichChart({ sessions }) {
             {/* Legend */}
             <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
               {allYears.filter(y=>activeYears.includes(y)).map((y,i) => {
-                const { avg } = getMonthlyPts(y);
+                const { avg } = getIndividualPts(y);
                 const ci = allYears.indexOf(y);
                 return avg !== null ? (
                   <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
