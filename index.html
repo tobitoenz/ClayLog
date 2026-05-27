@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v50';
+const APP_VERSION = 'v51';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1467,19 +1467,23 @@ function JahresvergleichChart({ sessions }) {
     const pts = src.map(s => ({
       id: s.id,
       date: s.date,
+      type: s.type,
       avg: Math.round(s.score/s.max*1000)/10
     }));
     return { pts, avg };
   }
 
+  // Fixed colors for Competition and Practice (used when typeFilter === 'alle')
+  const TYPE_COLOR = { wettkampf: 'var(--accent2,#4ae8c8)', training: 'var(--accent,#e8c84a)' };
+
   const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
   const chartW=W-padL-padR, chartH=H-padT-padB;
-  // X axis: Jan 1 to Dec 31 within the year (all years share same 0-11 month scale)
   function toX(dateStr) {
     const d = new Date(dateStr);
     const dayOfYear = (d - new Date(d.getFullYear()+'-01-01')) / (1000*60*60*24);
     return padL + (dayOfYear / 365) * chartW;
   }
+  function toXMonth(m) { return padL + (m / 11) * chartW; }
   function toY(v) { return padT + chartH - (v/100)*chartH; }
   function lineD(pts) {
     return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
@@ -1533,7 +1537,7 @@ function JahresvergleichChart({ sessions }) {
 
                 {/* X month labels */}
                 {MONTHS.map((lbl,i) => (
-                  <text key={i} x={toX(i)} y={H-4} textAnchor="middle"
+                  <text key={i} x={toXMonth(i)} y={H-4} textAnchor="middle"
                     fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>
                 ))}
 
@@ -1542,15 +1546,19 @@ function JahresvergleichChart({ sessions }) {
                   if (!activeYears.includes(year)) return null;
                   const { pts } = getIndividualPts(year);
                   if (!pts.length) return null;
-                  const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+                  const yearColor = YEAR_COLORS[yi % YEAR_COLORS.length];
                   return (
                     <g key={year}>
-                      <path d={lineD(pts)} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>
-                      {pts.map((p,pi) => (
-                        <circle key={p.id || p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3"
-                          fill={color}
-                        />
-                      ))}
+                      <path d={lineD(pts)} fill="none" stroke={yearColor} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.4"/>
+                      {pts.map((p,pi) => {
+                        const dotColor = typeFilter === 'alle' ? (TYPE_COLOR[p.type] || yearColor) : yearColor;
+                        return (
+                          <circle key={p.id || p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5"
+                            fill={dotColor}
+                            stroke={yearColor} strokeWidth="1" strokeOpacity="0.6"
+                          />
+                        );
+                      })}
                     </g>
                   );
                 })}
@@ -1570,6 +1578,18 @@ function JahresvergleichChart({ sessions }) {
                   </div>
                 ) : null;
               })}
+              {typeFilter === 'alle' && (
+                <div style={{display:'flex',gap:12,width:'100%',marginTop:4}}>
+                  <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontFamily:'DM Mono,monospace'}}>
+                    <circle r="4" style={{width:8,height:8,borderRadius:'50%',background:'var(--accent2,#4ae8c8)',display:'inline-block',flexShrink:0}}/>
+                    <span style={{color:'var(--accent2,#4ae8c8)'}}>🏆 Competition</span>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontFamily:'DM Mono,monospace'}}>
+                    <span style={{width:8,height:8,borderRadius:'50%',background:'var(--accent,#e8c84a)',display:'inline-block',flexShrink:0}}/>
+                    <span style={{color:'var(--accent,#e8c84a)'}}>🏋️ Practice</span>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
