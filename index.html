@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v54';
+const APP_VERSION = 'v55';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -996,7 +996,7 @@ function Dashboard({ sessions, onSessionClick }) {
   }
 
   const blockContent = {
-    score: <ResultateChart sessions={sessions} variant="mini" />,
+    score: <UnifiedScoreChart sessions={sessions} variant="mini" />,
     stats: (
       <div className="stat-grid">
         <div className="stat-box"><div className="stat-val">{yearSessions.length}</div><div className="stat-label">Sessions {year}</div></div>
@@ -1279,351 +1279,298 @@ function useIndividualPts(data) {
     }));
 }
 
-function ScoreLineChart({ compPts, trainPts, showComp, showTrain, variant = 'full' }) {
+function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const isMini = variant === 'mini';
+  const [viewMode, setViewMode] = useState('overlapped'); // 'overlapped' | 'timeline'
+  const [typeFilter, setTypeFilter] = useState('alle');   // 'alle' | 'wettkampf' | 'training'
+  const [disziplin, setDisziplin] = useState('alle');
 
-  const W = 300, H = isMini ? 80 : 220;
-  const padL = isMini ? 0 : 30, padR = 8, padT = 12, padB = isMini ? 16 : 28;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  const allPts = [...(showComp ? compPts : []), ...(showTrain ? trainPts : [])];
-  if (allPts.length === 0) return null;
-
-  const allDates = allPts.map(p=>p.date).sort();
-  const minYear = allDates[0].slice(0,4);
-  const maxYear = allDates[allDates.length-1].slice(0,4);
-  const minDate = new Date(allDates[0]);
-  minDate.setDate(1); // start of first month
-  const lastDate = new Date(allDates[allDates.length-1]);
-  lastDate.setMonth(lastDate.getMonth()+1);
-  const dateRange = Math.max(lastDate - minDate, 1);
-
-  const allVals = allPts.map(p=>p.avg);
-  const minY = Math.max(0, Math.min(...allVals) - 8);
-  const maxY = Math.min(100, Math.max(...allVals) + 4);
-  const yRange = maxY - minY || 1;
-
-  function toX(dateStr) { return padL + ((new Date(dateStr) - minDate) / dateRange) * chartW; }
-  function toY(v)   { return padT + chartH - ((v - minY) / yRange) * chartH; }
-
-  const allYears = [...new Set(allDates.map(k=>k.slice(0,4)))].sort();
-  const gridVals = [];
-  for (let v = Math.ceil(minY/25)*25; v <= maxY; v += 25) gridVals.push(v);
-
-  function lineD(pts) {
-    return pts.map((p,i) => `${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
-  }
-
-  const lines = [
-    showComp && compPts.length > 0 && { pts: compPts, color: 'var(--accent2,#4ae8c8)' },
-    showTrain && trainPts.length > 0 && { pts: trainPts, color: 'var(--accent,#e8c84a)' },
-  ].filter(Boolean);
-
-  return (
-    <div style={{position:'relative'}}>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
-
-        {/* Y grid + labels */}
-        {!isMini && gridVals.map(v => (
-          <g key={v}>
-            <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
-              stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-            <text x={padL-3} y={toY(v)+3} textAnchor="end"
-              fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
-          </g>
-        ))}
-
-        {/* Year separators + labels */}
-        {allYears.map(yr => {
-          const x = padL + ((new Date(yr+'-01-01') - minDate) / dateRange) * chartW;
-          const labelX = yr === minYear ? Math.max(x, padL+14) : x;
-          return (
-            <g key={yr}>
-              {x > padL+2 && x < W-padR-2 && (
-                <line x1={x} y1={padT} x2={x} y2={padT+chartH}
-                  stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/>
-              )}
-              <text x={labelX} y={H-4} textAnchor="middle"
-                fill="#9a9abb" fontSize={isMini?"7":"10"} fontWeight="bold" fontFamily="DM Mono,monospace">{yr}</text>
-            </g>
-          );
-        })}
-
-        {/* Lines */}
-        {lines.map(({pts, color}) => (
-          <path key={color} d={lineD(pts)} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>
-        ))}
-
-        {/* Dots — one per session */}
-        {lines.map(({pts, color}) => pts.map(p => (
-          <circle key={p.key} cx={toX(p.date)} cy={toY(p.avg)} r={isMini ? 2 : 3}
-            fill={color}
-          />
-        )))}
-      </svg>
-    </div>
-  );
-}
-
-function ResultateChart({ sessions, variant = 'full' }) {
-  const [typeFilter, setTypeFilter] = useState('wettkampf');
-  const [disziplin, setDisziplin]   = useState('alle');
-  const isMini = variant === 'mini';
-
-  const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
-  const base = sessions.filter(s=>s.max>0)
-    .filter(s=>disziplin==='alle'||s.disziplin===disziplin)
-    .sort((a,b)=>a.date>b.date?1:-1);
-
-  const wettkampf = base.filter(s=>s.type==='wettkampf');
-  const training  = base.filter(s=>s.type==='training');
-  const compPts   = useIndividualPts(wettkampf);
-  const trainPts  = useIndividualPts(training);
-
-  const showComp  = typeFilter !== 'training';
-  const showTrain = typeFilter !== 'wettkampf';
-  const currentYear = String(new Date().getFullYear());
-
-  function avgQ(arr) {
-    const v = arr.filter(s=>s.max>0);
-    return v.length ? Math.round(v.reduce((a,s)=>a+s.score/s.max*100,0)/v.length*10)/10 : null;
-  }
-  const compYear  = avgQ(wettkampf.filter(s=>s.date?.startsWith(currentYear)));
-  const compTotal = avgQ(wettkampf);
-  const trainYear = avgQ(training.filter(s=>s.date?.startsWith(currentYear)));
-  const trainTotal= avgQ(training);
-
-  if (isMini) return (
-    <div className="card" style={{marginBottom:0}}>
-      <div className="card-header" style={{marginBottom:4}}>
-        <span className="card-title" style={{fontSize:12}}>Score</span>
-        {compTotal && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--accent2,#4ae8c8)'}}>{compYear??'–'}%</span>}
-      </div>
-      <ScoreLineChart compPts={compPts} trainPts={trainPts} showComp={true} showTrain={false} variant="mini"/>
-    </div>
-  );
-
-  return (
-    <div className="card">
-      <div className="card-title" style={{marginBottom:12}}>Score</div>
-      <div style={{display:'flex',gap:6,marginBottom:12}}>
-        {[['wettkampf','🏆 Competition'],['training','🏋️ Practice'],['beide','Both']].map(([v,l]) => (
-          <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`} onClick={()=>setTypeFilter(v)}>{l}</button>
-        ))}
-      </div>
-      <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{marginBottom:12}}>
-        <option value="alle">All disciplines</option>
-        {disziplinen.map(d=><option key={d}>{d}</option>)}
-      </select>
-      {showComp && compTotal !== null && (
-        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent2,#4ae8c8)',marginBottom:6}}>
-          🏆 Ø {currentYear}: {compYear??'–'}% | Ø All: {compTotal}%
-        </div>
-      )}
-      {showTrain && trainTotal !== null && (
-        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--accent)',marginBottom:6}}>
-          🏋️ Ø {currentYear}: {trainYear??'–'}% | Ø All: {trainTotal}%
-        </div>
-      )}
-      {base.length === 0 ? (
-        <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>
-      ) : (
-        <>
-          <ScoreLineChart compPts={compPts} trainPts={trainPts} showComp={showComp} showTrain={showTrain} variant="full"/>
-          <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
-            {showComp && wettkampf.length>0 && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:'var(--accent2,#4ae8c8)',borderRadius:2}}/><span style={{color:'var(--accent2,#4ae8c8)'}}>Competition</span></div>}
-            {showTrain && training.length>0  && <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:'var(--accent)',borderRadius:2}}/><span style={{color:'var(--accent)'}}>Practice</span></div>}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function JahresvergleichChart({ sessions }) {
+  const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
+  const TRAIN_COLOR = 'var(--accent,#e8c84a)';
   const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
   const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  const MONTH_DAYS = [0,31,59,90,120,151,181,212,243,273,304,334];
 
+  const currentYear = String(new Date().getFullYear());
+  const disziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
   const allYears = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.date?.slice(0,4)).filter(Boolean))].sort();
-  const allDisziplinen = [...new Set(sessions.filter(s=>s.max>0).map(s=>s.disziplin).filter(Boolean))].sort();
   const [activeYears, setActiveYears] = useState(allYears);
-  const [disziplin, setDisziplin] = useState('alle');
-  const [typeFilter, setTypeFilter] = useState('alle');
-
-  useEffect(() => { setActiveYears(allYears); }, [sessions.length]);
+  useEffect(() => { setActiveYears(prev => allYears.filter(y => prev.includes(y) || prev.length===0)); }, [sessions.length]);
 
   function toggleYear(y) {
     setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
   }
 
-  function getIndividualPts(year) {
-    const src = sessions.filter(s =>
-      s.date?.startsWith(year) && s.max > 0 &&
-      (disziplin === 'alle' || s.disziplin === disziplin) &&
-      (typeFilter === 'alle' || s.type === typeFilter)
-    ).sort((a,b) => a.date > b.date ? 1 : -1);
-    const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
+  // Filter base sessions
+  const base = sessions.filter(s =>
+    s.date && s.max > 0 &&
+    (disziplin === 'alle' || s.disziplin === disziplin)
+  ).sort((a,b) => a.date > b.date ? 1 : -1);
 
-    const toP = s => ({ id: s.id, date: s.date, type: s.type, avg: Math.round(s.score/s.max*1000)/10 });
-    const compPts  = src.filter(s => s.type === 'wettkampf').map(toP);
-    const trainPts = src.filter(s => s.type === 'training').map(toP);
-    const pts = src.map(toP); // all, for single-type filter mode
-    return { pts, compPts, trainPts, avg };
+  function toP(s) {
+    return { id: s.id, date: s.date, type: s.type, year: s.date.slice(0,4), avg: Math.round(s.score/s.max*1000)/10 };
   }
 
-  // Fixed colors for Competition and Practice
-  const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
-  const TRAIN_COLOR = 'var(--accent,#e8c84a)';
-
-  const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
-  const chartW=W-padL-padR, chartH=H-padT-padB;
-
-  // Normalized X: day-of-year mapped to fixed Jan–Dec axis (0–364 → 0–chartW)
-  function toX(dateStr) {
-    const d = new Date(dateStr);
-    const start = new Date(d.getFullYear(), 0, 1);
-    const dayOfYear = Math.floor((d - start) / (1000*60*60*24));
-    return padL + (dayOfYear / 364) * chartW;
+  // Stats summary
+  function avgQ(arr) {
+    return arr.length ? Math.round(arr.reduce((a,s)=>a+s.avg,0)/arr.length*10)/10 : null;
   }
-  function toXMonth(m) {
-    // Approx day-of-year for start of each month (non-leap)
-    const days = [0,31,59,90,120,151,181,212,243,273,304,334];
-    return padL + (days[m] / 364) * chartW;
+  const compAll  = base.filter(s=>s.type==='wettkampf').map(toP);
+  const trainAll = base.filter(s=>s.type==='training').map(toP);
+  const compYear  = avgQ(compAll.filter(p=>p.year===currentYear));
+  const compTotal = avgQ(compAll);
+  const trainYear = avgQ(trainAll.filter(p=>p.year===currentYear));
+  const trainTotal= avgQ(trainAll);
+
+  // Mini variant — just a small timeline chart, comp only
+  if (isMini) {
+    const pts = compAll;
+    if (!pts.length) return null;
+    const W=300, H=80, padL=0, padR=4, padT=6, padB=14;
+    const cW=W-padL-padR, cH=H-padT-padB;
+    const dates = pts.map(p=>new Date(p.date));
+    const minD = new Date(Math.min(...dates)); minD.setDate(1);
+    const maxD = new Date(Math.max(...dates)); maxD.setMonth(maxD.getMonth()+1);
+    const range = Math.max(maxD-minD,1);
+    const vals = pts.map(p=>p.avg);
+    const minY=Math.max(0,Math.min(...vals)-8), maxY=Math.min(100,Math.max(...vals)+4), yR=maxY-minY||1;
+    const tx = d => padL + ((new Date(d)-minD)/range)*cW;
+    const ty = v => padT + cH - ((v-minY)/yR)*cH;
+    const years = [...new Set(pts.map(p=>p.year))].sort();
+    return (
+      <div className="card" style={{marginBottom:0}}>
+        <div className="card-header" style={{marginBottom:4}}>
+          <span className="card-title" style={{fontSize:12}}>Score</span>
+          {compTotal && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear??'–'}%</span>}
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+          {years.map(yr => {
+            const x = padL+((new Date(yr+'-01-01')-minD)/range)*cW;
+            return x>2&&x<W-2 ? <line key={yr} x1={x} y1={padT} x2={x} y2={padT+cH} stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/> : null;
+          })}
+          {years.map(yr => {
+            const x = padL+((new Date(yr+'-01-01')-minD)/range)*cW;
+            return <text key={yr} x={Math.max(x,8)} y={H-2} textAnchor="middle" fill="#6a6a88" fontSize="7" fontFamily="DM Mono,monospace">{yr}</text>;
+          })}
+          <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
+            fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>
+          {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2" fill={COMP_COLOR}/>)}
+        </svg>
+      </div>
+    );
   }
-  function toY(v) { return padT + chartH - (v/100)*chartH; }
-  function lineD(pts) {
-    return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' ');
+
+  // ── TIMELINE MODE ────────────────────────────────────────────
+  function renderTimeline() {
+    const showComp  = typeFilter !== 'training';
+    const showTrain = typeFilter !== 'wettkampf';
+    const pts = base.map(toP).filter(p =>
+      (showComp && p.type==='wettkampf') || (showTrain && p.type==='training')
+    );
+    if (!pts.length) return <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>;
+
+    const W=300, H=200, padL=30, padR=8, padT=12, padB=28;
+    const cW=W-padL-padR, cH=H-padT-padB;
+    const dates = pts.map(p=>new Date(p.date));
+    const minD = new Date(Math.min(...dates)); minD.setDate(1);
+    const maxD = new Date(Math.max(...dates)); maxD.setMonth(maxD.getMonth()+1);
+    const range = Math.max(maxD-minD,1);
+    const vals = pts.map(p=>p.avg);
+    const minY=Math.max(0,Math.min(...vals)-8), maxY=Math.min(100,Math.max(...vals)+4), yR=maxY-minY||1;
+    const tx = d => padL+((new Date(d)-minD)/range)*cW;
+    const ty = v => padT+cH-((v-minY)/yR)*cH;
+    const years = [...new Set(pts.map(p=>p.year))].sort();
+    const gridVals=[]; for(let v=Math.ceil(minY/25)*25;v<=maxY;v+=25) gridVals.push(v);
+    const compPts = pts.filter(p=>p.type==='wettkampf');
+    const trainPts= pts.filter(p=>p.type==='training');
+    function ld(arr) { return arr.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' '); }
+
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+        {gridVals.map(v=>(
+          <g key={v}>
+            <line x1={padL} y1={ty(v)} x2={W-padR} y2={ty(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+            <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+          </g>
+        ))}
+        {years.map(yr=>{
+          const x=padL+((new Date(yr+'-01-01')-minD)/range)*cW;
+          return (<g key={yr}>
+            {x>padL+2&&x<W-padR-2&&<line x1={x} y1={padT} x2={x} y2={padT+cH} stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/>}
+            <text x={Math.max(x,padL+12)} y={H-4} textAnchor="middle" fill="#9a9abb" fontSize="9" fontWeight="bold" fontFamily="DM Mono,monospace">{yr}</text>
+          </g>);
+        })}
+        {showComp&&compPts.length>1&&<path d={ld(compPts)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>}
+        {showTrain&&trainPts.length>1&&<path d={ld(trainPts)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>}
+        {showComp&&compPts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="3" fill={COMP_COLOR}/>)}
+        {showTrain&&trainPts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="3" fill={TRAIN_COLOR}/>)}
+      </svg>
+    );
+  }
+
+  // ── OVERLAPPED MODE ──────────────────────────────────────────
+  function renderOverlapped() {
+    const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
+    const TRAIN_COLOR = 'var(--accent,#e8c84a)';
+    const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
+    const cW=W-padL-padR, cH=H-padT-padB;
+
+    function toX(dateStr) {
+      const d=new Date(dateStr), start=new Date(d.getFullYear(),0,1);
+      const doy=Math.floor((d-start)/(1000*60*60*24));
+      return padL+(doy/364)*cW;
+    }
+    function toXM(m) { return padL+(MONTH_DAYS[m]/364)*cW; }
+    function toY(v)  { return padT+cH-(v/100)*cH; }
+    function ld(pts) { return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' '); }
+
+    function getPts(year) {
+      const src = base.filter(s=>s.date.startsWith(year)&&(typeFilter==='alle'||s.type===typeFilter));
+      const toP2 = s=>({id:s.id,date:s.date,type:s.type,avg:Math.round(s.score/s.max*1000)/10});
+      return {
+        all:   src.map(toP2),
+        comp:  src.filter(s=>s.type==='wettkampf').map(toP2),
+        train: src.filter(s=>s.type==='training').map(toP2),
+        avg:   src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null
+      };
+    }
+
+    return (<>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+        {[0,25,50,75,100].map(v=>(
+          <g key={v}>
+            <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
+            <text x={padL-3} y={toY(v)+3} textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+          </g>
+        ))}
+        {MONTHS.map((lbl,i)=>(
+          <text key={i} x={toXM(i)} y={H-4} textAnchor="middle" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>
+        ))}
+        {allYears.map((year,yi)=>{
+          if(!activeYears.includes(year)) return null;
+          const {comp,train,all} = getPts(year);
+          const yc = YEAR_COLORS[yi%YEAR_COLORS.length];
+          if(typeFilter==='alle') return (
+            <g key={year}>
+              {comp.length>1&&<path d={ld(comp)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
+              {train.length>1&&<path d={ld(train)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
+              {comp.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={COMP_COLOR}/>)}
+              {train.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={TRAIN_COLOR}/>)}
+            </g>
+          );
+          return (
+            <g key={year}>
+              {all.length>1&&<path d={ld(all)} fill="none" stroke={yc} strokeWidth="1.5" strokeOpacity="0.5"/>}
+              {all.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={yc}/>)}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Year toggles */}
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
+        {allYears.map((y,i)=>(
+          <button key={y} className="analyse-tab" onClick={()=>toggleYear(y)} style={{
+            borderColor: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--border)',
+            color: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--muted)',
+            background: activeYears.includes(y) ? 'rgba(255,255,255,0.04)' : 'transparent'
+          }}>{y}</button>
+        ))}
+      </div>
+    </>);
+  }
+
+  // ── LEGEND ───────────────────────────────────────────────────
+  function renderLegend() {
+    if(viewMode==='timeline') {
+      const showComp=typeFilter!=='training', showTrain=typeFilter!=='wettkampf';
+      return (
+        <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
+          {showComp&&compAll.length>0&&<div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:COMP_COLOR,borderRadius:2}}/><span style={{color:COMP_COLOR}}>Competition</span></div>}
+          {showTrain&&trainAll.length>0&&<div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:TRAIN_COLOR,borderRadius:2}}/><span style={{color:TRAIN_COLOR}}>Practice</span></div>}
+        </div>
+      );
+    }
+    if(typeFilter==='alle') return (
+      <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:COMP_COLOR,borderRadius:2}}/><span style={{color:COMP_COLOR}}>🏆 Competition</span></div>
+        <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:TRAIN_COLOR,borderRadius:2}}/><span style={{color:TRAIN_COLOR}}>🏋️ Practice</span></div>
+      </div>
+    );
+    return (
+      <div style={{display:'flex',gap:10,marginTop:8,flexWrap:'wrap'}}>
+        {allYears.filter(y=>activeYears.includes(y)).map((y,i)=>{
+          const ci=allYears.indexOf(y);
+          const avg=avgQ(base.filter(s=>s.date.startsWith(y)&&(typeFilter==='alle'||s.type===typeFilter)).map(toP));
+          return avg!==null?(
+            <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+              <div style={{width:16,height:2,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
+              <span style={{color:YEAR_COLORS[ci%YEAR_COLORS.length]}}>{y}</span>
+              <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
+            </div>
+          ):null;
+        })}
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div style={{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap',alignItems:'center'}}>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-          {allYears.map((y,i) => (
-            <button key={y} className="analyse-tab"
-              style={{
-                background: activeYears.includes(y) ? 'rgba(255,255,255,0.05)' : 'transparent',
-                borderColor: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--border)',
-                color: activeYears.includes(y) ? YEAR_COLORS[i%YEAR_COLORS.length] : 'var(--muted)'
-              }}
-              onClick={()=>toggleYear(y)}>{y}</button>
+    <div className="card">
+      {/* View mode toggle */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <div style={{display:'flex',background:'var(--surface)',borderRadius:10,padding:3,gap:2}}>
+          {[['timeline','📈 Timeline'],['overlapped','📅 Overlapped']].map(([m,l])=>(
+            <button key={m} onClick={()=>setViewMode(m)} style={{
+              padding:'5px 12px', borderRadius:8, border:'none', cursor:'pointer',
+              fontFamily:'DM Mono,monospace', fontSize:11, fontWeight:600, letterSpacing:.3,
+              background: viewMode===m ? 'var(--accent)' : 'transparent',
+              color: viewMode===m ? '#111' : 'var(--muted)',
+              transition:'all .15s'
+            }}>{l}</button>
           ))}
         </div>
-        <select value={disziplin} onChange={e=>setDisziplin(e.target.value)} style={{flex:1,minWidth:120}}>
+        <select value={disziplin} onChange={e=>setDisziplin(e.target.value)}
+          style={{fontSize:12,padding:'4px 8px',maxWidth:140}}>
           <option value="alle">All disciplines</option>
-          {allDisziplinen.map(d=><option key={d}>{d}</option>)}
+          {disziplinen.map(d=><option key={d}>{d}</option>)}
         </select>
       </div>
+
+      {/* Type filter */}
       <div style={{display:'flex',gap:6,marginBottom:12}}>
-        {[['alle','All'],['wettkampf','🏆 Competition'],['training','🏋️ Practice']].map(([v,l]) => (
+        {[['alle','All'],['wettkampf','🏆 Competition'],['training','🏋️ Practice']].map(([v,l])=>(
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`}
-            style={{fontSize:11,padding:'4px 10px'}}
-            onClick={()=>setTypeFilter(v)}>{l}</button>
+            style={{fontSize:11,padding:'4px 10px'}} onClick={()=>setTypeFilter(v)}>{l}</button>
         ))}
       </div>
 
-      <div className="card">
-        <div className="card-title" style={{marginBottom:12}}>Year comparison</div>
-        {allYears.length === 0 ? (
-          <div className="empty"><div className="empty-text">No results yet.</div></div>
-        ) : (
-          <>
-            <div style={{position:'relative'}}>
-              <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+      {/* Stats summary */}
+      {(typeFilter==='alle'||typeFilter==='wettkampf') && compTotal!==null && (
+        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:COMP_COLOR,marginBottom:4}}>
+          🏆 Ø {currentYear}: {compYear??'–'}% | Ø All: {compTotal}%
+        </div>
+      )}
+      {(typeFilter==='alle'||typeFilter==='training') && trainTotal!==null && (
+        <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:TRAIN_COLOR,marginBottom:10}}>
+          🏋️ Ø {currentYear}: {trainYear??'–'}% | Ø All: {trainTotal}%
+        </div>
+      )}
 
-                {/* Y grid */}
-                {[0,25,50,75,100].map(v => (
-                  <g key={v}>
-                    <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
-                      stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-                    <text x={padL-3} y={toY(v)+3} textAnchor="end"
-                      fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
-                  </g>
-                ))}
-
-                {/* X month labels */}
-                {MONTHS.map((lbl,i) => (
-                  <text key={i} x={toXMonth(i)} y={H-4} textAnchor="middle"
-                    fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>
-                ))}
-
-                {/* Lines + dots per year */}
-                {allYears.map((year, yi) => {
-                  if (!activeYears.includes(year)) return null;
-                  const { pts, compPts, trainPts } = getIndividualPts(year);
-                  const yearColor = YEAR_COLORS[yi % YEAR_COLORS.length];
-
-                  // In "All" mode: draw two separate lines (comp + train)
-                  // In single-type mode: draw one line in year color
-                  if (typeFilter === 'alle') {
-                    return (
-                      <g key={year}>
-                        {/* Competition line */}
-                        {compPts.length > 1 && <path d={lineD(compPts)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
-                        {compPts.map((p,pi) => (
-                          <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={COMP_COLOR}/>
-                        ))}
-                        {/* Training line */}
-                        {trainPts.length > 1 && <path d={lineD(trainPts)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
-                        {trainPts.map((p,pi) => (
-                          <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={TRAIN_COLOR}/>
-                        ))}
-                      </g>
-                    );
-                  }
-
-                  // Single-type mode
-                  return (
-                    <g key={year}>
-                      {pts.length > 1 && <path d={lineD(pts)} fill="none" stroke={yearColor} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
-                      {pts.map((p,pi) => (
-                        <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={yearColor}/>
-                      ))}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-
-            {/* Legend */}
-            <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
-              {typeFilter === 'alle' ? (
-                <>
-                  <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                    <div style={{width:16,height:3,background:COMP_COLOR,borderRadius:2}}/>
-                    <span style={{color:COMP_COLOR}}>🏆 Competition</span>
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                    <div style={{width:16,height:3,background:TRAIN_COLOR,borderRadius:2}}/>
-                    <span style={{color:TRAIN_COLOR}}>🏋️ Practice</span>
-                  </div>
-                </>
-              ) : (
-                allYears.filter(y=>activeYears.includes(y)).map((y) => {
-                  const { avg } = getIndividualPts(y);
-                  const ci = allYears.indexOf(y);
-                  return avg !== null ? (
-                    <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                      <div style={{width:16,height:3,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
-                      <span style={{color:YEAR_COLORS[ci%YEAR_COLORS.length]}}>{y}</span>
-                      <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
-                    </div>
-                  ) : null;
-                })
-              )}
-            </div>
+      {base.length===0
+        ? <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>
+        : <>
+            {viewMode==='timeline' ? renderTimeline() : renderOverlapped()}
+            {renderLegend()}
           </>
-        )}
-      </div>
+      }
     </div>
   );
 }
 function AnalysePage({ sessions }) {
-  const [tab, setTab] = useState('resultate');
-  const currentYear = new Date().getFullYear();
+  const [tab, setTab] = useState('score');
   const years = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
-  const [selectedYear, setSelectedYear] = useState(String(currentYear));
+  const currentYear = String(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(currentYear);
 
   const filtered = selectedYear === 'alle' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
 
@@ -1645,18 +1592,11 @@ function AnalysePage({ sessions }) {
   });
   const munRows = Object.entries(munMap).sort((a,b) => b[1].sessions - a[1].sessions);
 
-  const isEquipTab = tab === 'munition' || tab === 'waffen';
-
   return (
     <div>
-      {/* Primary tab group: Score / Years / Ammo / Guns */}
+      {/* 3 tabs */}
       <div style={{display:'flex',gap:0,marginBottom:0,borderBottom:'1px solid var(--border)'}}>
-        {[
-          ['resultate',     '📈', 'Score'],
-          ['jahresvergleich','📅', 'Years'],
-          ['munition',      '🔴', 'Ammo'],
-          ['waffen',        '🔫', 'Guns'],
-        ].map(([t, icon, label]) => (
+        {[['score','📈','Score'],['munition','🔴','Ammo'],['waffen','🔫','Guns']].map(([t,icon,label]) => (
           <button key={t} onClick={()=>setTab(t)} style={{
             flex:1, padding:'10px 4px', background:'transparent', border:'none',
             borderBottom: tab===t ? '2px solid var(--accent)' : '2px solid transparent',
@@ -1671,50 +1611,38 @@ function AnalysePage({ sessions }) {
         ))}
       </div>
 
-      {/* Year filter — only for equipment tabs */}
-      {isEquipTab && (
+      {/* Year filter for equipment tabs */}
+      {(tab==='munition'||tab==='waffen') && (
         <div className="tab-row" style={{marginTop:10,marginBottom:4}}>
-          {['alle', ...years].map(y => (
+          {['alle',...years].map(y=>(
             <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y==='alle'?'All':y}</button>
           ))}
         </div>
       )}
 
-      {tab === 'resultate' && <ResultateChart sessions={sessions} />}
+      {tab==='score' && <UnifiedScoreChart sessions={sessions} />}
 
-      {tab === 'jahresvergleich' && <JahresvergleichChart sessions={sessions} />}
-
-      {tab === 'munition' && (
+      {tab==='munition' && (
         <div className="card" style={{marginTop:10}}>
-          {munRows.length === 0 ? (
-            <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">No ammo data.</div></div>
-          ) : (
-            <table className="a-table">
-              <thead><tr><th>Ammo</th><th className="num">Sessions</th><th className="num">Shells</th></tr></thead>
-              <tbody>
-                {munRows.map(([m,d]) => (
-                  <tr key={m}><td>{m}</td><td className="num">{d.sessions}</td><td className="num">{d.shots.toLocaleString()}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          {munRows.length===0
+            ? <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">No ammo data.</div></div>
+            : <table className="a-table">
+                <thead><tr><th>Ammo</th><th className="num">Sessions</th><th className="num">Shells</th></tr></thead>
+                <tbody>{munRows.map(([m,d])=><tr key={m}><td>{m}</td><td className="num">{d.sessions}</td><td className="num">{d.shots.toLocaleString()}</td></tr>)}</tbody>
+              </table>
+          }
         </div>
       )}
 
-      {tab === 'waffen' && (
+      {tab==='waffen' && (
         <div className="card" style={{marginTop:10}}>
-          {waffenRows.length === 0 ? (
-            <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">No gun data.</div></div>
-          ) : (
-            <table className="a-table">
-              <thead><tr><th>Gun</th><th className="num">Sessions</th><th className="num">Ø Score</th></tr></thead>
-              <tbody>
-                {waffenRows.map(([w,d]) => (
-                  <tr key={w}><td>{w}</td><td className="num">{d.sessions}</td><td className="num" style={{color:'var(--accent)'}}>{d.scored ? Math.round(d.totalQ/d.scored*100)+'%' : '–'}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          {waffenRows.length===0
+            ? <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">No gun data.</div></div>
+            : <table className="a-table">
+                <thead><tr><th>Gun</th><th className="num">Sessions</th><th className="num">Ø Score</th></tr></thead>
+                <tbody>{waffenRows.map(([w,d])=><tr key={w}><td>{w}</td><td className="num">{d.sessions}</td><td className="num" style={{color:'var(--accent)'}}>{d.scored?Math.round(d.totalQ/d.scored*100)+'%':'–'}</td></tr>)}</tbody>
+              </table>
+          }
         </div>
       )}
     </div>
