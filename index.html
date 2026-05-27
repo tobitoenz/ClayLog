@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v51';
+const APP_VERSION = 'v52';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1464,17 +1464,17 @@ function JahresvergleichChart({ sessions }) {
       (typeFilter === 'alle' || s.type === typeFilter)
     ).sort((a,b) => a.date > b.date ? 1 : -1);
     const avg = src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null;
-    const pts = src.map(s => ({
-      id: s.id,
-      date: s.date,
-      type: s.type,
-      avg: Math.round(s.score/s.max*1000)/10
-    }));
-    return { pts, avg };
+
+    const toP = s => ({ id: s.id, date: s.date, type: s.type, avg: Math.round(s.score/s.max*1000)/10 });
+    const compPts  = src.filter(s => s.type === 'wettkampf').map(toP);
+    const trainPts = src.filter(s => s.type === 'training').map(toP);
+    const pts = src.map(toP); // all, for single-type filter mode
+    return { pts, compPts, trainPts, avg };
   }
 
-  // Fixed colors for Competition and Practice (used when typeFilter === 'alle')
-  const TYPE_COLOR = { wettkampf: 'var(--accent2,#4ae8c8)', training: 'var(--accent,#e8c84a)' };
+  // Fixed colors for Competition and Practice
+  const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
+  const TRAIN_COLOR = 'var(--accent,#e8c84a)';
 
   const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
   const chartW=W-padL-padR, chartH=H-padT-padB;
@@ -1544,21 +1544,35 @@ function JahresvergleichChart({ sessions }) {
                 {/* Lines + dots per year */}
                 {allYears.map((year, yi) => {
                   if (!activeYears.includes(year)) return null;
-                  const { pts } = getIndividualPts(year);
-                  if (!pts.length) return null;
+                  const { pts, compPts, trainPts } = getIndividualPts(year);
                   const yearColor = YEAR_COLORS[yi % YEAR_COLORS.length];
+
+                  // In "All" mode: draw two separate lines (comp + train)
+                  // In single-type mode: draw one line in year color
+                  if (typeFilter === 'alle') {
+                    return (
+                      <g key={year}>
+                        {/* Competition line */}
+                        {compPts.length > 1 && <path d={lineD(compPts)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
+                        {compPts.map((p,pi) => (
+                          <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={COMP_COLOR}/>
+                        ))}
+                        {/* Training line */}
+                        {trainPts.length > 1 && <path d={lineD(trainPts)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
+                        {trainPts.map((p,pi) => (
+                          <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={TRAIN_COLOR}/>
+                        ))}
+                      </g>
+                    );
+                  }
+
+                  // Single-type mode
                   return (
                     <g key={year}>
-                      <path d={lineD(pts)} fill="none" stroke={yearColor} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.4"/>
-                      {pts.map((p,pi) => {
-                        const dotColor = typeFilter === 'alle' ? (TYPE_COLOR[p.type] || yearColor) : yearColor;
-                        return (
-                          <circle key={p.id || p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5"
-                            fill={dotColor}
-                            stroke={yearColor} strokeWidth="1" strokeOpacity="0.6"
-                          />
-                        );
-                      })}
+                      {pts.length > 1 && <path d={lineD(pts)} fill="none" stroke={yearColor} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity="0.5"/>}
+                      {pts.map((p,pi) => (
+                        <circle key={p.id||p.date+pi} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={yearColor}/>
+                      ))}
                     </g>
                   );
                 })}
@@ -1567,28 +1581,29 @@ function JahresvergleichChart({ sessions }) {
 
             {/* Legend */}
             <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:12}}>
-              {allYears.filter(y=>activeYears.includes(y)).map((y,i) => {
-                const { avg } = getIndividualPts(y);
-                const ci = allYears.indexOf(y);
-                return avg !== null ? (
-                  <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
-                    <div style={{width:16,height:3,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
-                    <span style={{color:YEAR_COLORS[ci%YEAR_COLORS.length]}}>{y}</span>
-                    <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
+              {typeFilter === 'alle' ? (
+                <>
+                  <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                    <div style={{width:16,height:3,background:COMP_COLOR,borderRadius:2}}/>
+                    <span style={{color:COMP_COLOR}}>🏆 Competition</span>
                   </div>
-                ) : null;
-              })}
-              {typeFilter === 'alle' && (
-                <div style={{display:'flex',gap:12,width:'100%',marginTop:4}}>
-                  <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontFamily:'DM Mono,monospace'}}>
-                    <circle r="4" style={{width:8,height:8,borderRadius:'50%',background:'var(--accent2,#4ae8c8)',display:'inline-block',flexShrink:0}}/>
-                    <span style={{color:'var(--accent2,#4ae8c8)'}}>🏆 Competition</span>
+                  <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                    <div style={{width:16,height:3,background:TRAIN_COLOR,borderRadius:2}}/>
+                    <span style={{color:TRAIN_COLOR}}>🏋️ Practice</span>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontFamily:'DM Mono,monospace'}}>
-                    <span style={{width:8,height:8,borderRadius:'50%',background:'var(--accent,#e8c84a)',display:'inline-block',flexShrink:0}}/>
-                    <span style={{color:'var(--accent,#e8c84a)'}}>🏋️ Practice</span>
-                  </div>
-                </div>
+                </>
+              ) : (
+                allYears.filter(y=>activeYears.includes(y)).map((y) => {
+                  const { avg } = getIndividualPts(y);
+                  const ci = allYears.indexOf(y);
+                  return avg !== null ? (
+                    <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
+                      <div style={{width:16,height:3,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
+                      <span style={{color:YEAR_COLORS[ci%YEAR_COLORS.length]}}>{y}</span>
+                      <span style={{color:'var(--muted)'}}>Ø {avg}%</span>
+                    </div>
+                  ) : null;
+                })
               )}
             </div>
           </>
