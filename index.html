@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v59';
+const APP_VERSION = 'v60';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -935,6 +935,7 @@ function Dashboard({ sessions, onSessionClick }) {
 
   const compYear  = sessions.filter(s => s.type==='wettkampf' && s.max>0 && (s.date||'').startsWith(year));
   const compAll   = sessions.filter(s => s.type==='wettkampf' && s.max>0);
+  const compAllTotal = sessions.filter(s => s.type==='wettkampf');
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
   const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
@@ -999,9 +1000,21 @@ function Dashboard({ sessions, onSessionClick }) {
     score: <UnifiedScoreChart sessions={sessions} variant="mini" />,
     stats: (
       <div className="stat-grid">
-        <div className="stat-box"><div className="stat-val">{yearSessions.length}</div><div className="stat-label">Sessions {year}</div></div>
+        <div className="stat-box">
+          <div className="stat-val">
+            {yearSessions.length}
+            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:400}}> / {sessions.length}</span>
+          </div>
+          <div className="stat-label">Sessions {year}</div>
+        </div>
         <div className="stat-box"><div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div><div className="stat-label">🏆 Ø {year}</div></div>
-        <div className="stat-box"><div className="stat-val">{compYear.length}</div><div className="stat-label">🏆 Competitions</div></div>
+        <div className="stat-box">
+          <div className="stat-val">
+            {compYear.length}
+            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:400}}> / {compAllTotal.length}</span>
+          </div>
+          <div className="stat-label">🏆 Competitions</div>
+        </div>
         <div className="stat-box"><div className="stat-val">{quoteAll !== null ? quoteAll+'%' : '–'}</div><div className="stat-label">Ø All time</div></div>
       </div>
     ),
