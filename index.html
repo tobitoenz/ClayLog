@@ -130,10 +130,26 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   position: fixed; inset: 0; background: rgba(0,0,0,.75);
   backdrop-filter: blur(8px); z-index: 200;
   display: flex; align-items: flex-end;
-  touch-action: none; /* prevent background scroll on iOS */
+  touch-action: none;
   overscroll-behavior: contain;
+  /* iOS: stay pinned even when keyboard opens */
+  height: 100%; width: 100%;
+  top: 0; left: 0;
 }
-body.modal-open { overflow: hidden; position: fixed; width: 100%; }
+.modal {
+  background: var(--surface); border-radius: 24px 24px 0 0;
+  width: 100%; padding: 16px 16px 36px;
+  border: 1px solid var(--border); border-bottom: none;
+  animation: slideUp .3s cubic-bezier(.34,1.56,.64,1);
+  /* Key fix: limit height and scroll internally, don't use dvh */
+  max-height: 85vh; overflow-y: auto;
+  /* Prevent iOS from scrolling the backdrop */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Extra padding for keyboard */
+  padding-bottom: max(36px, env(keyboard-inset-height, 0px));
+}
+body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 .modal {
   background: var(--surface); border-radius: 24px 24px 0 0;
   width: 100%; padding: 16px 16px 36px;
@@ -539,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v68';
+const APP_VERSION = 'v69';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -660,12 +676,18 @@ function useICSFeed(url) {
 function useModalLock(open) {
   useEffect(() => {
     if (!open) return;
-    const scrollY = window.scrollY;
-    document.body.classList.add('modal-open');
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.classList.remove('modal-open');
+      document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
   }, [open]);
@@ -3145,7 +3167,7 @@ function App() {
         )}
       </div>
 
-      <button className="fab" onClick={openNew}>+</button>
+      {!modal && <button className="fab" onClick={openNew}>+</button>}
       <BottomNav active={tab} onChange={setTab} />
 
       {(modal === 'new' || modal === 'edit') && (
