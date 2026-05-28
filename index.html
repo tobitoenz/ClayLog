@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v60';
+const APP_VERSION = 'v61';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -563,10 +563,179 @@ function Header({ user, syncStatus }) {
 /* ════════════════════════════════════════════════════════════════
    BOTTOM NAV
 ════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   ICS FEED — parse & fetch
+════════════════════════════════════════════════════════════════ */
+function parseICS(text) {
+  const events = [];
+  const blocks = text.split('BEGIN:VEVENT');
+  blocks.slice(1).forEach(block => {
+    const get = (key) => {
+      const m = block.match(new RegExp(key+'(?:;[^:]*)?:([^\\r\\n]+)'));
+      return m ? m[1].trim() : '';
+    };
+    const dtRaw = get('DTSTART') || get('DTSTART;VALUE=DATE');
+    const dtEnd  = get('DTEND')  || get('DTEND;VALUE=DATE');
+    if (!dtRaw) return;
+    // Parse YYYYMMDD or YYYYMMDDTHHmmssZ
+    function parseDate(s) {
+      if (!s) return null;
+      const clean = s.replace(/[TZ]/g,'');
+      const y=clean.slice(0,4), mo=clean.slice(4,6), d=clean.slice(6,8);
+      const h=clean.slice(8,10)||'00', mi=clean.slice(10,12)||'00';
+      return new Date(`${y}-${mo}-${d}T${h}:${mi}:00`);
+    }
+    const start = parseDate(dtRaw);
+    const end   = parseDate(dtEnd);
+    if (!start) return;
+    events.push({
+      uid:      get('UID') || Math.random().toString(36),
+      title:    get('SUMMARY')  || 'Event',
+      location: get('LOCATION') || '',
+      notes:    get('DESCRIPTION') || '',
+      start, end,
+      date:     `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`,
+      allDay:   dtRaw.length === 8,
+    });
+  });
+  return events.sort((a,b) => a.start - b.start);
+}
+
+function useICSFeed(url) {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState(null);
+
+  useEffect(() => {
+    if (!url) { setEvents([]); return; }
+    setLoading(true); setError(null);
+    // Use a CORS proxy since ICS feeds don't allow direct browser fetch
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    fetch(proxy)
+      .then(r => r.json())
+      .then(d => { setEvents(parseICS(d.contents || '')); setLoading(false); })
+      .catch(e => { setError('Could not load feed.'); setLoading(false); });
+  }, [url]);
+
+  return { events, loading, error };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EVENTS PAGE
+════════════════════════════════════════════════════════════════ */
+function EventsPage({ icsUrl, onCreateSession }) {
+  const { events, loading, error } = useICSFeed(icsUrl);
+  const [selected, setSelected] = useState(null);
+  const now = new Date();
+
+  const upcoming = events.filter(e => e.start >= now || e.date >= now.toISOString().slice(0,10));
+  const past     = events.filter(e => e.start < now && e.date < now.toISOString().slice(0,10));
+
+  function fmtDate(e) {
+    const opts = { weekday:'short', day:'numeric', month:'short', year:'numeric' };
+    const d = e.start.toLocaleDateString('de-CH', opts);
+    if (e.allDay) return d;
+    const t = e.start.toLocaleTimeString('de-CH', { hour:'2-digit', minute:'2-digit' });
+    return `${d} · ${t}`;
+  }
+  function daysUntil(e) {
+    const diff = Math.ceil((e.start - now) / (1000*60*60*24));
+    if (diff === 0) return 'Heute';
+    if (diff === 1) return 'Morgen';
+    if (diff < 0)  return `vor ${Math.abs(diff)} Tagen`;
+    return `in ${diff} Tagen`;
+  }
+
+  function EventCard({ ev, showBadge }) {
+    const isPast = ev.start < now;
+    return (
+      <div onClick={()=>setSelected(ev)} style={{
+        background:'var(--card)', border:'1px solid var(--border)', borderRadius:12,
+        padding:'12px 14px', marginBottom:8, cursor:'pointer',
+        borderLeft: isPast ? '3px solid var(--border)' : '3px solid var(--accent)',
+        opacity: isPast ? 0.6 : 1
+      }}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{ev.title}</div>
+            <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>{fmtDate(ev)}</div>
+            {ev.location && <div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>📍 {ev.location}</div>}
+          </div>
+          {showBadge && !isPast && (
+            <div style={{
+              background:'var(--accent)', color:'#111', borderRadius:20,
+              padding:'3px 10px', fontSize:11, fontFamily:'DM Mono,monospace',
+              fontWeight:700, whiteSpace:'nowrap', marginLeft:8, alignSelf:'center'
+            }}>{daysUntil(ev)}</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!icsUrl) return (
+    <div style={{padding:'32px 16px', textAlign:'center'}}>
+      <div style={{fontSize:40, marginBottom:12}}>📅</div>
+      <div style={{color:'var(--muted)', fontFamily:'DM Mono,monospace', fontSize:13, lineHeight:1.6}}>
+        Noch kein ICS-Feed eingerichtet.<br/>
+        Bitte in den <strong style={{color:'var(--accent)'}}>Settings → Events</strong> die Google Kalender ICS-URL eintragen.
+      </div>
+    </div>
+  );
+
+  if (loading) return <div style={{padding:32,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Lade Termine…</div>;
+  if (error)   return <div style={{padding:32,textAlign:'center',color:'var(--red)',fontFamily:'DM Mono,monospace'}}>{error}</div>;
+  if (!events.length) return <div style={{padding:32,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Keine Termine gefunden.</div>;
+
+  return (
+    <div>
+      {upcoming.length > 0 && (
+        <div>
+          <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,margin:'12px 0 8px'}}>UPCOMING</div>
+          {upcoming.map(ev => <EventCard key={ev.uid} ev={ev} showBadge={true}/>)}
+        </div>
+      )}
+      {past.length > 0 && (
+        <div>
+          <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,margin:'16px 0 8px'}}>PAST</div>
+          {past.slice(0,10).map(ev => <EventCard key={ev.uid} ev={ev} showBadge={false}/>)}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selected && (
+        <div className="modal-overlay" onClick={()=>setSelected(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{selected.title}</div>
+              <button className="modal-close" onClick={()=>setSelected(null)}>×</button>
+            </div>
+            <div style={{padding:'0 16px 16px'}}>
+              <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--muted)',marginBottom:8}}>{fmtDate(selected)}</div>
+              {selected.location && <div style={{marginBottom:8,fontSize:14}}>📍 {selected.location}</div>}
+              {selected.notes && (
+                <div style={{background:'var(--surface)',borderRadius:8,padding:12,fontSize:13,color:'var(--fg)',marginBottom:16,lineHeight:1.6}}>
+                  {selected.notes.replace(/\\n/g,'\n')}
+                </div>
+              )}
+              <button className="btn btn-primary" style={{width:'100%',marginTop:8}} onClick={()=>{
+                onCreateSession({ date: selected.date, disziplin: selected.title, ort: selected.location, type: 'wettkampf' });
+                setSelected(null);
+              }}>
+                🏆 Session erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NAV_ITEMS = [
   { id: 'dashboard', icon: '🎯', label: 'Home' },
   { id: 'sessions',  icon: '📋', label: 'Sessions' },
-  { id: 'notizen',   icon: '📝', label: 'Notes' },
+  { id: 'events',    icon: '📅', label: 'Events' },
   { id: 'analyse',   icon: '🔬', label: 'Stats' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
 ];
@@ -907,10 +1076,11 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
 }
 // ── Dashboard block definitions ──────────────────────────────
 const DEFAULT_BLOCKS = [
-  { id: 'stats',   label: 'Stats',        visible: true },
-  { id: 'shells',  label: 'Shells Fired', visible: true },
-  { id: 'score',   label: 'Score (mini)', visible: false },
-  { id: 'recent',  label: 'Recent',       visible: true },
+  { id: 'stats',     label: 'Stats',          visible: true  },
+  { id: 'nextEvent', label: 'Next Event',      visible: true  },
+  { id: 'shells',    label: 'Shells Fired',    visible: true  },
+  { id: 'score',     label: 'Score (mini)',    visible: false },
+  { id: 'recent',    label: 'Recent',          visible: true  },
 ];
 
 function loadBlocks() {
@@ -929,7 +1099,7 @@ function saveBlocks(blocks) {
   localStorage.setItem('claylog_blocks', JSON.stringify(blocks));
 }
 
-function Dashboard({ sessions, onSessionClick }) {
+function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
 
@@ -939,6 +1109,11 @@ function Dashboard({ sessions, onSessionClick }) {
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
   const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
+
+  // Next event from ICS feed
+  const { events: icsEvents } = useICSFeed(icsUrl);
+  const now = new Date();
+  const nextEvent = icsEvents.find(e => e.start >= now);
 
   const [blocks, setBlocks]     = useState(() => loadBlocks());
   const [editMode, setEditMode] = useState(false);
@@ -998,6 +1173,25 @@ function Dashboard({ sessions, onSessionClick }) {
 
   const blockContent = {
     score: <UnifiedScoreChart sessions={sessions} variant="mini" />,
+    nextEvent: nextEvent ? (
+      <div className="card" style={{marginBottom:0,borderLeft:'3px solid var(--accent)'}}>
+        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:6}}>NÄCHSTER WETTKAMPF</div>
+        <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>{nextEvent.title}</div>
+        <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:nextEvent.location?4:0}}>
+          {nextEvent.start.toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
+          {!nextEvent.allDay && ' · '+nextEvent.start.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}
+        </div>
+        {nextEvent.location && <div style={{fontSize:12,color:'var(--muted)'}}>📍 {nextEvent.location}</div>}
+        <div style={{display:'flex',gap:8,marginTop:10}}>
+          <div style={{background:'var(--accent)',color:'#111',borderRadius:20,padding:'3px 12px',fontSize:11,fontFamily:'DM Mono,monospace',fontWeight:700}}>
+            {Math.ceil((nextEvent.start-now)/(1000*60*60*24))===0?'Heute':Math.ceil((nextEvent.start-now)/(1000*60*60*24))===1?'Morgen':`in ${Math.ceil((nextEvent.start-now)/(1000*60*60*24))} Tagen`}
+          </div>
+          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,disziplin:nextEvent.title,ort:nextEvent.location,type:'wettkampf'})}>
+            + Session
+          </button>
+        </div>
+      </div>
+    ) : null,
     stats: (
       <div className="stat-grid">
         <div className="stat-box">
@@ -1781,7 +1975,7 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus }) {
+function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus, icsUrl, onSaveIcsUrl }) {
   const [showLists, setShowLists] = useState(false);
   const name = user?.user_metadata?.name || '';
   const email = user?.email || '';
@@ -1811,6 +2005,27 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
   return (
     <div>
       <AppearanceSettings />
+
+      <div className="card">
+        <div className="card-title" style={{marginBottom:12}}>📅 Events / ICS Feed</div>
+        <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>
+          Google Kalender ICS-URL eintragen — Termine werden automatisch im Events-Tab und auf dem Dashboard angezeigt.
+        </div>
+        <div className="form-group">
+          <label>ICS-URL</label>
+          <input type="url" defaultValue={icsUrl||''} placeholder="https://calendar.google.com/calendar/ical/…"
+            id="ics-url-input"
+            style={{fontSize:12,wordBreak:'break-all'}}/>
+        </div>
+        <button className="btn btn-primary" style={{marginTop:4}} onClick={()=>{
+          const val = document.getElementById('ics-url-input').value.trim();
+          onSaveIcsUrl(val);
+          alert(val ? 'ICS-URL gespeichert!' : 'ICS-Feed entfernt.');
+        }}>Speichern</button>
+        <div style={{fontSize:11,color:'var(--muted)',marginTop:10,fontFamily:'DM Mono,monospace',lineHeight:1.6}}>
+          In Google Kalender: Kalender-Einstellungen → «Öffentliche URL im iCal-Format»
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>🎯 Custom Disciplines</div>
@@ -1919,16 +2134,16 @@ const DISZ_CONFIG = {
   Trap:   { passen: 5, maxPro: 25, scoreOnly: false },
 };
 
-function SessionModal({ session, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
+function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
 
-  const [type, setType] = useState(session?.type || 'training');
-  const [disziplin, setDisziplin] = useState(session?.disziplin || 'Fitasc');
-  const [date, setDate] = useState(session?.date || todayStr());
+  const [type, setType] = useState(session?.type || prefill?.type || 'training');
+  const [disziplin, setDisziplin] = useState(session?.disziplin || prefill?.disziplin || 'Fitasc');
+  const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
   const [notes, setNotes] = useState(session?.notes || '');
   const [munition, setMunition] = useState(session?.munition || '');
-  const [ort, setOrt] = useState(session?.ort ?? lastSession?.ort ?? '');
+  const [ort, setOrt] = useState(session?.ort ?? prefill?.ort ?? lastSession?.ort ?? '');
   const [waffe, setWaffe] = useState(session?.waffe ?? lastSession?.waffe ?? '');
   const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ ?? lastSession?.munition_typ ?? '');
   function addToList(key, label, setter) {
@@ -2586,8 +2801,17 @@ function App() {
     } catch {}
   }
 
-  /* ── MODALS ── */
-  function openNew() {
+  const [icsUrl, setIcsUrl] = useState(() => { try { return localStorage.getItem('claylog_icsurl') || ''; } catch { return ''; } });
+
+  function saveIcsUrl(url) {
+    setIcsUrl(url);
+    try { localStorage.setItem('claylog_icsurl', url); } catch {}
+  }
+
+  function openNewWithPrefill(prefill = {}) {
+    setSelectedSession({ _prefill: prefill });
+    setModal('new');
+  }
     setSelectedSession(null);
     setModal('new');
   }
@@ -2617,8 +2841,9 @@ function App() {
       <Header user={currentUser} syncStatus={syncStatus} />
 
       <div className="main">
-        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} />}
+        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
+        {tab === 'events' && <EventsPage icsUrl={icsUrl} onCreateSession={openNewWithPrefill} />}
         {tab === 'notizen' && <NotizenPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
@@ -2629,7 +2854,9 @@ function App() {
             onSync={() => loadData(authToken)}
             onExport={exportData}
             onClearData={clearAllData}
-            onSaveLists={saveLists} />
+            onSaveLists={saveLists}
+            icsUrl={icsUrl}
+            onSaveIcsUrl={saveIcsUrl} />
         )}
       </div>
 
@@ -2640,6 +2867,7 @@ function App() {
         <SessionModal
           key={modal === 'edit' ? selectedSession?.id : 'new'}
           session={modal === 'edit' ? selectedSession : null}
+          prefill={modal === 'new' ? selectedSession?._prefill : null}
           lists={lists}
           customDisz={customDisz}
           onSave={saveSession}
