@@ -555,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v69';
+const APP_VERSION = 'v70';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -692,97 +692,21 @@ function useModalLock(open) {
     };
   }, [open]);
 }
-function EventModal({ event, onSave, onDelete, onClose, onCreateSession }) {
-  useModalLock(true);
-  const isEdit = !!event?.id;
-  const [name, setName]         = useState(event?.name || '');
-  const [ort, setOrt]           = useState(event?.ort || '');
-  const [dateStart, setDateStart] = useState(event?.dateStart || todayStr());
-  const [dateEnd, setDateEnd]   = useState(event?.dateEnd || '');
-  const [notes, setNotes]       = useState(event?.notes || '');
 
-  function handleSave() {
-    if (!name.trim()) { alert('Bitte einen Namen eingeben.'); return; }
-    onSave({
-      id: event?.id || crypto.randomUUID(),
-      name: name.trim(), ort, dateStart, dateEnd, notes,
-      source: 'manual',
-    });
-  }
-
-  const gcalUrl = makeGCalUrl({
-    title: name || 'Wettkampf',
-    date: dateStart,
-    dateEnd: dateEnd || dateStart,
-    location: ort,
-    notes,
+function createEventViaPrompt(existing, onSave) {
+  const name = prompt('Wettkampf Name:', existing?.name || '');
+  if (!name?.trim()) return;
+  const ort = prompt('Ort:', existing?.ort || '') ?? '';
+  const dateStart = prompt('Von (YYYY-MM-DD):', existing?.dateStart || new Date().toISOString().slice(0,10));
+  if (!dateStart?.trim()) return;
+  const dateEnd = prompt('Bis (leer = gleicher Tag):', existing?.dateEnd || '') ?? '';
+  const notes = prompt('Notizen (optional):', existing?.notes || '') ?? '';
+  onSave({
+    id: existing?.id || crypto.randomUUID(),
+    name: name.trim(), ort: ort.trim(),
+    dateStart: dateStart.trim(), dateEnd: dateEnd.trim(),
+    notes: notes.trim(), source: 'manual',
   });
-
-  return (
-    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal">
-        <div className="modal-handle"/>
-        <div className="modal-title">{isEdit ? 'Wettkampf bearbeiten' : 'Neuer Wettkampf'}</div>
-
-        <div className="form-group">
-          <label>Name</label>
-          <input type="text" value={name} onChange={e=>setName(e.target.value)}
-            placeholder="z.B. PC 200 Blaser Cup Bern" autoFocus/>
-        </div>
-        <div className="form-group">
-          <label>Ort</label>
-          <input type="text" value={ort} onChange={e=>setOrt(e.target.value)}
-            placeholder="z.B. Bern, Schweiz"/>
-        </div>
-        <div className="input-row">
-          <div className="form-group">
-            <label>Von</label>
-            <input type="date" value={dateStart} onChange={e=>setDateStart(e.target.value)}/>
-          </div>
-          <div className="form-group">
-            <label>Bis <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
-            <input type="date" value={dateEnd} onChange={e=>setDateEnd(e.target.value)}
-              min={dateStart}/>
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Notizen</label>
-          <textarea value={notes} onChange={e=>setNotes(e.target.value)}
-            placeholder="Infos, Anmeldung, etc." rows={3}/>
-        </div>
-
-        <button className="btn btn-primary" style={{width:'100%'}} onClick={handleSave}>
-          {isEdit ? '✅ Speichern' : '+ Wettkampf eintragen'}
-        </button>
-
-        <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
-          style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            marginTop:8,padding:'11px',borderRadius:12,border:'1px solid var(--border)',
-            background:'var(--surface)',color:'var(--fg)',textDecoration:'none',
-            fontFamily:'DM Mono,monospace',fontSize:13,fontWeight:600}}>
-          <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
-            style={{width:18,height:18}} alt=""/>
-          In Google Kalender eintragen
-        </a>
-
-        {isEdit && (
-          <div className="btn-row" style={{marginTop:8}}>
-            {onCreateSession && (
-              <button className="btn btn-ghost" style={{flex:1,marginTop:0}} onClick={()=>{
-                onCreateSession({ date:dateStart, name, ort, type:'wettkampf' });
-                onClose();
-              }}>🏆 Session erstellen</button>
-            )}
-            <button className="btn btn-danger" style={{flex:1,marginTop:0}}
-              onClick={()=>{ if(confirm('Wettkampf löschen?')) onDelete(event.id); }}>
-              🗑 Löschen
-            </button>
-          </div>
-        )}
-        <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Abbrechen</button>
-      </div>
-    </div>
-  );
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -790,13 +714,11 @@ function EventModal({ event, onSave, onDelete, onClose, onCreateSession }) {
 ════════════════════════════════════════════════════════════════ */
 function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreateSession }) {
   const { events: icsEvents, loading, error, debugInfo } = useICSFeed(icsUrl);
-  const [selected, setSelected]   = useState(null);
-  const [editEvent, setEditEvent] = useState(null);
+  const [selected, setSelected] = useState(null);
   const now = new Date();
   const todayStr = now.toISOString().slice(0,10);
 
-  // Lock body scroll when any popup is open
-  useModalLock(!!(selected || editEvent !== null));
+  useModalLock(!!selected);
 
   // Normalise manual events to same shape as ICS
   const manualNorm = manualEvents.map(ev => ({
@@ -839,7 +761,10 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
     const isPast = (ev.dateEnd||ev.date) < todayStr;
     const isManual = ev.source === 'manual';
     return (
-      <div onClick={()=> isManual ? setEditEvent(ev._raw) : setSelected(ev)} style={{
+      <div onClick={()=> isManual
+        ? createEventViaPrompt(ev._raw, onSaveEvent)
+        : setSelected(ev)
+      } style={{
         background:'var(--card)', border:'1px solid var(--border)', borderRadius:12,
         padding:'12px 14px', marginBottom:8, cursor:'pointer',
         borderLeft:`3px solid ${isPast ? 'var(--border)' : isManual ? 'var(--accent)' : 'var(--accent2)'}`,
@@ -873,7 +798,7 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
     <div>
       {/* + Wettkampf Button */}
       <button className="btn btn-primary" style={{width:'100%',marginBottom:12,marginTop:4}}
-        onClick={()=>setEditEvent({})}>
+        onClick={()=>createEventViaPrompt(null, onSaveEvent)}>
         + Wettkampf eintragen
       </button>
 
@@ -951,16 +876,6 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
         </div>
       )}
 
-      {/* Manual event modal */}
-      {editEvent !== null && (
-        <EventModal
-          event={editEvent?.id ? editEvent : null}
-          onSave={onSaveEvent}
-          onDelete={onDeleteEvent}
-          onClose={()=>setEditEvent(null)}
-          onCreateSession={onCreateSession}
-        />
-      )}
     </div>
   );
 }
