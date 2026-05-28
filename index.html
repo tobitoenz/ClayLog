@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v61';
+const APP_VERSION = 'v62';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -2812,6 +2812,7 @@ function App() {
     setSelectedSession({ _prefill: prefill });
     setModal('new');
   }
+  function openNew() {
     setSelectedSession(null);
     setModal('new');
   }
