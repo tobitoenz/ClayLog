@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v62';
+const APP_VERSION = 'v63';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -567,64 +567,97 @@ function Header({ user, syncStatus }) {
    ICS FEED — parse & fetch
 ════════════════════════════════════════════════════════════════ */
 function parseICS(text) {
+  if (!text) return [];
+  // Unfold long lines (ICS spec: lines split with CRLF + space/tab)
+  text = text.replace(/\r\n[ \t]/g, '').replace(/\r/g, '');
   const events = [];
   const blocks = text.split('BEGIN:VEVENT');
   blocks.slice(1).forEach(block => {
     const get = (key) => {
-      const m = block.match(new RegExp(key+'(?:;[^:]*)?:([^\\r\\n]+)'));
+      const m = block.match(new RegExp('(?:^|\\n)' + key + '(?:;[^:\\n]*)?:([^\\n]+)', 'i'));
       return m ? m[1].trim() : '';
     };
-    const dtRaw = get('DTSTART') || get('DTSTART;VALUE=DATE');
-    const dtEnd  = get('DTEND')  || get('DTEND;VALUE=DATE');
+    const dtRaw = get('DTSTART');
+    const dtEnd  = get('DTEND');
     if (!dtRaw) return;
-    // Parse YYYYMMDD or YYYYMMDDTHHmmssZ
     function parseDate(s) {
       if (!s) return null;
-      const clean = s.replace(/[TZ]/g,'');
-      const y=clean.slice(0,4), mo=clean.slice(4,6), d=clean.slice(6,8);
-      const h=clean.slice(8,10)||'00', mi=clean.slice(10,12)||'00';
-      return new Date(`${y}-${mo}-${d}T${h}:${mi}:00`);
+      if (/^\d{8}$/.test(s))
+        return new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00`);
+      if (s.endsWith('Z')) {
+        const c = s.replace(/[TZ]/g,'');
+        return new Date(`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}T${c.slice(8,10)}:${c.slice(10,12)}:00Z`);
+      }
+      const c = s.replace('T','');
+      return new Date(`${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}T${c.slice(8,10)||'00'}:${c.slice(10,12)||'00'}:00`);
     }
     const start = parseDate(dtRaw);
-    const end   = parseDate(dtEnd);
-    if (!start) return;
+    if (!start || isNaN(start)) return;
+    const end = parseDate(dtEnd);
+    const decode = s => s.replace(/\\n/g,'\n').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\');
     events.push({
       uid:      get('UID') || Math.random().toString(36),
-      title:    get('SUMMARY')  || 'Event',
-      location: get('LOCATION') || '',
-      notes:    get('DESCRIPTION') || '',
+      title:    decode(get('SUMMARY'))     || 'Event',
+      location: decode(get('LOCATION'))    || '',
+      notes:    decode(get('DESCRIPTION')) || '',
       start, end,
       date:     `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`,
-      allDay:   dtRaw.length === 8,
+      allDay:   /^\d{8}$/.test(dtRaw),
     });
   });
   return events.sort((a,b) => a.start - b.start);
 }
 
 function useICSFeed(url) {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents]   = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
+  const [error, setError]     = useState(null);
+  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     if (!url) { setEvents([]); return; }
-    setLoading(true); setError(null);
-    // Use a CORS proxy since ICS feeds don't allow direct browser fetch
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    fetch(proxy)
-      .then(r => r.json())
-      .then(d => { setEvents(parseICS(d.contents || '')); setLoading(false); })
-      .catch(e => { setError('Could not load feed.'); setLoading(false); });
+    setLoading(true); setError(null); setDebugInfo('');
+    const proxies = [
+      u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+      u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    ];
+    async function tryFetch() {
+      for (let i = 0; i < proxies.length; i++) {
+        try {
+          const r = await fetch(proxies[i](url));
+          if (!r.ok) continue;
+          let text = '';
+          const ct = r.headers.get('content-type')||'';
+          if (ct.includes('json')) {
+            const d = await r.json();
+            text = d?.contents || '';
+          } else {
+            text = await r.text();
+          }
+          if (text.includes('BEGIN:VCALENDAR') || text.includes('BEGIN:VEVENT')) {
+            const parsed = parseICS(text);
+            setEvents(parsed);
+            setDebugInfo(`OK (proxy ${i+1}): ${parsed.length} events`);
+            setLoading(false);
+            return;
+          }
+        } catch(e) { continue; }
+      }
+      setError('Feed konnte nicht geladen werden. URL prüfen.');
+      setLoading(false);
+    }
+    tryFetch();
   }, [url]);
 
-  return { events, loading, error };
+  return { events, loading, error, debugInfo };
 }
 
 /* ════════════════════════════════════════════════════════════════
    EVENTS PAGE
 ════════════════════════════════════════════════════════════════ */
 function EventsPage({ icsUrl, onCreateSession }) {
-  const { events, loading, error } = useICSFeed(icsUrl);
+  const { events, loading, error, debugInfo } = useICSFeed(icsUrl);
   const [selected, setSelected] = useState(null);
   const now = new Date();
 
@@ -684,8 +717,20 @@ function EventsPage({ icsUrl, onCreateSession }) {
   );
 
   if (loading) return <div style={{padding:32,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Lade Termine…</div>;
-  if (error)   return <div style={{padding:32,textAlign:'center',color:'var(--red)',fontFamily:'DM Mono,monospace'}}>{error}</div>;
-  if (!events.length) return <div style={{padding:32,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Keine Termine gefunden.</div>;
+  if (error)   return (
+    <div style={{padding:24}}>
+      <div style={{color:'var(--red)',fontFamily:'DM Mono,monospace',marginBottom:8}}>{error}</div>
+      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',lineHeight:1.6}}>
+        Tipp: Stelle sicher dass die URL die «Privatadresse im iCal-Format» aus Google Kalender ist.
+      </div>
+    </div>
+  );
+  if (!events.length) return (
+    <div style={{padding:32,textAlign:'center'}}>
+      <div style={{color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:8}}>Keine Termine gefunden.</div>
+      {debugInfo && <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',opacity:.6}}>{debugInfo}</div>}
+    </div>
+  );
 
   return (
     <div>
