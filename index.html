@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v63';
+const APP_VERSION = 'v64';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -747,26 +747,54 @@ function EventsPage({ icsUrl, onCreateSession }) {
         </div>
       )}
 
-      {/* Detail Modal */}
+      {/* Detail Popup */}
       {selected && (
-        <div className="modal-overlay" onClick={()=>setSelected(null)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">{selected.title}</div>
-              <button className="modal-close" onClick={()=>setSelected(null)}>×</button>
+        <div onClick={()=>setSelected(null)} style={{
+          position:'fixed', inset:0, background:'rgba(0,0,0,0.7)',
+          zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center',
+          padding:'24px 16px'
+        }}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            background:'var(--card)', borderRadius:20, width:'100%', maxWidth:420,
+            boxShadow:'0 24px 64px rgba(0,0,0,0.7)', overflow:'hidden',
+            border:'1px solid var(--border)'
+          }}>
+            {/* Header */}
+            <div style={{
+              background:'var(--accent)', padding:'16px 16px 14px',
+              display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12
+            }}>
+              <div style={{fontWeight:800, fontSize:18, color:'#111', lineHeight:1.3, flex:1}}>
+                {selected.title}
+              </div>
+              <button onClick={()=>setSelected(null)} style={{
+                background:'#c0392b', border:'none', borderRadius:10,
+                width:36, height:36, fontSize:22, fontWeight:700, color:'#fff',
+                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                flexShrink:0, lineHeight:1
+              }}>×</button>
             </div>
-            <div style={{padding:'0 16px 16px'}}>
-              <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'var(--muted)',marginBottom:8}}>{fmtDate(selected)}</div>
-              {selected.location && <div style={{marginBottom:8,fontSize:14}}>📍 {selected.location}</div>}
+            {/* Body */}
+            <div style={{padding:'16px 18px 20px'}}>
+              <div style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--muted)',marginBottom:10}}>
+                📅 {fmtDate(selected)}
+              </div>
+              {selected.location && (
+                <div style={{fontSize:14, marginBottom:10}}>📍 {selected.location}</div>
+              )}
               {selected.notes && (
-                <div style={{background:'var(--surface)',borderRadius:8,padding:12,fontSize:13,color:'var(--fg)',marginBottom:16,lineHeight:1.6}}>
-                  {selected.notes.replace(/\\n/g,'\n')}
+                <div style={{
+                  background:'var(--surface)', borderRadius:10, padding:'10px 12px',
+                  fontSize:13, color:'var(--fg)', marginBottom:16, lineHeight:1.6
+                }}>
+                  {selected.notes}
                 </div>
               )}
-              <button className="btn btn-primary" style={{width:'100%',marginTop:8}} onClick={()=>{
-                onCreateSession({ date: selected.date, disziplin: selected.title, ort: selected.location, type: 'wettkampf' });
-                setSelected(null);
-              }}>
+              <button className="btn btn-primary" style={{width:'100%', marginTop:4, fontSize:15, padding:'13px'}}
+                onClick={()=>{
+                  onCreateSession({ date:selected.date, disziplin:selected.title, ort:selected.location, type:'wettkampf' });
+                  setSelected(null);
+                }}>
                 🏆 Session erstellen
               </button>
             </div>
