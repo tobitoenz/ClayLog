@@ -536,7 +536,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v65';
+const APP_VERSION = 'v66';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -792,7 +792,7 @@ function EventsPage({ icsUrl, onCreateSession }) {
               )}
               <button className="btn btn-primary" style={{width:'100%', marginTop:4, fontSize:15, padding:'13px'}}
                 onClick={()=>{
-                  onCreateSession({ date:selected.date, disziplin:selected.title, ort:selected.location, type:'wettkampf' });
+                  onCreateSession({ date:selected.date, name:selected.title, ort:selected.location, type:'wettkampf' });
                   setSelected(null);
                 }}>
                 🏆 Session erstellen
@@ -848,8 +848,9 @@ function SessionItem({ s, compact, onClick }) {
         {isComp ? '🏆' : '🏋️'}
       </div>
       <div className="session-info">
-        <div className="session-name">{s.disziplin || 'Training'}</div>
+        <div className="session-name">{s.name || s.disziplin || 'Training'}</div>
         <div className="session-meta">
+          {s.name && <span style={{color:'var(--muted)',marginRight:4}}>{s.disziplin} · </span>}
           {fmtDate(s.date)}{s.ort ? ` · ${s.ort}` : ''}{s.waffe ? ` · ${s.waffe}` : ''}
         </div>
       </div>
@@ -1269,7 +1270,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession }) {
           <div style={{background:'var(--accent)',color:'#111',borderRadius:20,padding:'3px 12px',fontSize:11,fontFamily:'DM Mono,monospace',fontWeight:700}}>
             {Math.ceil((nextEvent.start-now)/(1000*60*60*24))===0?'Heute':Math.ceil((nextEvent.start-now)/(1000*60*60*24))===1?'Morgen':`in ${Math.ceil((nextEvent.start-now)/(1000*60*60*24))} Tagen`}
           </div>
-          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,disziplin:nextEvent.title,ort:nextEvent.location,type:'wettkampf'})}>
+          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,name:nextEvent.title,ort:nextEvent.location,type:'wettkampf'})}>
             + Session
           </button>
         </div>
@@ -2222,6 +2223,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
 
   const [type, setType] = useState(session?.type || prefill?.type || 'training');
+  const [name, setName] = useState(session?.name || prefill?.name || '');
   const [disziplin, setDisziplin] = useState(session?.disziplin || prefill?.disziplin || 'Fitasc');
   const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
   const [notes, setNotes] = useState(session?.notes || '');
@@ -2324,7 +2326,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     }
     const s = {
       id: session?.id || crypto.randomUUID(),
-      type, disziplin, date, notes,
+      type, name, disziplin, date, notes,
       munition: parseInt(munition)||0,
       ort, waffe, munition_typ: munitionTyp,
       score, max, passen: passenArr,
@@ -2345,6 +2347,13 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
             <button className="type-btn" style={{background: type==='training'?'var(--accent)':'var(--card)', color: type==='training'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('training')}>🏋️ Practice</button>
             <button className="type-btn" style={{background: type==='wettkampf'?'var(--accent2)':'var(--card)', color: type==='wettkampf'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('wettkampf')}>🏆 Competition</button>
           </div>
+        </div>
+
+        {/* Name (optional) */}
+        <div className="form-group">
+          <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
+          <input type="text" value={name} onChange={e=>setName(e.target.value)}
+            placeholder={type==='wettkampf' ? 'z.B. Blaser Cup Bern' : 'z.B. Morgentraining'}/>
         </div>
 
         {/* Discipline + Date */}
@@ -2548,7 +2557,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
   const quote = hasScore ? Math.round(session.score / session.max * 100) : null;
 
   const gcalUrl = makeGCalUrl({
-    title: `${session.type === 'wettkampf' ? '🏆 ' : '🏋️ '}${session.disziplin}`,
+    title: `${session.type === 'wettkampf' ? '🏆 ' : '🏋️ '}${session.name || session.disziplin}`,
     date: session.date,
     location: session.ort,
     notes: session.notes,
@@ -2561,7 +2570,8 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
           <div>
             <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:2,marginBottom:4}}>{session.type?.toUpperCase()}</div>
-            <div style={{fontSize:22,fontWeight:600}}>{session.disziplin}</div>
+            <div style={{fontSize:22,fontWeight:600}}>{session.name || session.disziplin}</div>
+            {session.name && <div style={{fontSize:13,color:'var(--muted)',marginTop:2}}>{session.disziplin}</div>}
             <div style={{fontSize:13,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginTop:4}}>{fmtDate(session.date)}</div>
           </div>
           {hasScore && (
