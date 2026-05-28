@@ -555,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v72';
+const APP_VERSION = 'v73';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -701,17 +701,26 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
   const [name, setName]           = useState(existing?.name || '');
   const [ort, setOrt]             = useState(existing?.ort || '');
   const [dateStart, setDateStart] = useState(existing?.dateStart || new Date().toISOString().slice(0,10));
-  const [dateEnd, setDateEnd]     = useState(existing?.dateEnd || '');
+  const [dateEnd, setDateEnd]     = useState(existing?.dateEnd || existing?.dateStart || new Date().toISOString().slice(0,10));
   const isEdit = !!existing?.id;
+
+  // Keep dateEnd in sync when dateStart moves forward
+  function handleDateStart(val) {
+    setDateStart(val);
+    if (!dateEnd || dateEnd < val) setDateEnd(val);
+  }
 
   function handleSave() {
     if (!name.trim()) { alert('Bitte einen Namen eingeben.'); return; }
-    onSave({
+    const ev = {
       id: existing?.id || crypto.randomUUID(),
       name: name.trim(), ort: ort.trim(),
       dateStart, dateEnd: dateEnd || dateStart,
       notes: existing?.notes || '', source: 'manual',
-    });
+    };
+    onSave(ev);
+    // Open Google Calendar directly
+    window.open(makeGCalUrl({ title: ev.name, date: ev.dateStart, dateEnd: ev.dateEnd, location: ev.ort }), '_blank');
   }
 
   return (
@@ -762,7 +771,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
               letterSpacing:1,marginBottom:5}}>VON</div>
             <input type="date" value={dateStart}
-              onChange={e=>setDateStart(e.target.value)}
+              onChange={e=>handleDateStart(e.target.value)}
               style={{fontSize:14, padding:'8px 10px'}}/>
           </div>
           <div>
