@@ -556,7 +556,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v79';
+const APP_VERSION = 'v80';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -628,46 +628,90 @@ function parseICS(text) {
   return events.sort((a,b) => a.start - b.start);
 }
 
+const ICS_CACHE_KEY = 'claylog_ics_cache';
+const ICS_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
 function useICSFeed(url) {
-  const [events, setEvents]   = useState([]);
+  const [events, setEvents]   = useState(() => {
+    // Load from cache immediately on mount
+    try {
+      const c = JSON.parse(localStorage.getItem(ICS_CACHE_KEY)||'{}');
+      if (c.url === url && c.data && Date.now() - c.ts < ICS_CACHE_TTL) {
+        return c.data.map(e => ({ ...e, start: new Date(e.start) }));
+      }
+    } catch {}
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
   const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     if (!url) { setEvents([]); return; }
-    setLoading(true); setError(null); setDebugInfo('');
-    const proxies = [
-      u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-      u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    ];
-    async function tryFetch() {
-      for (let i = 0; i < proxies.length; i++) {
-        try {
-          const r = await fetch(proxies[i](url));
-          if (!r.ok) continue;
-          let text = '';
-          const ct = r.headers.get('content-type')||'';
-          if (ct.includes('json')) {
-            const d = await r.json();
-            text = d?.contents || '';
-          } else {
-            text = await r.text();
-          }
-          if (text.includes('BEGIN:VCALENDAR') || text.includes('BEGIN:VEVENT')) {
-            const parsed = parseICS(text);
-            setEvents(parsed);
-            setDebugInfo(`OK (proxy ${i+1}): ${parsed.length} events`);
-            setLoading(false);
-            return;
-          }
-        } catch(e) { continue; }
+
+    // Check cache — if fresh, skip fetch
+    try {
+      const c = JSON.parse(localStorage.getItem(ICS_CACHE_KEY)||'{}');
+      if (c.url === url && c.data && Date.now() - c.ts < ICS_CACHE_TTL) {
+        setEvents(c.data.map(e => ({ ...e, start: new Date(e.start) })));
+        setDebugInfo('from cache');
+        return; // skip network request
       }
-      setError('Feed konnte nicht geladen werden. URL prüfen.');
+    } catch {}
+
+    setLoading(true); setError(null);
+
+    // Helper: fetch via one proxy with 5s timeout
+    async function tryProxy(proxyUrl) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const r = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!r.ok) return null;
+        const ct = r.headers.get('content-type') || '';
+        let text = '';
+        if (ct.includes('json')) {
+          const d = await r.json();
+          text = d?.contents || '';
+        } else {
+          text = await r.text();
+        }
+        if (text.includes('BEGIN:VCALENDAR') || text.includes('BEGIN:VEVENT')) return text;
+        return null;
+      } catch { clearTimeout(timer); return null; }
+    }
+
+    async function fetchFeed() {
+      const proxies = [
+        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+      ];
+
+      // Race all proxies in parallel — take first success
+      const text = await Promise.any(
+        proxies.map(p => tryProxy(p).then(t => { if (!t) throw new Error('no data'); return t; }))
+      ).catch(() => null);
+
+      if (text) {
+        const parsed = parseICS(text);
+        setEvents(parsed);
+        setDebugInfo(`OK: ${parsed.length} events`);
+        // Save to cache
+        try {
+          localStorage.setItem(ICS_CACHE_KEY, JSON.stringify({
+            url, ts: Date.now(),
+            data: parsed.map(e => ({ ...e, start: e.start.toISOString() }))
+          }));
+        } catch {}
+      } else {
+        setError('Feed konnte nicht geladen werden. URL prüfen.');
+      }
       setLoading(false);
     }
-    tryFetch();
+
+    fetchFeed();
   }, [url]);
 
   return { events, loading, error, debugInfo };
