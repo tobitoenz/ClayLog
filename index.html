@@ -556,7 +556,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v77';
+const APP_VERSION = 'v79';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -2342,6 +2342,106 @@ function ShareCard() {
   );
 }
 
+function ICSGuide() {
+  const [open, setOpen] = useState(false);
+  const steps = [
+    {
+      n: '1',
+      title: 'Separaten «Wettkämpfe»-Kalender erstellen',
+      text: 'Erstelle in Google Kalender einen neuen Kalender mit dem Namen «Wettkämpfe». Wichtig: Nutze nicht deinen Hauptkalender — so teilst du nur die Wettkampf-Termine mit ClayLog, nichts Persönliches.',
+      tip: '💡 In Google Kalender: Linke Leiste → «Weitere Kalender» → «+» → «Neuen Kalender erstellen»',
+    },
+    {
+      n: '2',
+      title: 'Kalender-Einstellungen öffnen',
+      text: 'Klicke auf die drei Punkte (···) neben deinem neuen Kalender und wähle «Einstellungen und Freigabe».',
+      tip: null,
+    },
+    {
+      n: '3',
+      title: 'Privatadresse im iCal-Format kopieren',
+      text: 'Scrolle ganz nach unten zu «Kalender integrieren». Klicke auf das Auge-Symbol 👁 neben «Privatadresse im iCal-Format» um die URL anzuzeigen, dann kopieren.',
+      tip: '⚠️ Nimm die Privatadresse, nicht die öffentliche URL — die funktioniert auch ohne den Kalender öffentlich zu machen.',
+    },
+    {
+      n: '4',
+      title: 'URL hier einfügen & speichern',
+      text: 'Füge die kopierte URL oben ins Feld ein und tippe auf Speichern.',
+      tip: null,
+    },
+    {
+      n: '5',
+      title: 'Termine eintragen',
+      text: 'Trage deine Wettkämpfe in den Google Kalender ein. Sie erscheinen nach ca. 15–60 Minuten automatisch im Events-Tab.',
+      tip: '💡 Alternativ: Wettkämpfe direkt in ClayLog im Events-Tab eintragen — diese erscheinen sofort.',
+    },
+  ];
+
+  return (
+    <div style={{marginTop:12}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{
+        background:'none', border:'none', cursor:'pointer', padding:0,
+        display:'flex', alignItems:'center', gap:6,
+        color:'var(--accent)', fontFamily:'DM Mono,monospace', fontSize:12, fontWeight:600
+      }}>
+        <span style={{
+          display:'inline-block', transition:'transform .2s',
+          transform: open ? 'rotate(90deg)' : 'rotate(0deg)'
+        }}>▶</span>
+        {open ? 'Anleitung ausblenden' : '? Anleitung: Google Kalender verbinden'}
+      </button>
+
+      {open && (
+        <div style={{marginTop:12}}>
+          {steps.map(s => (
+            <div key={s.n} style={{
+              display:'flex', gap:12, marginBottom:14, alignItems:'flex-start'
+            }}>
+              {/* Step number */}
+              <div style={{
+                width:26, height:26, borderRadius:'50%', flexShrink:0,
+                background:'var(--accent)', color:'#111',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontWeight:800, fontSize:13, fontFamily:'DM Mono,monospace'
+              }}>{s.n}</div>
+              {/* Content */}
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700, fontSize:13, marginBottom:4}}>{s.title}</div>
+                <div style={{fontSize:12, color:'var(--muted)', lineHeight:1.6}}>{s.text}</div>
+                {s.tip && (
+                  <div style={{
+                    marginTop:6, padding:'6px 10px', borderRadius:8,
+                    background:'var(--card)', border:'1px solid var(--border)',
+                    fontSize:11, color:'var(--muted)', lineHeight:1.5
+                  }}>{s.tip}</div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* FAQ */}
+          <div style={{
+            marginTop:8, padding:'10px 12px', borderRadius:10,
+            background:'var(--card)', border:'1px solid var(--border)'
+          }}>
+            <div style={{fontWeight:700, fontSize:12, marginBottom:8, fontFamily:'DM Mono,monospace', letterSpacing:.5}}>HÄUFIGE FRAGEN</div>
+            {[
+              ['Termine erscheinen nicht sofort', 'Google aktualisiert den ICS-Feed alle 15–60 Minuten. Bitte etwas Geduld — neue Einträge erscheinen nach kurzer Zeit automatisch.'],
+              ['Sind meine Termine öffentlich?', 'Nein. Die Privatadresse enthält einen geheimen Token. Nur wer die genaue URL kennt kann die Termine sehen.'],
+              ['Was ist der Unterschied zu manuellen Einträgen?', 'Manuelle Einträge (im Events-Tab) erscheinen sofort und werden auch in Google Kalender eingetragen. ICS-Einträge kommen aus Google Kalender und werden nur gelesen.'],
+            ].map(([q,a]) => (
+              <div key={q} style={{marginBottom:10}}>
+                <div style={{fontSize:12, fontWeight:600, marginBottom:3}}>❓ {q}</div>
+                <div style={{fontSize:11, color:'var(--muted)', lineHeight:1.5}}>→ {a}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus, icsUrl, onSaveIcsUrl }) {
   const [showLists, setShowLists] = useState(false);
   const name = user?.user_metadata?.name || '';
@@ -2376,7 +2476,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>📅 Events / ICS Feed</div>
         <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>
-          Google Kalender ICS-URL eintragen — Termine werden automatisch im Events-Tab und auf dem Dashboard angezeigt.
+          Google Kalender verbinden — Wettkämpfe erscheinen automatisch im Events-Tab und auf dem Dashboard.
         </div>
         <div className="form-group">
           <label>ICS-URL</label>
@@ -2387,11 +2487,11 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         <button className="btn btn-primary" style={{marginTop:4}} onClick={()=>{
           const val = document.getElementById('ics-url-input').value.trim();
           onSaveIcsUrl(val);
-          alert(val ? 'ICS-URL gespeichert!' : 'ICS-Feed entfernt.');
+          alert(val ? '✅ ICS-URL gespeichert!' : 'ICS-Feed entfernt.');
         }}>Speichern</button>
-        <div style={{fontSize:11,color:'var(--muted)',marginTop:10,fontFamily:'DM Mono,monospace',lineHeight:1.6}}>
-          In Google Kalender: Kalender-Einstellungen → «Öffentliche URL im iCal-Format»
-        </div>
+
+        {/* Collapsible guide */}
+        <ICSGuide />
       </div>
 
       <div className="card">
