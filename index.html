@@ -555,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v73';
+const APP_VERSION = 'v74';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -1416,7 +1416,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
 
   // Long-press to enter edit mode on mobile
   function handleTouchStart() {
-    longPressTimer.current = setTimeout(() => setEditMode(true), 600);
+    longPressTimer.current = setTimeout(() => setEditMode(true), 2000);
   }
   function handleTouchEnd() {
     clearTimeout(longPressTimer.current);
@@ -1818,16 +1818,16 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     if (!pts.length) return null;
     const W=300, H=80, padL=24, padR=4, padT=6, padB=14;
     const cW=W-padL-padR, cH=H-padT-padB;
-    const dates = pts.map(p=>new Date(p.date));
-    const minD = new Date(Math.min(...dates)); minD.setDate(1);
-    const maxD = new Date(Math.max(...dates)); maxD.setMonth(maxD.getMonth()+1);
-    const range = Math.max(maxD-minD,1);
+    // Fixed Jan–Dec axis for current year
+    const minD = new Date(currentYear+'-01-01');
+    const maxD = new Date(currentYear+'-12-31');
+    const range = maxD - minD || 1;
     const vals = pts.map(p=>p.avg);
     const minY=Math.max(0,Math.min(...vals)-8), maxY=Math.min(100,Math.max(...vals)+4), yR=maxY-minY||1;
     const tx = d => padL + ((new Date(d)-minD)/range)*cW;
     const ty = v => padT + cH - ((v-minY)/yR)*cH;
     return (
-      <div className="card" style={{marginBottom:0}}>
+      <div className="card" style={{marginBottom:8}}>
         <div className="card-header" style={{marginBottom:4}}>
           <span className="card-title" style={{fontSize:12}}>Score {currentYear}</span>
           {compYear && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear}%</span>}
@@ -1840,15 +1840,15 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
               <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#6a6a88" fontSize="7" fontFamily="DM Mono,monospace">{Math.round(v)}%</text>
             </g>
           ))}
-          {/* Month markers — every 2 months */}
-          {[0,2,4,6,8,10].map(m => {
+          {/* All 12 months */}
+          {[0,1,2,3,4,5,6,7,8,9,10,11].map(m => {
             const d = new Date(currentYear+'-'+String(m+1).padStart(2,'0')+'-01');
             const x = padL+((d-minD)/range)*cW;
-            return x>=padL&&x<=W-padR ? (
+            return (
               <text key={m} x={x} y={H-1} textAnchor="middle" fill="#6a6a88" fontSize="6" fontFamily="DM Mono,monospace">
                 {['J','F','M','A','M','J','J','A','S','O','N','D'][m]}
               </text>
-            ) : null;
+            );
           })}
           <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
             fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.6"/>
