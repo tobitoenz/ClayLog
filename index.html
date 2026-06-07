@@ -555,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v74';
+const APP_VERSION = 'v75';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -719,9 +719,9 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
       notes: existing?.notes || '', source: 'manual',
     };
     onSave(ev);
-    // Open Google Calendar directly
-    window.open(makeGCalUrl({ title: ev.name, date: ev.dateStart, dateEnd: ev.dateEnd, location: ev.ort }), '_blank');
   }
+
+  const gcalUrl = makeGCalUrl({ title: name||'Wettkampf', date: dateStart, dateEnd, location: ort });
 
   return (
     <div style={{
@@ -790,11 +790,22 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             background:'transparent', color:'var(--muted)',
             fontFamily:'DM Mono,monospace', fontSize:13, cursor:'pointer'
           }}>Abbrechen</button>
-          <button onClick={handleSave} style={{
-            padding:'11px', borderRadius:10, border:'none',
-            background:'var(--accent)', color:'#111',
-            fontFamily:'DM Mono,monospace', fontSize:13, fontWeight:700, cursor:'pointer'
-          }}>Speichern</button>
+          <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+            onClick={e => {
+              if (!name.trim()) { e.preventDefault(); alert('Bitte einen Namen eingeben.'); return; }
+              handleSave();
+            }}
+            style={{
+              padding:'11px', borderRadius:10, border:'none',
+              background:'var(--accent)', color:'#111',
+              fontFamily:'DM Mono,monospace', fontSize:13, fontWeight:700,
+              cursor:'pointer', textDecoration:'none',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:6
+            }}>
+            <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
+              style={{width:16,height:16}} alt=""/>
+            Speichern
+          </a>
         </div>
 
         {/* Secondary actions for edit mode */}
