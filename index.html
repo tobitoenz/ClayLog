@@ -113,7 +113,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; flex-shrink: 0;
 }
-.session-icon.training { background: rgba(232,200,74,.12); }
+.session-icon.practice { background: rgba(232,200,74,.12); }
 .session-icon.competition { background: rgba(74,232,200,.12); }
 .session-info { flex: 1; min-width: 0; }
 .session-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -262,10 +262,10 @@ canvas { width: 100% !important; }
 .a-bar-wrap { background: var(--border); border-radius: 3px; height: 5px; margin-top: 4px; }
 .a-bar { height: 5px; border-radius: 3px; background: var(--accent); }
 
-/* ─── NOTIZEN ───────────────────────────────────────────────── */
+/* ─── NOTES ───────────────────────────────────────────────── */
 .notiz-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
-.notiz-card.erledigt { opacity: .5; }
-.notiz-card.erledigt .notiz-text { text-decoration: line-through; color: var(--muted); }
+.notiz-card.done { opacity: .5; }
+.notiz-card.done .notiz-text { text-decoration: line-through; color: var(--muted); }
 .notiz-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
 .notiz-text { font-size: 14px; line-height: 1.6; }
 .notiz-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
@@ -275,8 +275,8 @@ canvas { width: 100% !important; }
   font-family: 'DM Mono', monospace; cursor: pointer; border: 1px solid;
   user-select: none;
 }
-.notiz-tag.aufgabe { background: rgba(232,200,74,.1); color: var(--accent); border-color: rgba(232,200,74,.3); }
-.notiz-tag.erledigt-tag { background: rgba(74,232,200,.1); color: var(--accent2); border-color: rgba(74,232,200,.3); }
+.notiz-tag.open-tag { background: rgba(232,200,74,.1); color: var(--accent); border-color: rgba(232,200,74,.3); }
+.notiz-tag.done-tag { background: rgba(74,232,200,.1); color: var(--accent2); border-color: rgba(74,232,200,.3); }
 .notiz-tag.active { background: rgba(232,200,74,.25); border-color: var(--accent); }
 
 /* ─── PASSEN GRID ───────────────────────────────────────────── */
@@ -556,7 +556,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v80';
+const APP_VERSION = 'v84';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -706,7 +706,7 @@ function useICSFeed(url) {
           }));
         } catch {}
       } else {
-        setError('Feed konnte nicht geladen werden. URL prüfen.');
+        setError('Could not load feed. Please check the URL.');
       }
       setLoading(false);
     }
@@ -756,7 +756,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
   }
 
   function handleSave() {
-    if (!name.trim()) { alert('Bitte einen Namen eingeben.'); return; }
+    if (!name.trim()) { alert('Please enter a name.'); return; }
     const ev = {
       id: existing?.id || crypto.randomUUID(),
       name: name.trim(), ort: ort.trim(),
@@ -766,7 +766,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
     onSave(ev);
   }
 
-  const gcalUrl = makeGCalUrl({ title: name||'Wettkampf', date: dateStart, dateEnd, location: ort });
+  const gcalUrl = makeGCalUrl({ title: name||'Competition', date: dateStart, dateEnd, location: ort });
 
   return (
     <div style={{
@@ -789,7 +789,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
         padding:'20px 18px 16px',
       }}>
         <div style={{fontWeight:700, fontSize:15, marginBottom:14, textAlign:'center'}}>
-          {isEdit ? 'Wettkampf bearbeiten' : 'Wettkampf eintragen'}
+          {isEdit ? 'Edit competition' : 'Add competition'}
         </div>
 
         {/* Name */}
@@ -797,16 +797,16 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
             letterSpacing:1,marginBottom:5}}>NAME</div>
           <input type="text" value={name} onChange={e=>setName(e.target.value)}
-            placeholder="z.B. Blaser Cup Bern"
+            placeholder="e.g. Blaser Cup Bern"
             style={{fontSize:15}}/>
         </div>
 
-        {/* Ort */}
+        {/* Location */}
         <div style={{marginBottom:10}}>
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
-            letterSpacing:1,marginBottom:5}}>ORT</div>
+            letterSpacing:1,marginBottom:5}}>LOCATION</div>
           <input type="text" value={ort} onChange={e=>setOrt(e.target.value)}
-            placeholder="z.B. Bern"
+            placeholder="e.g. Bern"
             style={{fontSize:15}}/>
         </div>
 
@@ -814,14 +814,14 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16}}>
           <div>
             <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
-              letterSpacing:1,marginBottom:5}}>VON</div>
+              letterSpacing:1,marginBottom:5}}>FROM</div>
             <input type="date" value={dateStart}
               onChange={e=>handleDateStart(e.target.value)}
               style={{fontSize:14, padding:'8px 10px'}}/>
           </div>
           <div>
             <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
-              letterSpacing:1,marginBottom:5}}>BIS</div>
+              letterSpacing:1,marginBottom:5}}>TO</div>
             <input type="date" value={dateEnd} min={dateStart}
               onChange={e=>setDateEnd(e.target.value)}
               style={{fontSize:14, padding:'8px 10px'}}/>
@@ -834,10 +834,10 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             padding:'11px', borderRadius:10, border:'1px solid var(--border)',
             background:'transparent', color:'var(--muted)',
             fontFamily:'DM Mono,monospace', fontSize:13, cursor:'pointer'
-          }}>Abbrechen</button>
+          }}>Cancel</button>
           <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
             onClick={e => {
-              if (!name.trim()) { e.preventDefault(); alert('Bitte einen Namen eingeben.'); return; }
+              if (!name.trim()) { e.preventDefault(); alert('Please enter a name.'); return; }
               handleSave();
             }}
             style={{
@@ -849,7 +849,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             }}>
             <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
               style={{width:16,height:16}} alt=""/>
-            Speichern
+            Save
           </a>
         </div>
 
@@ -857,18 +857,18 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
         {isEdit && (
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8}}>
             {onCreateSession && (
-              <button onClick={()=>{ onCreateSession({date:dateStart,name,ort,type:'wettkampf'}); onClose(); }}
+              <button onClick={()=>{ onCreateSession({date:dateStart,name,ort,type:'competition'}); onClose(); }}
                 style={{padding:'9px', borderRadius:10, border:'1px solid var(--border)',
                   background:'transparent', color:'var(--accent2)',
                   fontFamily:'DM Mono,monospace', fontSize:12, cursor:'pointer'}}>
                 🏆 Session
               </button>
             )}
-            <button onClick={()=>{ if(confirm('Löschen?')){ onDelete(existing.id); onClose(); } }}
+            <button onClick={()=>{ if(confirm('Delete?')){ onDelete(existing.id); onClose(); } }}
               style={{padding:'9px', borderRadius:10, border:'1px solid var(--red)',
                 background:'transparent', color:'var(--red)',
                 fontFamily:'DM Mono,monospace', fontSize:12, cursor:'pointer'}}>
-              🗑 Löschen
+              🗑 Delete
             </button>
           </div>
         )}
@@ -919,11 +919,11 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
   }
   function daysUntil(ev) {
     const diff = Math.ceil((new Date(ev.date+'T00:00:00') - now) / (1000*60*60*24));
-    if (diff <= 0 && (ev.dateEnd||ev.date) >= todayStr) return 'Läuft';
-    if (diff === 0) return 'Heute';
-    if (diff === 1) return 'Morgen';
-    if (diff < 0)  return `vor ${Math.abs(diff)}d`;
-    return `in ${diff} Tagen`;
+    if (diff <= 0 && (ev.dateEnd||ev.date) >= todayStr) return 'Ongoing';
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff < 0)  return `${Math.abs(diff)}d ago`;
+    return `in ${diff} days`;
   }
 
   function EventCard({ ev, showBadge }) {
@@ -942,7 +942,7 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
               <span style={{fontSize:11,color: isManual ? 'var(--accent)' : 'var(--accent2)',
                 fontFamily:'DM Mono,monospace',letterSpacing:.5}}>
-                {isManual ? '📌 MANUELL' : '📅 KALENDER'}
+                {isManual ? '📌 MANUAL' : '📅 CALENDAR'}
               </span>
             </div>
             <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{ev.title}</div>
@@ -963,20 +963,20 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
 
   return (
     <div>
-      {/* + Wettkampf Button */}
+      {/* + Competition Button */}
       <button className="btn btn-primary" style={{width:'100%',marginBottom:12,marginTop:4}}
         onClick={()=>setEditEvent({})}>
-        + Wettkampf eintragen
+        + Add competition
       </button>
 
-      {loading && <div style={{padding:16,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Lade Kalender…</div>}
+      {loading && <div style={{padding:16,textAlign:'center',color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>Loading calendar…</div>}
       {error && <div style={{padding:'8px 0',color:'var(--red)',fontFamily:'DM Mono,monospace',fontSize:12}}>{error}</div>}
 
       {!loading && allEvents.length === 0 && (
         <div style={{padding:'32px 0',textAlign:'center'}}>
           <div style={{fontSize:40,marginBottom:12}}>📅</div>
           <div style={{color:'var(--muted)',fontFamily:'DM Mono,monospace',fontSize:13}}>
-            Noch keine Termine.<br/>Wettkampf eintragen oder ICS-Feed in Settings verbinden.
+            No events yet.<br/>Add competition oder ICS-Feed in Settings verbinden.
           </div>
         </div>
       )}
@@ -1025,9 +1025,9 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
               )}
               <button className="btn btn-primary" style={{width:'100%',marginTop:4,fontSize:15,padding:'13px'}}
                 onClick={()=>{
-                  onCreateSession({ date:selected.date, name:selected.title, ort:selected.location, type:'wettkampf' });
+                  onCreateSession({ date:selected.date, name:selected.title, ort:selected.location, type:'competition' });
                   setSelected(null);
-                }}>🏆 Session erstellen</button>
+                }}>🏆 Create session</button>
               <a href={makeGCalUrl({title:selected.title,date:selected.date,location:selected.location,notes:selected.notes})}
                 target="_blank" rel="noopener noreferrer"
                 style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,
@@ -1036,7 +1036,7 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
                   fontFamily:'DM Mono,monospace',fontSize:13,fontWeight:600}}>
                 <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
                   style={{width:18,height:18}} alt=""/>
-                In Google Kalender eintragen
+                Add to Google Calendar
               </a>
             </div>
           </div>
@@ -1082,15 +1082,15 @@ function BottomNav({ active, onChange }) {
    SESSION ITEM (shared component)
 ════════════════════════════════════════════════════════════════ */
 function SessionItem({ s, compact, onClick }) {
-  const isComp = s.type === 'wettkampf';
+  const isComp = s.type === 'competition';
   const hasScore = s.score != null && s.max != null && s.max > 0;
   return (
     <div className="session-item" onClick={onClick}>
-      <div className={`session-icon ${isComp ? 'competition' : 'training'}`}>
+      <div className={`session-icon ${isComp ? 'competition' : 'practice'}`}>
         {isComp ? '🏆' : '🏋️'}
       </div>
       <div className="session-info">
-        <div className="session-name">{s.name || s.disziplin || 'Training'}</div>
+        <div className="session-name">{s.name || s.disziplin || 'Practice'}</div>
         <div className="session-meta">
           {s.name && <span style={{color:'var(--muted)',marginRight:4}}>{s.disziplin} · </span>}
           {fmtDate(s.date)}{s.ort ? ` · ${s.ort}` : ''}{s.waffe ? ` · ${s.waffe}` : ''}
@@ -1429,9 +1429,9 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
 
-  const compYear  = sessions.filter(s => s.type==='wettkampf' && s.max>0 && (s.date||'').startsWith(year));
-  const compAll   = sessions.filter(s => s.type==='wettkampf' && s.max>0);
-  const compAllTotal = sessions.filter(s => s.type==='wettkampf');
+  const compYear  = sessions.filter(s => s.type==='competition' && s.max>0 && (s.date||'').startsWith(year));
+  const compAll   = sessions.filter(s => s.type==='competition' && s.max>0);
+  const compAllTotal = sessions.filter(s => s.type==='competition');
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
   const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
@@ -1508,7 +1508,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
     score: <UnifiedScoreChart sessions={sessions} variant="mini" />,
     nextEvent: nextEvent ? (
       <div className="card" style={{marginBottom:0,borderLeft:'3px solid var(--accent)'}}>
-        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:6}}>NÄCHSTER WETTKAMPF</div>
+        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:6}}>NEXT COMPETITION</div>
         <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>{nextEvent.title}</div>
         <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:nextEvent.location?4:0}}>
           {nextEvent.start.toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
@@ -1517,9 +1517,9 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
         {nextEvent.location && <div style={{fontSize:12,color:'var(--muted)'}}>📍 {nextEvent.location}</div>}
         <div style={{display:'flex',gap:8,marginTop:10}}>
           <div style={{background:'var(--accent)',color:'#111',borderRadius:20,padding:'3px 12px',fontSize:11,fontFamily:'DM Mono,monospace',fontWeight:700}}>
-            {Math.ceil((nextEvent.start-now)/(1000*60*60*24))===0?'Heute':Math.ceil((nextEvent.start-now)/(1000*60*60*24))===1?'Morgen':`in ${Math.ceil((nextEvent.start-now)/(1000*60*60*24))} Tagen`}
+            {Math.ceil((nextEvent.start-now)/(1000*60*60*24))===0?'Today':Math.ceil((nextEvent.start-now)/(1000*60*60*24))===1?'Tomorrow':`in ${Math.ceil((nextEvent.start-now)/(1000*60*60*24))} days`}
           </div>
-          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,name:nextEvent.title,ort:nextEvent.location,type:'wettkampf'})}>
+          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,name:nextEvent.title,ort:nextEvent.location,type:'competition'})}>
             + Session
           </button>
         </div>
@@ -1696,8 +1696,8 @@ function SessionsPage({ sessions, onSessionClick }) {
               <label>Type</label>
               <select value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
                 <option value="">All</option>
-                <option value="training">Practice</option>
-                <option value="wettkampf">Competition</option>
+                <option value="practice">Practice</option>
+                <option value="competition">Competition</option>
               </select>
             </div>
             <div>
@@ -1754,23 +1754,23 @@ function SessionsPage({ sessions, onSessionClick }) {
 /* ════════════════════════════════════════════════════════════════
    NOTES PAGE
 ════════════════════════════════════════════════════════════════ */
-function NotizenPage({ sessions, noteStates, onToggleNote }) {
-  const [filter, setFilter] = useState('alle');
+function NotesPage({ sessions, noteStates, onToggleNote }) {
+  const [filter, setFilter] = useState('all');
   const withNotes = sessions.filter(s => s.notes && s.notes.trim());
 
   const filtered = withNotes.filter(s => {
     const st = noteStates[s.id] || 'normal';
-    if (filter === 'aufgaben') return st === 'aufgabe';
-    if (filter === 'erledigt') return st === 'erledigt';
+    if (filter === 'open') return st === 'open';
+    if (filter === 'done') return st === 'done';
     return true;
   }).sort((a,b) => b.date > a.date ? 1 : -1);
 
-  const filterLabels = { alle: 'All', aufgaben: 'Tasks', erledigt: 'Done' };
+  const filterLabels = { all: 'All', open: 'Open', done: 'Done' };
 
   return (
     <div>
       <div className="tab-row">
-        {['alle','aufgaben','erledigt'].map(f => (
+        {['all','open','done'].map(f => (
           <button key={f} className={`analyse-tab ${filter===f?'active':''}`} onClick={()=>setFilter(f)}>
             {filterLabels[f]}
           </button>
@@ -1784,16 +1784,16 @@ function NotizenPage({ sessions, noteStates, onToggleNote }) {
       ) : filtered.map(s => {
         const st = noteStates[s.id] || 'normal';
         return (
-          <div key={s.id} className={`notiz-card ${st==='erledigt'?'erledigt':''}`}>
+          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
             <div className="notiz-meta">{fmtDate(s.date)} · {s.disziplin}</div>
             <div className="notiz-text">{s.notes}</div>
             <div className="notiz-actions">
-              <span className={`notiz-tag aufgabe ${st==='aufgabe'?'active':''}`}
-                onClick={()=>onToggleNote(s.id, st==='aufgabe'?'normal':'aufgabe')}>
+              <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
+                onClick={()=>onToggleNote(s.id, st==='open'?'normal':'open')}>
                 📌 Task
               </span>
-              <span className={`notiz-tag erledigt-tag ${st==='erledigt'?'active':''}`}
-                onClick={()=>onToggleNote(s.id, st==='erledigt'?'normal':'erledigt')}>
+              <span className={`notiz-tag done-tag ${st==='done'?'active':''}`}
+                onClick={()=>onToggleNote(s.id, st==='done'?'normal':'done')}>
                 ✅ Done
               </span>
             </div>
@@ -1822,8 +1822,8 @@ function useIndividualPts(data) {
 function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const isMini = variant === 'mini';
   const [viewMode, setViewMode] = useState('overlapped');
-  const [typeFilter, setTypeFilter] = useState('wettkampf');
-  const [disziplin, setDisziplin] = useState('alle');
+  const [typeFilter, setTypeFilter] = useState('competition');
+  const [disziplin, setDisziplin] = useState('all');
 
   const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
   const TRAIN_COLOR = 'var(--accent,#e8c84a)';
@@ -1850,7 +1850,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   // Filter base sessions
   const base = sessions.filter(s =>
     s.date && s.max > 0 &&
-    (disziplin === 'alle' || s.disziplin === disziplin)
+    (disziplin === 'all' || s.disziplin === disziplin)
   ).sort((a,b) => a.date > b.date ? 1 : -1);
 
   function toP(s) {
@@ -1861,8 +1861,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   function avgQ(arr) {
     return arr.length ? Math.round(arr.reduce((a,s)=>a+s.avg,0)/arr.length*10)/10 : null;
   }
-  const compAll  = base.filter(s=>s.type==='wettkampf').map(toP);
-  const trainAll = base.filter(s=>s.type==='training').map(toP);
+  const compAll  = base.filter(s=>s.type==='competition').map(toP);
+  const trainAll = base.filter(s=>s.type==='practice').map(toP);
   const compYear  = avgQ(compAll.filter(p=>p.year===currentYear));
   const compTotal = avgQ(compAll);
   const trainYear = avgQ(trainAll.filter(p=>p.year===currentYear));
@@ -1916,10 +1916,10 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
 
   // ── TIMELINE MODE ────────────────────────────────────────────
   function renderTimeline() {
-    const showComp  = typeFilter !== 'training';
-    const showTrain = typeFilter !== 'wettkampf';
+    const showComp  = typeFilter !== 'practice';
+    const showTrain = typeFilter !== 'competition';
     const pts = base.map(toP).filter(p =>
-      (showComp && p.type==='wettkampf') || (showTrain && p.type==='training')
+      (showComp && p.type==='competition') || (showTrain && p.type==='practice')
     );
     if (!pts.length) return <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>;
 
@@ -1935,8 +1935,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     const ty = v => padT+cH-((v-minY)/yR)*cH;
     const years = [...new Set(pts.map(p=>p.year))].sort();
     const gridVals=[]; for(let v=Math.ceil(minY/25)*25;v<=maxY;v+=25) gridVals.push(v);
-    const compPts = pts.filter(p=>p.type==='wettkampf');
-    const trainPts= pts.filter(p=>p.type==='training');
+    const compPts = pts.filter(p=>p.type==='competition');
+    const trainPts= pts.filter(p=>p.type==='practice');
     function ld(arr) { return arr.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' '); }
 
     return (
@@ -1979,12 +1979,12 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     function ld(pts) { return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' '); }
 
     function getPts(year) {
-      const src = base.filter(s=>s.date.startsWith(year)&&(typeFilter==='alle'||s.type===typeFilter));
+      const src = base.filter(s=>s.date.startsWith(year)&&(typeFilter==='all'||s.type===typeFilter));
       const toP2 = s=>({id:s.id,date:s.date,type:s.type,avg:Math.round(s.score/s.max*1000)/10});
       return {
         all:   src.map(toP2),
-        comp:  src.filter(s=>s.type==='wettkampf').map(toP2),
-        train: src.filter(s=>s.type==='training').map(toP2),
+        comp:  src.filter(s=>s.type==='competition').map(toP2),
+        train: src.filter(s=>s.type==='practice').map(toP2),
         avg:   src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null
       };
     }
@@ -2004,7 +2004,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           if(!activeYears.includes(year)) return null;
           const {comp,train,all} = getPts(year);
           const yc = YEAR_COLORS[yi%YEAR_COLORS.length];
-          if(typeFilter==='alle') return (
+          if(typeFilter==='all') return (
             <g key={year}>
               {comp.length>1&&<path d={ld(comp)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
               {train.length>1&&<path d={ld(train)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
@@ -2037,7 +2037,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   // ── LEGEND ───────────────────────────────────────────────────
   function renderLegend() {
     if(viewMode==='timeline') {
-      const showComp=typeFilter!=='training', showTrain=typeFilter!=='wettkampf';
+      const showComp=typeFilter!=='practice', showTrain=typeFilter!=='competition';
       return (
         <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
           {showComp&&compAll.length>0&&<div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:COMP_COLOR,borderRadius:2}}/><span style={{color:COMP_COLOR}}>Competition</span></div>}
@@ -2045,7 +2045,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         </div>
       );
     }
-    if(typeFilter==='alle') return (
+    if(typeFilter==='all') return (
       <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
         <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:COMP_COLOR,borderRadius:2}}/><span style={{color:COMP_COLOR}}>🏆 Competition</span></div>
         <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}><div style={{width:16,height:2,background:TRAIN_COLOR,borderRadius:2}}/><span style={{color:TRAIN_COLOR}}>🏋️ Practice</span></div>
@@ -2055,7 +2055,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
       <div style={{display:'flex',gap:10,marginTop:8,flexWrap:'wrap'}}>
         {allYears.filter(y=>activeYears.includes(y)).map((y,i)=>{
           const ci=allYears.indexOf(y);
-          const avg=avgQ(base.filter(s=>s.date.startsWith(y)&&(typeFilter==='alle'||s.type===typeFilter)).map(toP));
+          const avg=avgQ(base.filter(s=>s.date.startsWith(y)&&(typeFilter==='all'||s.type===typeFilter)).map(toP));
           return avg!==null?(
             <div key={y} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontFamily:'DM Mono,monospace'}}>
               <div style={{width:16,height:2,background:YEAR_COLORS[ci%YEAR_COLORS.length],borderRadius:2}}/>
@@ -2085,26 +2085,26 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         </div>
         <select value={disziplin} onChange={e=>setDisziplin(e.target.value)}
           style={{fontSize:12,padding:'4px 8px',maxWidth:140}}>
-          <option value="alle">All disciplines</option>
+          <option value="all">All disciplines</option>
           {disziplinen.map(d=><option key={d}>{d}</option>)}
         </select>
       </div>
 
       {/* Type filter */}
       <div style={{display:'flex',gap:6,marginBottom:12}}>
-        {[['alle','All'],['wettkampf','🏆 Competition'],['training','🏋️ Practice']].map(([v,l])=>(
+        {[['all','All'],['competition','🏆 Competition'],['practice','🏋️ Practice']].map(([v,l])=>(
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`}
             style={{fontSize:11,padding:'4px 10px'}} onClick={()=>setTypeFilter(v)}>{l}</button>
         ))}
       </div>
 
       {/* Stats summary */}
-      {(typeFilter==='alle'||typeFilter==='wettkampf') && compTotal!==null && (
+      {(typeFilter==='all'||typeFilter==='competition') && compTotal!==null && (
         <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:COMP_COLOR,marginBottom:4}}>
           🏆 Ø {currentYear}: {compYear??'–'}% | Ø All: {compTotal}%
         </div>
       )}
-      {(typeFilter==='alle'||typeFilter==='training') && trainTotal!==null && (
+      {(typeFilter==='all'||typeFilter==='practice') && trainTotal!==null && (
         <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:TRAIN_COLOR,marginBottom:10}}>
           🏋️ Ø {currentYear}: {trainYear??'–'}% | Ø All: {trainTotal}%
         </div>
@@ -2126,7 +2126,7 @@ function AnalysePage({ sessions }) {
   const currentYear = String(new Date().getFullYear());
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
-  const filtered = selectedYear === 'alle' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
+  const filtered = selectedYear === 'all' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
 
   const waffenMap = {};
   filtered.forEach(s => {
@@ -2150,7 +2150,7 @@ function AnalysePage({ sessions }) {
     <div>
       {/* 3 tabs */}
       <div style={{display:'flex',gap:0,marginBottom:0,borderBottom:'1px solid var(--border)'}}>
-        {[['score','📈','Score'],['munition','🔴','Ammo'],['waffen','🔫','Guns']].map(([t,icon,label]) => (
+        {[['score','📈','Score'],['ammo','🔴','Ammo'],['waffen','🔫','Guns']].map(([t,icon,label]) => (
           <button key={t} onClick={()=>setTab(t)} style={{
             flex:1, padding:'10px 4px', background:'transparent', border:'none',
             borderBottom: tab===t ? '2px solid var(--accent)' : '2px solid transparent',
@@ -2166,17 +2166,17 @@ function AnalysePage({ sessions }) {
       </div>
 
       {/* Year filter for equipment tabs */}
-      {(tab==='munition'||tab==='waffen') && (
+      {(tab==='ammo'||tab==='waffen') && (
         <div className="tab-row" style={{marginTop:10,marginBottom:4}}>
-          {['alle',...years].map(y=>(
-            <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y==='alle'?'All':y}</button>
+          {['all',...years].map(y=>(
+            <button key={y} className={`analyse-tab ${selectedYear===y?'active':''}`} onClick={()=>setSelectedYear(y)}>{y==='all'?'All':y}</button>
           ))}
         </div>
       )}
 
       {tab==='score' && <UnifiedScoreChart sessions={sessions} />}
 
-      {tab==='munition' && (
+      {tab==='ammo' && (
         <div className="card" style={{marginTop:10}}>
           {munRows.length===0
             ? <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">No ammo data.</div></div>
@@ -2352,9 +2352,9 @@ function ShareCard() {
 
   return (
     <div className="card">
-      <div className="card-title" style={{marginBottom:12}}>🔗 App teilen</div>
+      <div className="card-title" style={{marginBottom:12}}>🔗 Share app</div>
       <div style={{fontSize:13,color:'var(--muted)',marginBottom:16,lineHeight:1.5}}>
-        QR-Code scannen oder Link teilen — die App öffnet direkt im Browser, keine Installation nötig.
+        Scan the QR code or share the link — the app opens directly in the browser, no installation needed.
       </div>
 
       {/* QR Code */}
@@ -2380,7 +2380,7 @@ function ShareCard() {
 
       {/* Share button */}
       <button className="btn btn-primary" onClick={handleShare} style={{width:'100%'}}>
-        {shared ? '✅ Kopiert!' : '📤 Link teilen'}
+        {shared ? '✅ Copied!' : '📤 Share link'}
       </button>
     </div>
   );
@@ -2391,33 +2391,33 @@ function ICSGuide() {
   const steps = [
     {
       n: '1',
-      title: 'Separaten «Wettkämpfe»-Kalender erstellen',
-      text: 'Erstelle in Google Kalender einen neuen Kalender mit dem Namen «Wettkämpfe». Wichtig: Nutze nicht deinen Hauptkalender — so teilst du nur die Wettkampf-Termine mit ClayLog, nichts Persönliches.',
-      tip: '💡 In Google Kalender: Linke Leiste → «Weitere Kalender» → «+» → «Neuen Kalender erstellen»',
+      title: 'Create a separate «Competitions» calendar',
+      text: 'Create a new calendar in Google Calendar named «Competitions». Important: Do not use your main calendar — this way only competition events are shared with ClayLog, nothing personal.',
+      tip: '💡 Google Calendar: Left sidebar → «Other calendars» → «+» → «Create new calendar»',
     },
     {
       n: '2',
-      title: 'Kalender-Einstellungen öffnen',
-      text: 'Klicke auf die drei Punkte (···) neben deinem neuen Kalender und wähle «Einstellungen und Freigabe».',
+      title: 'Open calendar settings',
+      text: 'Click the three dots (···) next to your new calendar and select «Settings and sharing».',
       tip: null,
     },
     {
       n: '3',
-      title: 'Privatadresse im iCal-Format kopieren',
-      text: 'Scrolle ganz nach unten zu «Kalender integrieren». Klicke auf das Auge-Symbol 👁 neben «Privatadresse im iCal-Format» um die URL anzuzeigen, dann kopieren.',
-      tip: '⚠️ Nimm die Privatadresse, nicht die öffentliche URL — die funktioniert auch ohne den Kalender öffentlich zu machen.',
+      title: 'Copy private iCal address',
+      text: 'Scroll to the bottom of the settings page to «Integrate calendar». Click the eye icon 👁 next to «Secret address in iCal format» to reveal the URL, then copy it.',
+      tip: '⚠️ Use the secret address, not the public URL — it works without making the calendar public.',
     },
     {
       n: '4',
-      title: 'URL hier einfügen & speichern',
-      text: 'Füge die kopierte URL oben ins Feld ein und tippe auf Speichern.',
+      title: 'Paste URL & save',
+      text: 'Paste the copied URL into the field above and tap Save.',
       tip: null,
     },
     {
       n: '5',
-      title: 'Termine eintragen',
-      text: 'Trage deine Wettkämpfe in den Google Kalender ein. Sie erscheinen nach ca. 15–60 Minuten automatisch im Events-Tab.',
-      tip: '💡 Alternativ: Wettkämpfe direkt in ClayLog im Events-Tab eintragen — diese erscheinen sofort.',
+      title: 'Add events',
+      text: 'Add your competitions to Google Calendar. They will appear automatically in the Events tab after about 15–60 minutes.',
+      tip: '💡 Alternative: Add competitions directly in ClayLog via the Events tab — they appear immediately.',
     },
   ];
 
@@ -2432,7 +2432,7 @@ function ICSGuide() {
           display:'inline-block', transition:'transform .2s',
           transform: open ? 'rotate(90deg)' : 'rotate(0deg)'
         }}>▶</span>
-        {open ? 'Anleitung ausblenden' : '? Anleitung: Google Kalender verbinden'}
+        {open ? 'Hide guide' : '? Guide: Connect Google Calendar'}
       </button>
 
       {open && (
@@ -2468,11 +2468,11 @@ function ICSGuide() {
             marginTop:8, padding:'10px 12px', borderRadius:10,
             background:'var(--card)', border:'1px solid var(--border)'
           }}>
-            <div style={{fontWeight:700, fontSize:12, marginBottom:8, fontFamily:'DM Mono,monospace', letterSpacing:.5}}>HÄUFIGE FRAGEN</div>
+            <div style={{fontWeight:700, fontSize:12, marginBottom:8, fontFamily:'DM Mono,monospace', letterSpacing:.5}}>FAQ</div>
             {[
-              ['Termine erscheinen nicht sofort', 'Google aktualisiert den ICS-Feed alle 15–60 Minuten. Bitte etwas Geduld — neue Einträge erscheinen nach kurzer Zeit automatisch.'],
-              ['Sind meine Termine öffentlich?', 'Nein. Die Privatadresse enthält einen geheimen Token. Nur wer die genaue URL kennt kann die Termine sehen.'],
-              ['Was ist der Unterschied zu manuellen Einträgen?', 'Manuelle Einträge (im Events-Tab) erscheinen sofort und werden auch in Google Kalender eingetragen. ICS-Einträge kommen aus Google Kalender und werden nur gelesen.'],
+              [`Events don't appear immediately`, `Google updates the ICS feed every 15–60 minutes. New events will appear automatically after a short delay.`],
+              [`Are my events public?`, `No. The secret address contains a hidden token. Only someone who knows the exact URL can access your events.`],
+              [`What's the difference to manual entries?`, `Manual entries (in the Events tab) appear immediately and are also added to Google Calendar. ICS entries come from Google Calendar and are read-only.`],
             ].map(([q,a]) => (
               <div key={q} style={{marginBottom:10}}>
                 <div style={{fontSize:12, fontWeight:600, marginBottom:3}}>❓ {q}</div>
@@ -2520,10 +2520,10 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>📅 Events / ICS Feed</div>
         <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>
-          Google Kalender verbinden — Wettkämpfe erscheinen automatisch im Events-Tab und auf dem Dashboard.
+          Connect Google Calendar — competitions appear automatically in the Events tab and on the Dashboard.
         </div>
         <div className="form-group">
-          <label>ICS-URL</label>
+          <label>ICS URL</label>
           <input type="url" defaultValue={icsUrl||''} placeholder="https://calendar.google.com/calendar/ical/…"
             id="ics-url-input"
             style={{fontSize:12,wordBreak:'break-all'}}/>
@@ -2531,8 +2531,8 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         <button className="btn btn-primary" style={{marginTop:4}} onClick={()=>{
           const val = document.getElementById('ics-url-input').value.trim();
           onSaveIcsUrl(val);
-          alert(val ? '✅ ICS-URL gespeichert!' : 'ICS-Feed entfernt.');
-        }}>Speichern</button>
+          alert(val ? '✅ ICS URL saved!' : 'ICS feed removed.');
+        }}>Save</button>
 
         {/* Collapsible guide */}
         <ICSGuide />
@@ -2636,7 +2636,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SESSION MODAL (Neue Einheit / Bearbeiten)
+   SESSION MODAL (Neue Einheit / Edit)
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
 const DISZ_CONFIG = {
@@ -2652,7 +2652,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
 
-  const [type, setType] = useState(session?.type || prefill?.type || 'training');
+  const [type, setType] = useState(session?.type || prefill?.type || 'practice');
   const [name, setName] = useState(session?.name || prefill?.name || '');
   const [disziplin, setDisziplin] = useState(session?.disziplin || prefill?.disziplin || 'Fitasc');
   const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
@@ -2672,13 +2672,13 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
 
   // Score state
   const [hasScore, setHasScore] = useState(session?.max > 0 || false);
-  const [passen, setPassen] = useState(() => {
+  const [passen, setRounds] = useState(() => {
     const p = session?.passen;
     if (Array.isArray(p) && p.length > 0) return p.length;
     const cfg = DISZ_CONFIG[session?.disziplin] || customDisz.find(d=>d.name===session?.disziplin) || DISZ_CONFIG['Fitasc'];
     return cfg?.passen || 4;
   });
-  const [passenVals, setPassenVals] = useState(() => {
+  const [passenVals, setRoundsVals] = useState(() => {
     const p = session?.passen;
     // Handle array from Supabase (numbers or strings)
     if (Array.isArray(p) && p.length > 0) {
@@ -2719,11 +2719,11 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     if (cfg.scoreOnly) {
       setScoreOnlyMax(cfg.totalMax || '');
       setScoreOnlyVal('');
-    } else if (type === 'wettkampf' || hasScore) {
+    } else if (type === 'competition' || hasScore) {
       const p = cfg.passen || 4;
       const mp = cfg.maxPro || 25;
-      setPassen(p);
-      setPassenVals(Array(p).fill(''));
+      setRounds(p);
+      setRoundsVals(Array(p).fill(''));
       setMaxPro(mp);
     }
   }, [disziplin, type]);
@@ -2731,10 +2731,10 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const totalScore = passenVals.reduce((a,v) => a + (parseInt(v)||0), 0);
   const totalMax = passen * maxPro;
 
-  function handlePassen(delta) {
-    setPassen(p => {
+  function handleRounds(delta) {
+    setRounds(p => {
       const np = Math.max(1, Math.min(20, p + delta));
-      setPassenVals(v => {
+      setRoundsVals(v => {
         const nv = [...v];
         while (nv.length < np) nv.push('');
         return nv.slice(0, np);
@@ -2750,9 +2750,9 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       max   = parseInt(scoreOnlyMax)||0;
       passenArr = [];
     } else {
-      score = (type==='wettkampf' || hasScore) ? totalScore : null;
-      max   = (type==='wettkampf' || hasScore) ? totalMax   : null;
-      passenArr = (type==='wettkampf' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
+      score = (type==='competition' || hasScore) ? totalScore : null;
+      max   = (type==='competition' || hasScore) ? totalMax   : null;
+      passenArr = (type==='competition' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
     const s = {
       id: session?.id || crypto.randomUUID(),
@@ -2774,8 +2774,8 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         <div className="form-group">
           <label>Type</label>
           <div className="type-btn-row">
-            <button className="type-btn" style={{background: type==='training'?'var(--accent)':'var(--card)', color: type==='training'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('training')}>🏋️ Practice</button>
-            <button className="type-btn" style={{background: type==='wettkampf'?'var(--accent2)':'var(--card)', color: type==='wettkampf'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('wettkampf')}>🏆 Competition</button>
+            <button className="type-btn" style={{background: type==='practice'?'var(--accent)':'var(--card)', color: type==='practice'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('practice')}>🏋️ Practice</button>
+            <button className="type-btn" style={{background: type==='competition'?'var(--accent2)':'var(--card)', color: type==='competition'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('competition')}>🏆 Competition</button>
           </div>
         </div>
 
@@ -2783,7 +2783,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         <div className="form-group">
           <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
           <input type="text" value={name} onChange={e=>setName(e.target.value)}
-            placeholder={type==='wettkampf' ? 'z.B. Blaser Cup Bern' : 'z.B. Morgentraining'}/>
+            placeholder={type==='competition' ? 'e.g. Blaser Cup Bern' : 'e.g. Morning practice'}/>
         </div>
 
         {/* Discipline + Date */}
@@ -2807,17 +2807,17 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           <ScoreOnlyInput
             scoreVal={scoreOnlyVal} maxVal={scoreOnlyMax}
             onChangeScore={setScoreOnlyVal} onChangeMax={setScoreOnlyMax} />
-        ) : type === 'wettkampf' ? (
-          <WettkampfScore passen={passen} passenVals={passenVals} maxPro={maxPro}
+        ) : type === 'competition' ? (
+          <CompetitionScore passen={passen} passenVals={passenVals} maxPro={maxPro}
             totalScore={totalScore} totalMax={totalMax}
-            onChangePassen={handlePassen}
-            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setPassenVals(nv); }} />
+            onChangeRounds={handleRounds}
+            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setRoundsVals(nv); }} />
         ) : (
-          <TrainingScore hasScore={hasScore} onToggle={()=>setHasScore(h=>!h)}
+          <PracticeScore hasScore={hasScore} onToggle={()=>setHasScore(h=>!h)}
             passen={passen} passenVals={passenVals} maxPro={maxPro}
             totalScore={totalScore} totalMax={totalMax}
-            onChangePassen={handlePassen}
-            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setPassenVals(nv); }} />
+            onChangeRounds={handleRounds}
+            onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setRoundsVals(nv); }} />
         )}
 
         {/* Notes */}
@@ -2882,7 +2882,7 @@ function ScoreOnlyInput({ scoreVal, maxVal, onChangeScore, onChangeMax }) {
     <>
       <div style={{display:'flex',gap:12,marginBottom:12}}>
         <div className="form-group" style={{flex:1}}>
-          <label>Ergebnis</label>
+          <label>Score</label>
           <input type="number" value={scoreVal} min="0" placeholder="0"
             style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
             onChange={e=>onChangeScore(e.target.value)} />
@@ -2903,17 +2903,17 @@ function ScoreOnlyInput({ scoreVal, maxVal, onChangeScore, onChangeMax }) {
   );
 }
 
-function WettkampfScore({ passen, passenVals, maxPro, totalScore, totalMax, onChangePassen, onChangeVal }) {
+function CompetitionScore({ passen, passenVals, maxPro, totalScore, totalMax, onChangeRounds, onChangeVal }) {
   return (
     <>
       <div className="form-group">
         <label>Rounds</label>
         <div className="passen-control">
-          <button className="passen-btn" onClick={()=>onChangePassen(-1)}>−</button>
+          <button className="passen-btn" onClick={()=>onChangeRounds(-1)}>−</button>
           <input type="number" value={passen} min="1" max="20"
             style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
-            onChange={e=>{ const n=parseInt(e.target.value)||1; onChangePassen(n-passen); }} />
-          <button className="passen-btn" onClick={()=>onChangePassen(1)}>+</button>
+            onChange={e=>{ const n=parseInt(e.target.value)||1; onChangeRounds(n-passen); }} />
+          <button className="passen-btn" onClick={()=>onChangeRounds(1)}>+</button>
         </div>
       </div>
       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:10,letterSpacing:1}}>HITS PER ROUND (max. {maxPro})</div>
@@ -2930,7 +2930,7 @@ function WettkampfScore({ passen, passenVals, maxPro, totalScore, totalMax, onCh
   );
 }
 
-function TrainingScore({ hasScore, onToggle, passen, passenVals, maxPro, totalScore, totalMax, onChangePassen, onChangeVal }) {
+function PracticeScore({ hasScore, onToggle, passen, passenVals, maxPro, totalScore, totalMax, onChangeRounds, onChangeVal }) {
   return (
     <>
       <div className="score-check-row" onClick={onToggle}>
@@ -2944,11 +2944,11 @@ function TrainingScore({ hasScore, onToggle, passen, passenVals, maxPro, totalSc
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:10,letterSpacing:1}}>HITS PER ROUND (max. {maxPro})</div>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
             <span style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>ROUNDS:</span>
-            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangePassen(-1)}>−</button>
+            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangeRounds(-1)}>−</button>
             <input type="number" value={passen} min="1" max="20"
               style={{width:60,textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:22,padding:6,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:8,outline:'none'}}
-              onChange={e=>{ const n=parseInt(e.target.value)||1; onChangePassen(n-passen); }} />
-            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangePassen(1)}>+</button>
+              onChange={e=>{ const n=parseInt(e.target.value)||1; onChangeRounds(n-passen); }} />
+            <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangeRounds(1)}>+</button>
           </div>
           <div className="passen-grid">
             {passenVals.map((v,i) => (
@@ -2996,7 +2996,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
   const quote = hasScore ? Math.round(session.score / session.max * 100) : null;
 
   const gcalUrl = makeGCalUrl({
-    title: `${session.type === 'wettkampf' ? '🏆 ' : '🏋️ '}${session.name || session.disziplin}`,
+    title: `${session.type === 'competition' ? '🏆 ' : '🏋️ '}${session.name || session.disziplin}`,
     date: session.date,
     location: session.ort,
     notes: session.notes,
@@ -3028,7 +3028,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
               <div style={{height:'100%',width:`${quote}%`,background:'var(--accent)',borderRadius:2,transition:'width .4s'}} />
             </div>
             <div style={{marginBottom:16}}>
-              <div className="detail-label" style={{marginBottom:8}}>Passen</div>
+              <div className="detail-label" style={{marginBottom:8}}>Rounds</div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
                 {session.passen.map((v,i) => (
                   <div key={i} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 6px',textAlign:'center'}}>
@@ -3066,7 +3066,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
             fontFamily:'DM Mono,monospace', fontSize:13, fontWeight:600}}>
           <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
             style={{width:18,height:18}} alt=""/>
-          In Google Kalender eintragen
+          Add to Google Calendar
         </a>
         <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Close</button>
       </div>
@@ -3238,7 +3238,8 @@ function App() {
       const raw = Array.isArray(sessionData) ? sessionData : [];
       const s = raw.map(r => ({
         id: r.id,
-        type: r.type || 'training',
+        type: r.type === 'wettkampf' ? 'competition' : r.type === 'training' ? 'practice' : r.type || 'practice',
+        name: r.name || '',
         disziplin: r.disziplin || 'Fitasc',
         date: r.date || '',
         score: r.score ?? null,
@@ -3278,7 +3279,10 @@ function App() {
       setSyncStatus('ok');
     } catch(e) {
       // Fall back to localStorage
-      setSessions(LS.get('claylog_sessions', []));
+      setSessions(LS.get('claylog_sessions', []).map(s => ({
+        ...s,
+        type: s.type === 'wettkampf' ? 'competition' : s.type === 'training' ? 'practice' : s.type || 'practice',
+      })));
       setNoteStates(LS.get('claylog_notestates', {}));
       setLists(LS.get('claylog_lists', { waffe:[], ort:[], munition:[] }));
       setSyncStatus('error');
@@ -3421,7 +3425,7 @@ function App() {
         {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotizenPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} />}
+        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
