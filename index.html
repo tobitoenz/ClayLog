@@ -556,7 +556,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v84';
+const APP_VERSION = 'v85';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -2473,6 +2473,7 @@ function ICSGuide() {
               [`Events don't appear immediately`, `Google updates the ICS feed every 15–60 minutes. New events will appear automatically after a short delay.`],
               [`Are my events public?`, `No. The secret address contains a hidden token. Only someone who knows the exact URL can access your events.`],
               [`What's the difference to manual entries?`, `Manual entries (in the Events tab) appear immediately and are also added to Google Calendar. ICS entries come from Google Calendar and are read-only.`],
+              [`Where is the ICS URL stored?`, `Only on this device (local storage) — not in the cloud database. If you log in on a new device, you'll need to enter the URL again.`],
             ].map(([q,a]) => (
               <div key={q} style={{marginBottom:10}}>
                 <div style={{fontSize:12, fontWeight:600, marginBottom:3}}>❓ {q}</div>
