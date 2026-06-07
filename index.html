@@ -18,6 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 :root {
@@ -555,7 +556,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v76';
+const APP_VERSION = 'v77';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -2263,6 +2264,84 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   QR CODE — pure JS, no external library
+════════════════════════════════════════════════════════════════ */
+function QRCode({ url, size = 160 }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    // Use QRious library loaded from CDN
+    if (!window.QRious) return;
+    new window.QRious({
+      element: canvasRef.current,
+      value: url,
+      size,
+      backgroundAlpha: 0,
+      foreground: '#e8c84a',
+      level: 'M',
+    });
+  }, [url, size]);
+  return <canvas ref={canvasRef} width={size} height={size} style={{borderRadius:8}}/>;
+}
+
+function ShareCard() {
+  const url = window.location.href.split('?')[0];
+  const [shared, setShared] = useState(false);
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'ClayLog',
+          text: 'Clay Shooting Tracker App — kostenlos im Browser:',
+          url,
+        });
+        setShared(true);
+        setTimeout(()=>setShared(false), 2000);
+      } catch {}
+    } else {
+      navigator.clipboard?.writeText(url);
+      setShared(true);
+      setTimeout(()=>setShared(false), 2000);
+    }
+  }
+
+  return (
+    <div className="card">
+      <div className="card-title" style={{marginBottom:12}}>🔗 App teilen</div>
+      <div style={{fontSize:13,color:'var(--muted)',marginBottom:16,lineHeight:1.5}}>
+        QR-Code scannen oder Link teilen — die App öffnet direkt im Browser, keine Installation nötig.
+      </div>
+
+      {/* QR Code */}
+      <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
+        <div style={{
+          background:'#111', padding:12, borderRadius:12,
+          border:'1px solid var(--border)',
+          display:'inline-flex', flexDirection:'column', alignItems:'center', gap:8
+        }}>
+          <QRCode url={url} size={160}/>
+          <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',
+            letterSpacing:1,opacity:.7}}>SCAN TO OPEN</div>
+        </div>
+      </div>
+
+      {/* URL display */}
+      <div style={{
+        background:'var(--card)', borderRadius:10, padding:'10px 12px',
+        fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--muted)',
+        marginBottom:12, wordBreak:'break-all', lineHeight:1.5,
+        border:'1px solid var(--border)'
+      }}>{url}</div>
+
+      {/* Share button */}
+      <button className="btn btn-primary" onClick={handleShare} style={{width:'100%'}}>
+        {shared ? '✅ Kopiert!' : '📤 Link teilen'}
+      </button>
+    </div>
+  );
+}
+
 function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus, icsUrl, onSaveIcsUrl }) {
   const [showLists, setShowLists] = useState(false);
   const name = user?.user_metadata?.name || '';
@@ -2404,6 +2483,8 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         </div>
         <button className="btn btn-ghost" style={{marginTop:8}} onClick={onSignOut}>🚪 Sign out</button>
       </div>
+
+      <ShareCard />
 
       <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v1.2 · Cloud sync</p>
     </div>
