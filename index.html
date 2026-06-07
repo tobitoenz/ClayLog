@@ -555,7 +555,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-const APP_VERSION = 'v75';
+const APP_VERSION = 'v76';
 
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
@@ -840,12 +840,12 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
   const [selected, setSelected] = useState(null);
   const [editEvent, setEditEvent] = useState(null); // null=closed, {}=new, ev=edit
   const now = new Date();
-  const todayStr = now.toISOString().slice(0,10);
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
   useModalLock(!!(selected || editEvent));
 
   // Normalise manual events to same shape as ICS
-  const manualNorm = manualEvents.map(ev => ({
+  const manualNorm = manualEvents.filter(ev => ev.id && ev.name && ev.dateStart).map(ev => ({
     uid: ev.id,
     title: ev.name,
     location: ev.ort || '',
@@ -3066,14 +3066,12 @@ function App() {
       : [ev, ...events];
     setEvents(newEvents);
     LS.set('claylog_events', newEvents);
-    setModal(null); setSelectedSession(null);
   }
 
   function deleteEvent(id) {
     const newEvents = events.filter(e=>e.id!==id);
     setEvents(newEvents);
     LS.set('claylog_events', newEvents);
-    setModal(null); setSelectedSession(null);
   }
 
   async function saveSession(session) {
