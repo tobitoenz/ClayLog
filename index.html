@@ -883,8 +883,17 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
     _raw: ev,
   }));
 
+  // Deduplicate: remove ICS events that match a manual event by date + title
+  const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const icsDeduped = icsEvents.filter(ics =>
+    !manualNorm.some(m =>
+      m.date === ics.date &&
+      normalize(m.title) === normalize(ics.title)
+    )
+  );
+
   // Merge + sort
-  const allEvents = [...manualNorm, ...icsEvents]
+  const allEvents = [...manualNorm, ...icsDeduped]
     .sort((a,b) => a.start - b.start);
 
   const upcoming = allEvents.filter(e => (e.dateEnd || e.date) >= todayStr);
@@ -1422,7 +1431,11 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const manualUpcoming = manualEvents
     .filter(e => (e.dateEnd||e.dateStart) >= todayD)
     .map(e => ({ title:e.name, location:e.ort||'', date:e.dateStart, start:new Date(e.dateStart+'T00:00:00'), allDay:true }));
-  const allUpcoming = [...manualUpcoming, ...icsEvents.filter(e=>e.date>=todayD)]
+  const normTitle = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const icsUpcomingDeduped = icsEvents.filter(e => e.date >= todayD &&
+    !manualUpcoming.some(m => m.date === e.date && normTitle(m.title) === normTitle(e.title))
+  );
+  const allUpcoming = [...manualUpcoming, ...icsUpcomingDeduped]
     .sort((a,b)=>a.start-b.start);
   const nextEvent = allUpcoming[0] || null;
 
@@ -2609,7 +2622,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v87 · Cloud sync</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v88 · Cloud sync</p>
     </div>
   );
 }
