@@ -367,7 +367,7 @@ async function sbFetch(method, table, body, filter, token, retry = true) {
     body: body ? JSON.stringify(body) : null
   });
   if (res.status === 401 && retry) throw new Error('AUTH_EXPIRED');
-  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  if (!res.ok) { const e = await res.text(); throw new Error(`[${res.status}] ${e}`); }
   if (method === 'DELETE' || method === 'PATCH' || method === 'POST') return null;
   return res.json();
 }
@@ -2623,7 +2623,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v89 · Cloud sync</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v90 · Cloud sync</p>
     </div>
   );
 }
@@ -3153,6 +3153,7 @@ function App() {
   const [lists, setLists] = useState({ waffe:[], ort:[], munition:[] });
   const [customDisz, setCustomDisz] = useState(() => LS.get('claylog_customdisz', []));
   const [syncStatus, setSyncStatus] = useState('idle');
+  const [toastMsg, setToastMsg] = useState(null);
 
   // UI state
   const [tab, setTab] = useState('dashboard');
@@ -3312,6 +3313,8 @@ function App() {
     } catch(e) {
       console.error('saveSession error:', e);
       setSyncStatus('error');
+      setToastMsg('Sync error: ' + e.message);
+      setTimeout(() => setToastMsg(null), 6000);
     }
   }
 
@@ -3456,6 +3459,13 @@ function App() {
           onEdit={(s) => { setSelectedSession(s); setModal('edit'); }}
           onDelete={deleteSession}
           onClose={closeModal} />
+      )}
+      {toastMsg && (
+        <div style={{position:'fixed',bottom:90,left:16,right:16,background:'#c0392b',color:'#fff',
+          borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
+          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',lineHeight:1.4}}>
+          ⚠️ {toastMsg}
+        </div>
       )}
     </div>
   );
