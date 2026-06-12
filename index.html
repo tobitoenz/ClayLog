@@ -65,8 +65,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 8px 0; cursor: pointer; transition: all .2s; user-select: none;
 }
-.nav-icon { font-size: 22px; transition: transform .2s; }
-.nav-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.nav-icon { font-size: 19px; transition: transform .2s; }
+.nav-label { font-size: 9px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 .nav-item.active .nav-icon { transform: scale(1.1); }
 .nav-item.active .nav-label { color: var(--accent); }
 
@@ -248,6 +248,7 @@ canvas { width: 100% !important; }
 
 /* ─── NOTES ───────────────────────────────────────────────── */
 .notiz-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.notiz-meta { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:6px; }
 .notiz-card.done { opacity: .5; }
 .notiz-card.done .notiz-text { text-decoration: line-through; color: var(--muted); }
 .notiz-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
@@ -1050,6 +1051,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', icon: '🎯', label: 'Home' },
   { id: 'sessions',  icon: '📋', label: 'Sessions' },
   { id: 'events',    icon: '📅', label: 'Events' },
+  { id: 'notizen',   icon: '📝', label: 'Notes' },
   { id: 'analyse',   icon: '🔬', label: 'Stats' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
 ];
@@ -1775,18 +1777,24 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
         </div>
       ) : filtered.map(s => {
         const st = noteStates[s.id] || 'normal';
+        const icon = s.type === 'competition' ? '🏆' : '🏋️';
+        const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
         return (
           <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
-            <div className="notiz-meta">{fmtDate(s.date)} · {s.disziplin}</div>
+            <div className="notiz-meta">
+              <span>{icon} {s.disziplin}</span>
+              <span>📅 {fmtDate(s.date)}{score}</span>
+              {s.ort ? <span>📍 {s.ort}</span> : null}
+            </div>
             <div className="notiz-text">{s.notes}</div>
             <div className="notiz-actions">
               <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
                 onClick={()=>onToggleNote(s.id, st==='open'?'normal':'open')}>
-                📌 Task
+                📌 Task{st==='open' ? ' ✓' : ''}
               </span>
               <span className={`notiz-tag done-tag ${st==='done'?'active':''}`}
                 onClick={()=>onToggleNote(s.id, st==='done'?'normal':'done')}>
-                ✅ Done
+                ✅ Done{st==='done' ? ' ✓' : ''}
               </span>
             </div>
           </div>
@@ -2623,7 +2631,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v91 · Cloud sync</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v92 · Cloud sync</p>
     </div>
   );
 }
