@@ -67,7 +67,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   border-radius: 14px; margin: 0 2px;
 }
 .nav-icon { font-size: 28px; transition: transform .2s; line-height: 1; }
-.nav-label { font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; }
+.nav-label { font-size: var(--fs-xs, 11px); letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; }
 .nav-item.active { background: rgba(255,255,255,.06); }
 .nav-item.active .nav-icon { transform: scale(1.12); }
 .nav-item.active .nav-label { color: var(--accent); font-weight: 700; }
@@ -91,13 +91,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
 }
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.card-title { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.card-title { font-size: var(--fs-xs, 13px); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 
 /* ─── STAT GRID ─────────────────────────────────────────────── */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .stat-box { background: var(--surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
 .stat-val { font-family: 'Arial', sans-serif; font-size: 40px; color: var(--accent); line-height: 1; }
-.stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+.stat-label { font-size: var(--fs-xs, 13px); color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
 
 /* ─── SESSION ITEMS ─────────────────────────────────────────── */
 .session-item {
@@ -115,10 +115,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .session-icon.practice { background: rgba(232,200,74,.12); }
 .session-icon.competition { background: rgba(74,232,200,.12); }
 .session-info { flex: 1; min-width: 0; }
-.session-name { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.session-meta { font-size: 13px; color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
+.session-name { font-weight: 600; font-size: var(--fs-lg, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-meta { font-size: var(--fs-sm, 13px); color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
 .session-score { font-family: 'Arial', sans-serif; font-size: 30px; color: var(--accent); flex-shrink: 0; }
-.score-max { font-size: 14px; color: var(--muted); }
+.score-max { font-size: var(--fs-sm, 14px); color: var(--muted); }
 
 /* ─── EMPTY STATE ───────────────────────────────────────────── */
 .empty { text-align: center; padding: 40px 20px; }
@@ -150,7 +150,7 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 
 /* ─── FORMS ─────────────────────────────────────────────────── */
 .form-group { margin-bottom: 10px; }
-label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+label { display: block; font-size: var(--fs-xs, 13px); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
 input, select, textarea {
   width: 100%; background: #0e0e18; border: 1px solid var(--border);
   border-left: 3px solid var(--accent2);
@@ -224,9 +224,9 @@ textarea { resize: none; min-height: 80px; }
   padding: 16px 0; border-bottom: 1px solid var(--border);
 }
 .settings-row:last-child { border-bottom: none; }
-.settings-label { font-size: 16px; font-weight: 500; }
-.settings-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
-.settings-btn { padding: 10px 18px; font-size: 15px; margin: 0; width: auto; }
+.settings-label { font-size: var(--fs-lg, 16px); font-weight: 500; }
+.settings-sub { font-size: var(--fs-sm, 13px); color: var(--muted); margin-top: 3px; }
+.settings-btn { padding: 10px 18px; font-size: var(--fs-base, 15px); margin: 0; width: auto; }
 
 /* ─── CHART ─────────────────────────────────────────────────── */
 .chart-wrap { padding: 4px 0; }
@@ -235,13 +235,13 @@ canvas { width: 100% !important; }
 /* ─── ANALYSE ───────────────────────────────────────────────── */
 .analyse-tab {
   padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--card); color: var(--muted); font-size: 14px; font-weight: 600;
+  background: var(--card); color: var(--muted); font-size: var(--fs-sm, 14px); font-weight: 600;
   cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
 }
 .analyse-tab.active { background: rgba(232,200,74,.15); color: var(--accent); border-color: var(--accent); }
 .tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
-.a-table { width: 100%; border-collapse: collapse; font-size: 15px; }
-.a-table th { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+.a-table { width: 100%; border-collapse: collapse; font-size: var(--fs-base, 15px); }
+.a-table th { font-size: var(--fs-xs, 12px); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
 .a-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .a-table tr:last-child td { border-bottom: none; }
 .a-table .num { text-align: right; font-family: 'DM Mono', monospace; font-weight: 600; }
@@ -254,7 +254,7 @@ canvas { width: 100% !important; }
 .notiz-card.done { opacity: .5; }
 .notiz-card.done .notiz-text { text-decoration: line-through; color: var(--muted); }
 .notiz-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
-.notiz-text { font-size: 16px; line-height: 1.7; }
+.notiz-text { font-size: var(--fs-lg, 16px); line-height: 1.7; }
 .notiz-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .notiz-tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -307,9 +307,12 @@ function loadFontScale() {
 }
 
 function applyFontScale(factor) {
-  // Scale body font and SVG chart labels via CSS custom property
   document.documentElement.style.setProperty('--font-scale', factor);
-  document.documentElement.style.fontSize = (16 * factor) + 'px';
+  document.documentElement.style.setProperty('--fs-base', (15 * factor) + 'px');
+  document.documentElement.style.setProperty('--fs-sm',   (13 * factor) + 'px');
+  document.documentElement.style.setProperty('--fs-xs',   (11 * factor) + 'px');
+  document.documentElement.style.setProperty('--fs-lg',   (17 * factor) + 'px');
+  document.documentElement.style.setProperty('--fs-xl',   (20 * factor) + 'px');
 }
 
 (function() { applyFontScale(loadFontScale().factor); })();
@@ -1052,9 +1055,9 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: '🎯', label: 'Home',     hideable: false },
-  { id: 'sessions',  icon: '📋', label: 'Sessions', hideable: false },
+  { id: 'sessions',  icon: '📋', label: 'Sessions', hideable: true  },
   { id: 'events',    icon: '📅', label: 'Events',   hideable: true  },
-  { id: 'notizen',   icon: '📝', label: 'Notes',    hideable: false },
+  { id: 'notizen',   icon: '📝', label: 'Notes',    hideable: true  },
   { id: 'analyse',   icon: '🔬', label: 'Stats',    hideable: true  },
   { id: 'settings',  icon: '⚙️', label: 'Settings', hideable: false },
 ];
@@ -2705,7 +2708,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c2 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c3 · Comfort Edition</p>
     </div>
   );
 }
