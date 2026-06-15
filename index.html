@@ -59,23 +59,25 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 /* ─── BOTTOM NAV ────────────────────────────────────────────── */
 .bottom-nav {
   display: flex; background: var(--surface);
-  border-top: 1px solid var(--border); padding: 8px 0 24px; flex-shrink: 0;
+  border-top: 1px solid var(--border); padding: 6px 0 28px; flex-shrink: 0;
 }
 .nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 8px 0; cursor: pointer; transition: all .2s; user-select: none;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 4px 8px; cursor: pointer; transition: all .2s; user-select: none;
+  border-radius: 14px; margin: 0 2px;
 }
-.nav-icon { font-size: 19px; transition: transform .2s; }
-.nav-label { font-size: 9px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
-.nav-item.active .nav-icon { transform: scale(1.1); }
-.nav-item.active .nav-label { color: var(--accent); }
+.nav-icon { font-size: 28px; transition: transform .2s; line-height: 1; }
+.nav-label { font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; }
+.nav-item.active { background: rgba(255,255,255,.06); }
+.nav-item.active .nav-icon { transform: scale(1.12); }
+.nav-item.active .nav-label { color: var(--accent); font-weight: 700; }
 
 /* ─── FAB ───────────────────────────────────────────────────── */
 .fab {
-  position: fixed; bottom: 90px; right: 20px;
-  width: 58px; height: 58px; border-radius: 50%;
+  position: fixed; bottom: 104px; right: 20px;
+  width: 64px; height: 64px; border-radius: 50%;
   background: var(--accent); color: #000;
-  font-size: 28px; font-weight: bold;
+  font-size: 32px; font-weight: bold;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 8px 32px rgba(232,200,74,.4);
   cursor: pointer; z-index: 100; border: none;
@@ -89,13 +91,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
 }
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.card-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.card-title { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 
 /* ─── STAT GRID ─────────────────────────────────────────────── */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .stat-box { background: var(--surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
-.stat-val { font-family: 'Arial', sans-serif; font-size: 36px; color: var(--accent); line-height: 1; }
-.stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+.stat-val { font-family: 'Arial', sans-serif; font-size: 40px; color: var(--accent); line-height: 1; }
+.stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
 
 /* ─── SESSION ITEMS ─────────────────────────────────────────── */
 .session-item {
@@ -106,17 +108,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .session-item:last-child { border-bottom: none; }
 .session-item:active { opacity: .6; }
 .session-icon {
-  width: 42px; height: 42px; border-radius: 10px;
+  width: 48px; height: 48px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
+  font-size: 22px; flex-shrink: 0;
 }
 .session-icon.practice { background: rgba(232,200,74,.12); }
 .session-icon.competition { background: rgba(74,232,200,.12); }
 .session-info { flex: 1; min-width: 0; }
-.session-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.session-meta { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
-.session-score { font-family: 'Arial', sans-serif; font-size: 28px; color: var(--accent); flex-shrink: 0; }
-.score-max { font-size: 13px; color: var(--muted); }
+.session-name { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-meta { font-size: 13px; color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
+.session-score { font-family: 'Arial', sans-serif; font-size: 30px; color: var(--accent); flex-shrink: 0; }
+.score-max { font-size: 14px; color: var(--muted); }
 
 /* ─── EMPTY STATE ───────────────────────────────────────────── */
 .empty { text-align: center; padding: 40px 20px; }
@@ -148,7 +150,7 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 
 /* ─── FORMS ─────────────────────────────────────────────────── */
 .form-group { margin-bottom: 10px; }
-label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
 input, select, textarea {
   width: 100%; background: #0e0e18; border: 1px solid var(--border);
   border-left: 3px solid var(--accent2);
@@ -219,12 +221,12 @@ textarea { resize: none; min-height: 80px; }
 /* ─── SETTINGS ──────────────────────────────────────────────── */
 .settings-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 0; border-bottom: 1px solid var(--border);
+  padding: 16px 0; border-bottom: 1px solid var(--border);
 }
 .settings-row:last-child { border-bottom: none; }
-.settings-label { font-size: 14px; font-weight: 500; }
-.settings-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.settings-btn { padding: 8px 16px; font-size: 14px; margin: 0; width: auto; }
+.settings-label { font-size: 16px; font-weight: 500; }
+.settings-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.settings-btn { padding: 10px 18px; font-size: 15px; margin: 0; width: auto; }
 
 /* ─── CHART ─────────────────────────────────────────────────── */
 .chart-wrap { padding: 4px 0; }
@@ -232,15 +234,15 @@ canvas { width: 100% !important; }
 
 /* ─── ANALYSE ───────────────────────────────────────────────── */
 .analyse-tab {
-  padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--card); color: var(--muted); font-size: 12px; font-weight: 600;
+  padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted); font-size: 14px; font-weight: 600;
   cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
 }
 .analyse-tab.active { background: rgba(232,200,74,.15); color: var(--accent); border-color: var(--accent); }
 .tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
-.a-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.a-table th { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
-.a-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.a-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.a-table th { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+.a-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .a-table tr:last-child td { border-bottom: none; }
 .a-table .num { text-align: right; font-family: 'DM Mono', monospace; font-weight: 600; }
 .a-bar-wrap { background: var(--border); border-radius: 3px; height: 5px; margin-top: 4px; }
@@ -248,11 +250,11 @@ canvas { width: 100% !important; }
 
 /* ─── NOTES ───────────────────────────────────────────────── */
 .notiz-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
-.notiz-meta { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:6px; }
+.notiz-meta { display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:6px; }
 .notiz-card.done { opacity: .5; }
 .notiz-card.done .notiz-text { text-decoration: line-through; color: var(--muted); }
-.notiz-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
-.notiz-text { font-size: 14px; line-height: 1.6; }
+.notiz-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+.notiz-text { font-size: 16px; line-height: 1.7; }
 .notiz-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .notiz-tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -665,9 +667,10 @@ function useICSFeed(url) {
 
     async function fetchFeed() {
       const proxies = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+        `https://ics-proxy.tobitoenz.workers.dev/?url=${encodeURIComponent(url)}`,
         `https://corsproxy.io/?${encodeURIComponent(url)}`,
         `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
       ];
 
       // Race all proxies in parallel — take first success
@@ -1048,18 +1051,33 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
 }
 
 const NAV_ITEMS = [
-  { id: 'dashboard', icon: '🎯', label: 'Home' },
-  { id: 'sessions',  icon: '📋', label: 'Sessions' },
-  { id: 'events',    icon: '📅', label: 'Events' },
-  { id: 'notizen',   icon: '📝', label: 'Notes' },
-  { id: 'analyse',   icon: '🔬', label: 'Stats' },
-  { id: 'settings',  icon: '⚙️', label: 'Settings' },
+  { id: 'dashboard', icon: '🎯', label: 'Home',     hideable: false },
+  { id: 'sessions',  icon: '📋', label: 'Sessions', hideable: false },
+  { id: 'events',    icon: '📅', label: 'Events',   hideable: true  },
+  { id: 'notizen',   icon: '📝', label: 'Notes',    hideable: false },
+  { id: 'analyse',   icon: '🔬', label: 'Stats',    hideable: true  },
+  { id: 'settings',  icon: '⚙️', label: 'Settings', hideable: false },
 ];
 
+function loadNavHidden() {
+  try { return JSON.parse(localStorage.getItem('claylog_navhidden') || '{}'); }
+  catch { return {}; }
+}
+function saveNavHidden(obj) {
+  try { localStorage.setItem('claylog_navhidden', JSON.stringify(obj)); } catch {}
+}
+
 function BottomNav({ active, onChange }) {
+  const [hidden, setHidden] = useState(() => loadNavHidden());
+  useEffect(() => {
+    function onchange() { setHidden(loadNavHidden()); }
+    window.addEventListener('navhiddenchange', onchange);
+    return () => window.removeEventListener('navhiddenchange', onchange);
+  }, []);
+  const visible = NAV_ITEMS.filter(item => !hidden[item.id]);
   return (
     <nav className="bottom-nav">
-      {NAV_ITEMS.map(item => (
+      {visible.map(item => (
         <div key={item.id} className={`nav-item ${active===item.id?'active':''}`} onClick={()=>onChange(item.id)}>
           <div className="nav-icon">{item.icon}</div>
           <div className="nav-label">{item.label}</div>
@@ -2233,6 +2251,55 @@ function FontScaleSettings() {
   );
 }
 
+function NavVisibilitySettings() {
+  const [hidden, setHidden] = useState(() => loadNavHidden());
+  function toggle(id) {
+    const next = { ...hidden };
+    if (next[id]) delete next[id]; else next[id] = true;
+    setHidden(next);
+    saveNavHidden(next);
+    window.dispatchEvent(new Event('navhiddenchange'));
+  }
+  const hideableItems = NAV_ITEMS.filter(item => item.hideable);
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>NAVIGATION TABS</div>
+      <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>
+        Hide tabs you don't need. They stay accessible here.
+      </div>
+      {hideableItems.map(item => {
+        const isHidden = !!hidden[item.id];
+        return (
+          <div key={item.id} onClick={() => toggle(item.id)} style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'12px 14px', borderRadius:12, border:'1px solid var(--border)',
+            background: isHidden ? 'var(--surface)' : 'rgba(255,255,255,0.04)',
+            marginBottom:8, cursor:'pointer', transition:'all .15s'
+          }}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span style={{fontSize:22}}>{item.icon}</span>
+              <span style={{fontSize:15,fontWeight:600,color: isHidden ? 'var(--muted)' : 'var(--text)'}}>{item.label}</span>
+            </div>
+            <div style={{
+              width:44, height:26, borderRadius:13,
+              background: isHidden ? 'var(--border)' : 'var(--accent)',
+              position:'relative', transition:'background .2s', flexShrink:0
+            }}>
+              <div style={{
+                position:'absolute', top:3,
+                left: isHidden ? 3 : 21,
+                width:20, height:20, borderRadius:'50%',
+                background: isHidden ? 'var(--muted)' : '#000',
+                transition:'left .2s'
+              }}/>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AppearanceSettings() {
   const [current, setCurrent] = useState(() => loadTheme());
 
@@ -2296,6 +2363,13 @@ function AppearanceSettings() {
           </div>
           <span style={{fontSize:11,fontFamily:'DM Mono,monospace',color:'var(--muted)'}}>{current.accent2}</span>
         </div>
+      </div>
+
+      <NavVisibilitySettings />
+
+      <div style={{marginTop:16}}>
+        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>TEXT SIZE</div>
+        <FontScaleSettings />
       </div>
     </div>
   );
@@ -2631,7 +2705,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog v92 · Cloud sync</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c2 · Comfort Edition</p>
     </div>
   );
 }
