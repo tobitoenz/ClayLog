@@ -2225,29 +2225,32 @@ function AnalysePage({ sessions }) {
    SETTINGS PAGE
 ════════════════════════════════════════════════════════════════ */
 function FontScaleSettings() {
-  const [current, setCurrent] = useState(() => loadFontScale());
-  function select(scale) {
-    setCurrent(scale);
-    applyFontScale(scale.factor);
-    localStorage.setItem('claylog_fontscale', JSON.stringify(scale));
-    // Force re-render of charts by triggering a small state change
+  const [factor, setFactor] = useState(() => loadFontScale().factor);
+  function onChange(val) {
+    const f = parseFloat(val);
+    setFactor(f);
+    applyFontScale(f);
+    localStorage.setItem('claylog_fontscale', JSON.stringify({ id: 'custom', factor: f }));
     window.dispatchEvent(new Event('fontscalechange'));
   }
+  const pct = Math.round(factor * 100);
   return (
-    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-      {FONT_SCALES.map(s => (
-        <div key={s.id} onClick={() => select(s)} style={{
-          cursor:'pointer', borderRadius:10, padding:'8px 16px',
-          border: current.id===s.id ? '2px solid var(--accent)' : '2px solid var(--border)',
-          background: current.id===s.id ? 'rgba(255,255,255,0.06)' : 'var(--surface)',
-          fontSize: s.id==='normal' ? 13 : s.id==='large' ? 15 : 18,
-          fontFamily:'DM Sans,sans-serif',
-          color: current.id===s.id ? 'var(--accent)' : 'var(--text)',
-          fontWeight:600, transition:'all .15s'
-        }}>
-          {s.label}
-        </div>
-      ))}
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+        <span style={{fontSize:'var(--fs-xs,11px)',color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1}}>TEXT SIZE</span>
+        <span style={{fontSize:'var(--fs-sm,13px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',fontWeight:700}}>{pct}%</span>
+      </div>
+      <input type="range" min="0.7" max="2.0" step="0.05" value={factor}
+        onInput={e => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
+        style={{width:'100%',accentColor:'var(--accent)',height:6,cursor:'pointer'}} />
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+        <span style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>70%</span>
+        <span style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>200%</span>
+      </div>
+      <div style={{marginTop:10,padding:'10px 14px',borderRadius:10,background:'var(--surface)',border:'1px solid var(--border)'}}>
+        <span style={{fontSize: (15 * factor) + 'px', color:'var(--text)', fontFamily:'DM Sans,sans-serif'}}>Sample text — ClayLog</span>
+      </div>
     </div>
   );
 }
@@ -2366,7 +2369,6 @@ function AppearanceSettings() {
       <NavVisibilitySettings />
 
       <div style={{marginTop:16}}>
-        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>TEXT SIZE</div>
         <FontScaleSettings />
       </div>
     </div>
@@ -2703,7 +2705,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c4 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c5 · Comfort Edition</p>
     </div>
   );
 }
