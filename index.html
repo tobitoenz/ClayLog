@@ -322,8 +322,6 @@ const THEMES = [
   { id:'mint',   label:'Mint',   accent:'#4ae8c8', accent2:'#e8c84a' },
   { id:'gold',   label:'Gold',   accent:'#f0c030', accent2:'#e87a4a' },
   { id:'purple', label:'Purple', accent:'#b06af0', accent2:'#f06ab0' },
-  { id:'blue',   label:'Blue',   accent:'#4a9ef0', accent2:'#4ae8c8' },
-  { id:'red',    label:'Red',    accent:'#f04a4a', accent2:'#f0a04a' },
   { id:'custom', label:'Custom', accent:'#4ae8c8', accent2:'#e8c84a' },
 ];
 
@@ -2325,7 +2323,7 @@ function AppearanceSettings() {
       <div className="card-title" style={{marginBottom:14}}>🎨 Appearance</div>
 
       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>THEME</div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16,alignItems:'center'}}>
         {THEMES.filter(t=>t.id!=='custom').map(t => (
           <div key={t.id}
             onClick={() => selectTheme(t)}
@@ -2342,29 +2340,26 @@ function AppearanceSettings() {
             <span style={{fontSize:13,color: current.id===t.id ? t.accent : 'var(--text)',fontWeight:600}}>{t.label}</span>
           </div>
         ))}
-      </div>
 
-      <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10,marginTop:16}}>CUSTOM COLORS</div>
-      <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <label style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',margin:0}}>Primary</label>
-          <div style={{position:'relative',width:36,height:36,borderRadius:8,border:'2px solid var(--border)',overflow:'hidden',cursor:'pointer'}}>
+        {/* Custom color pickers inline */}
+        <div style={{display:'flex',alignItems:'center',gap:6,
+          borderRadius:10, padding:'7px 10px',
+          border: current.id==='custom' ? `2px solid ${current.accent}` : '2px solid var(--border)',
+          background: current.id==='custom' ? `rgba(${hexToRgb(current.accent)},0.12)` : 'var(--surface)',
+        }}>
+          <div style={{position:'relative',width:28,height:28,borderRadius:6,border:'2px solid var(--border)',overflow:'hidden',cursor:'pointer'}}>
             <div style={{position:'absolute',inset:0,background:current.accent,pointerEvents:'none'}}/>
             <input type="color" value={current.accent}
               onChange={e=>updateCustom('accent',e.target.value)}
               style={{opacity:0,position:'absolute',inset:0,width:'100%',height:'100%',cursor:'pointer',border:'none',padding:0}} />
           </div>
-          <span style={{fontSize:11,fontFamily:'DM Mono,monospace',color:'var(--muted)'}}>{current.accent}</span>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <label style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',margin:0}}>Secondary</label>
-          <div style={{position:'relative',width:36,height:36,borderRadius:8,border:'2px solid var(--border)',overflow:'hidden',cursor:'pointer'}}>
+          <div style={{position:'relative',width:28,height:28,borderRadius:6,border:'2px solid var(--border)',overflow:'hidden',cursor:'pointer'}}>
             <div style={{position:'absolute',inset:0,background:current.accent2,pointerEvents:'none'}}/>
             <input type="color" value={current.accent2}
               onChange={e=>updateCustom('accent2',e.target.value)}
               style={{opacity:0,position:'absolute',inset:0,width:'100%',height:'100%',cursor:'pointer',border:'none',padding:0}} />
           </div>
-          <span style={{fontSize:11,fontFamily:'DM Mono,monospace',color:'var(--muted)'}}>{current.accent2}</span>
+          <span style={{fontSize:13,color: current.id==='custom' ? current.accent : 'var(--text)',fontWeight:600}}>Custom</span>
         </div>
       </div>
 
@@ -2708,7 +2703,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c3 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c4 · Comfort Edition</p>
     </div>
   );
 }
