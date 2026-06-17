@@ -1769,7 +1769,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 ════════════════════════════════════════════════════════════════ */
 function NotesPage({ sessions, noteStates, onToggleNote }) {
   const [filter, setFilter] = useState('all');
-  const withNotes = sessions.filter(s => s.notes && s.notes.trim());
+  const withNotes = sessions.filter(s => (s.notesCat && Object.keys(s.notesCat).length) || (s.notes && s.notes.trim()));
 
   const filtered = withNotes.filter(s => {
     const st = noteStates[s.id] || 'normal';
@@ -1798,6 +1798,9 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
         const st = noteStates[s.id] || 'normal';
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
+        const cats = s.notesCat && Object.keys(s.notesCat).length
+          ? Object.entries(s.notesCat).filter(([k,v]) => v && v.trim())
+          : (s.notes && s.notes.trim() ? [['Notes', s.notes]] : []);
         return (
           <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
             <div className="notiz-meta">
@@ -1805,7 +1808,12 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
               <span>📅 {fmtDate(s.date)}{score}</span>
               {s.ort ? <span>📍 {s.ort}</span> : null}
             </div>
-            <div className="notiz-text">{s.notes}</div>
+            {cats.map(([cat, text]) => (
+              <div key={cat} style={{marginBottom:10}}>
+                <div style={{fontSize:'var(--fs-xs,11px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{cat}</div>
+                <div className="notiz-text">{text}</div>
+              </div>
+            ))}
             <div className="notiz-actions">
               <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
                 onClick={()=>onToggleNote(s.id, st==='open'?'normal':'open')}>
@@ -2705,7 +2713,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c5 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c6 · Comfort Edition</p>
     </div>
   );
 }
@@ -2714,6 +2722,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
    SESSION MODAL (Neue Einheit / Edit)
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
+const DEFAULT_NOTE_CATEGORIES = ['Technik','Material','Mental/Fitness','Sonstiges'];
 const DISZ_CONFIG = {
   Fitasc: { passen: 4, maxPro: 25, scoreOnly: false },
   Compak: { passen: 4, maxPro: 25, scoreOnly: false },
@@ -2731,7 +2740,22 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const [name, setName] = useState(session?.name || prefill?.name || '');
   const [disziplin, setDisziplin] = useState(session?.disziplin || prefill?.disziplin || 'Fitasc');
   const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
-  const [notes, setNotes] = useState(session?.notes || '');
+  const [notesCat, setNotesCat] = useState(() => {
+    if (session?.notesCat && typeof session.notesCat === 'object') return { ...session.notesCat };
+    // Migrate legacy plain-text notes into "Sonstiges" on first edit
+    if (session?.notes && session.notes.trim()) return { 'Sonstiges': session.notes };
+    return {};
+  });
+  function setCat(cat, val) { setNotesCat(prev => ({ ...prev, [cat]: val })); }
+  const noteCategories = [...DEFAULT_NOTE_CATEGORIES, ...(lists.notizKategorien||[]).filter(c=>!DEFAULT_NOTE_CATEGORIES.includes(c))];
+  function addNoteCategory() {
+    const v = prompt('New category name:', '');
+    if (!v || !v.trim()) return;
+    const val = v.trim();
+    if (noteCategories.includes(val)) return;
+    const updated = { ...lists, notizKategorien: [...(lists.notizKategorien||[]), val] };
+    onSaveLists(updated);
+  }
   const [munition, setMunition] = useState(session?.munition || '');
   const [ort, setOrt] = useState(session?.ort ?? prefill?.ort ?? lastSession?.ort ?? '');
   const [waffe, setWaffe] = useState(session?.waffe ?? lastSession?.waffe ?? '');
@@ -2829,9 +2853,12 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       max   = (type==='competition' || hasScore) ? totalMax   : null;
       passenArr = (type==='competition' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
+    const cleanNotesCat = Object.fromEntries(Object.entries(notesCat).filter(([k,v]) => v && v.trim()));
+    const legacyNotes = Object.entries(cleanNotesCat).map(([k,v]) => `${k}: ${v}`).join('\n\n');
     const s = {
       id: session?.id || crypto.randomUUID(),
-      type, name, disziplin, date, notes,
+      type, name, disziplin, date,
+      notes: legacyNotes, notesCat: cleanNotesCat,
       munition: parseInt(munition)||0,
       ort, waffe, munition_typ: munitionTyp,
       score, max, passen: passenArr,
@@ -2895,10 +2922,19 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
             onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setRoundsVals(nv); }} />
         )}
 
-        {/* Notes */}
+        {/* Notes by category */}
         <div className="form-group" style={{marginTop:8}}>
-          <label>Notes</label>
-          <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="How did it go? What worked, what didn't?" />
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+            <label style={{margin:0}}>Notes</label>
+            <span onClick={addNoteCategory} style={{fontSize:13,color:'var(--accent)',cursor:'pointer',fontWeight:600}}>+ Category</span>
+          </div>
+          {noteCategories.map(cat => (
+            <div key={cat} style={{marginBottom:10}}>
+              <label style={{fontSize:'var(--fs-xs,12px)',color:'var(--muted)',marginBottom:5}}>{cat}</label>
+              <textarea value={notesCat[cat]||''} onChange={e=>setCat(cat,e.target.value)}
+                placeholder={`${cat}…`} style={{minHeight:60}} />
+            </div>
+          ))}
         </div>
 
         {/* Shells + Location */}
@@ -3116,12 +3152,22 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
           </>
         )}
 
-        {session.notes && (
-          <div className="detail-section">
-            <div className="detail-label">Notes</div>
-            <div className="detail-val" style={{lineHeight:1.6}}>{session.notes}</div>
-          </div>
-        )}
+        {(() => {
+          const cats = session.notesCat && Object.keys(session.notesCat).length
+            ? Object.entries(session.notesCat).filter(([k,v]) => v && v.trim())
+            : (session.notes && session.notes.trim() ? [['Notes', session.notes]] : []);
+          if (!cats.length) return null;
+          return (
+            <div className="detail-section">
+              {cats.map(([cat, text]) => (
+                <div key={cat} style={{marginBottom:10}}>
+                  <div className="detail-label">{cat}</div>
+                  <div className="detail-val" style={{lineHeight:1.6}}>{text}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
           {session.waffe && <div><div className="detail-label">Gun</div><div className="detail-val">{session.waffe}</div></div>}
@@ -3322,6 +3368,7 @@ function App() {
         max: r.max ?? null,
         passen: Array.isArray(r.passen) ? r.passen : [],
         notes: r.notes || '',
+        notesCat: (r.notes_cat && typeof r.notes_cat === 'object') ? r.notes_cat : {},
         waffe: r.waffe || '',
         ort: r.ort || '',
         munition: r.munition || 0,
@@ -3390,8 +3437,8 @@ function App() {
     try {
       setSyncStatus('syncing');
       // Only send columns that exist in the Supabase sessions table
-      const { name: _n, ...sessionFields } = session;
-      const row = { ...sessionFields, user_id: currentUser?.id };
+      const { name: _n, notesCat: _nc, ...sessionFields } = session;
+      const row = { ...sessionFields, notes_cat: session.notesCat || {}, user_id: currentUser?.id };
       await sbFetch('POST', 'sessions', [row], '', authToken);
       setSyncStatus('ok');
     } catch(e) {
