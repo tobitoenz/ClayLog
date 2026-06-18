@@ -1767,14 +1767,31 @@ function SessionsPage({ sessions, onSessionClick }) {
 /* ════════════════════════════════════════════════════════════════
    NOTES PAGE
 ════════════════════════════════════════════════════════════════ */
-function NotesPage({ sessions, noteStates, onToggleNote }) {
+function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
   const [filter, setFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState([]); // empty = all categories
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
+
+  // Build category list: defaults + custom + anything actually used in data
+  const usedCats = new Set();
+  withNotes.forEach(s => {
+    if (Array.isArray(s.notesCat)) s.notesCat.forEach(e => usedCats.add(e.cat || 'Other'));
+  });
+  const allCats = [...DEFAULT_NOTE_CATEGORIES, ...(lists?.notizKategorien||[]), ...usedCats]
+    .filter((c,i,arr) => c && arr.indexOf(c)===i);
+
+  function toggleCat(c) {
+    setCatFilter(prev => prev.includes(c) ? prev.filter(x=>x!==c) : [...prev, c]);
+  }
 
   const filtered = withNotes.filter(s => {
     const st = noteStates[s.id] || 'normal';
-    if (filter === 'open') return st === 'open';
-    if (filter === 'done') return st === 'done';
+    if (filter === 'open' && st !== 'open') return false;
+    if (filter === 'done' && st !== 'done') return false;
+    if (catFilter.length) {
+      const sCats = Array.isArray(s.notesCat) ? s.notesCat.map(e=>e.cat||'Other') : (s.notes ? ['Other'] : []);
+      if (!sCats.some(c => catFilter.includes(c))) return false;
+    }
     return true;
   }).sort((a,b) => b.date > a.date ? 1 : -1);
 
@@ -1789,6 +1806,20 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
           </button>
         ))}
       </div>
+      {allCats.length > 0 && (
+        <div className="tab-row" style={{marginTop:-6}}>
+          {allCats.map(c => (
+            <button key={c} className={`analyse-tab ${catFilter.includes(c)?'active':''}`} onClick={()=>toggleCat(c)}>
+              {c}
+            </button>
+          ))}
+          {catFilter.length > 0 && (
+            <button className="analyse-tab" onClick={()=>setCatFilter([])} style={{color:'var(--muted)'}}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div className="empty">
           <div className="empty-icon">📝</div>
@@ -1798,9 +1829,10 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
         const st = noteStates[s.id] || 'normal';
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
-        const cats = Array.isArray(s.notesCat) && s.notesCat.length
-          ? s.notesCat.map((e,i) => [e.cat||'Sonstiges', e.text, i])
-          : (s.notes && s.notes.trim() ? [['Notes', s.notes, 0]] : []);
+        const allEntryCats = Array.isArray(s.notesCat) && s.notesCat.length
+          ? s.notesCat.map((e,i) => [e.cat||'Other', e.text, i])
+          : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
+        const cats = catFilter.length ? allEntryCats.filter(([c]) => catFilter.includes(c)) : allEntryCats;
         return (
           <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
             <div className="notiz-meta">
@@ -2713,7 +2745,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c7 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c8 · Comfort Edition</p>
     </div>
   );
 }
@@ -2722,7 +2754,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
    SESSION MODAL (Neue Einheit / Edit)
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
-const DEFAULT_NOTE_CATEGORIES = ['Technik','Material','Mental/Fitness','Sonstiges'];
+const DEFAULT_NOTE_CATEGORIES = ['Technique','Material','Mental/Fitness','Other'];
 const DISZ_CONFIG = {
   Fitasc: { passen: 4, maxPro: 25, scoreOnly: false },
   Compak: { passen: 4, maxPro: 25, scoreOnly: false },
@@ -2747,7 +2779,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat,text}));
     }
     // Migrate legacy plain-text notes into "Sonstiges" on first edit
-    if (session?.notes && session.notes.trim()) return [{ cat: 'Sonstiges', text: session.notes }];
+    if (session?.notes && session.notes.trim()) return [{ cat: 'Other', text: session.notes }];
     return [{ cat: '', text: '' }];
   });
   function updateEntry(i, key, val) {
@@ -2863,7 +2895,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       max   = (type==='competition' || hasScore) ? totalMax   : null;
       passenArr = (type==='competition' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
-    const cleanEntries = notesEntries.filter(e => e.text && e.text.trim()).map(e => ({ cat: e.cat || 'Sonstiges', text: e.text.trim() }));
+    const cleanEntries = notesEntries.filter(e => e.text && e.text.trim()).map(e => ({ cat: e.cat || 'Other', text: e.text.trim() }));
     const legacyNotes = cleanEntries.map(e => `${e.cat}: ${e.text}`).join('\n\n');
     const s = {
       id: session?.id || crypto.randomUUID(),
@@ -3173,7 +3205,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
 
         {(() => {
           const cats = Array.isArray(session.notesCat) && session.notesCat.length
-            ? session.notesCat.map((e,i) => [e.cat||'Sonstiges', e.text, i])
+            ? session.notesCat.map((e,i) => [e.cat||'Other', e.text, i])
             : (session.notes && session.notes.trim() ? [['Notes', session.notes, 0]] : []);
           if (!cats.length) return null;
           return (
@@ -3574,7 +3606,7 @@ function App() {
         {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} />}
+        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
