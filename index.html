@@ -1769,7 +1769,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 ════════════════════════════════════════════════════════════════ */
 function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
   const [filter, setFilter] = useState('all');
-  const [catFilter, setCatFilter] = useState([]); // empty = all categories
+  const [catFilter, setCatFilter] = useState(''); // '' = all
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
 
   // Build category list: defaults + custom + anything actually used in data
@@ -1780,17 +1780,13 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
   const allCats = [...DEFAULT_NOTE_CATEGORIES, ...(lists?.notizKategorien||[]), ...usedCats]
     .filter((c,i,arr) => c && arr.indexOf(c)===i);
 
-  function toggleCat(c) {
-    setCatFilter(prev => prev.includes(c) ? prev.filter(x=>x!==c) : [...prev, c]);
-  }
-
   const filtered = withNotes.filter(s => {
     const st = noteStates[s.id] || 'normal';
     if (filter === 'open' && st !== 'open') return false;
     if (filter === 'done' && st !== 'done') return false;
-    if (catFilter.length) {
+    if (catFilter) {
       const sCats = Array.isArray(s.notesCat) ? s.notesCat.map(e=>e.cat||'Other') : (s.notes ? ['Other'] : []);
-      if (!sCats.some(c => catFilter.includes(c))) return false;
+      if (!sCats.includes(catFilter)) return false;
     }
     return true;
   }).sort((a,b) => b.date > a.date ? 1 : -1);
@@ -1807,17 +1803,11 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
         ))}
       </div>
       {allCats.length > 0 && (
-        <div className="tab-row" style={{marginTop:-6}}>
-          {allCats.map(c => (
-            <button key={c} className={`analyse-tab ${catFilter.includes(c)?'active':''}`} onClick={()=>toggleCat(c)}>
-              {c}
-            </button>
-          ))}
-          {catFilter.length > 0 && (
-            <button className="analyse-tab" onClick={()=>setCatFilter([])} style={{color:'var(--muted)'}}>
-              ✕ Clear
-            </button>
-          )}
+        <div style={{marginBottom:14}}>
+          <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}>
+            <option value="">All categories</option>
+            {allCats.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
       )}
       {filtered.length === 0 ? (
@@ -1832,7 +1822,7 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
         const allEntryCats = Array.isArray(s.notesCat) && s.notesCat.length
           ? s.notesCat.map((e,i) => [e.cat||'Other', e.text, i])
           : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
-        const cats = catFilter.length ? allEntryCats.filter(([c]) => catFilter.includes(c)) : allEntryCats;
+        const cats = catFilter ? allEntryCats.filter(([c]) => c === catFilter) : allEntryCats;
         return (
           <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
             <div className="notiz-meta">
@@ -2745,7 +2735,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c8 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c9 · Comfort Edition</p>
     </div>
   );
 }
