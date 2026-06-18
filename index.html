@@ -1769,7 +1769,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 ════════════════════════════════════════════════════════════════ */
 function NotesPage({ sessions, noteStates, onToggleNote }) {
   const [filter, setFilter] = useState('all');
-  const withNotes = sessions.filter(s => (s.notesCat && Object.keys(s.notesCat).length) || (s.notes && s.notes.trim()));
+  const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
 
   const filtered = withNotes.filter(s => {
     const st = noteStates[s.id] || 'normal';
@@ -1798,9 +1798,9 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
         const st = noteStates[s.id] || 'normal';
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
-        const cats = s.notesCat && Object.keys(s.notesCat).length
-          ? Object.entries(s.notesCat).filter(([k,v]) => v && v.trim())
-          : (s.notes && s.notes.trim() ? [['Notes', s.notes]] : []);
+        const cats = Array.isArray(s.notesCat) && s.notesCat.length
+          ? s.notesCat.map((e,i) => [e.cat||'Sonstiges', e.text, i])
+          : (s.notes && s.notes.trim() ? [['Notes', s.notes, 0]] : []);
         return (
           <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
             <div className="notiz-meta">
@@ -1808,8 +1808,8 @@ function NotesPage({ sessions, noteStates, onToggleNote }) {
               <span>📅 {fmtDate(s.date)}{score}</span>
               {s.ort ? <span>📍 {s.ort}</span> : null}
             </div>
-            {cats.map(([cat, text]) => (
-              <div key={cat} style={{marginBottom:10}}>
+            {cats.map(([cat, text, i]) => (
+              <div key={i} style={{marginBottom:10}}>
                 <div style={{fontSize:'var(--fs-xs,11px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{cat}</div>
                 <div className="notiz-text">{text}</div>
               </div>
@@ -2713,7 +2713,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c6 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c7 · Comfort Edition</p>
     </div>
   );
 }
@@ -2740,21 +2740,31 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const [name, setName] = useState(session?.name || prefill?.name || '');
   const [disziplin, setDisziplin] = useState(session?.disziplin || prefill?.disziplin || 'Fitasc');
   const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
-  const [notesCat, setNotesCat] = useState(() => {
-    if (session?.notesCat && typeof session.notesCat === 'object') return { ...session.notesCat };
+  const [notesEntries, setNotesEntries] = useState(() => {
+    if (Array.isArray(session?.notesCat)) return session.notesCat.map(e => ({...e}));
+    // Migrate old object-shape {cat: text} into array form
+    if (session?.notesCat && typeof session.notesCat === 'object' && Object.keys(session.notesCat).length) {
+      return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat,text}));
+    }
     // Migrate legacy plain-text notes into "Sonstiges" on first edit
-    if (session?.notes && session.notes.trim()) return { 'Sonstiges': session.notes };
-    return {};
+    if (session?.notes && session.notes.trim()) return [{ cat: 'Sonstiges', text: session.notes }];
+    return [{ cat: '', text: '' }];
   });
-  function setCat(cat, val) { setNotesCat(prev => ({ ...prev, [cat]: val })); }
+  function updateEntry(i, key, val) {
+    setNotesEntries(prev => prev.map((e,idx) => idx===i ? {...e,[key]:val} : e));
+  }
+  function addEntry() { setNotesEntries(prev => [...prev, { cat:'', text:'' }]); }
+  function removeEntry(i) { setNotesEntries(prev => prev.filter((_,idx)=>idx!==i)); }
   const noteCategories = [...DEFAULT_NOTE_CATEGORIES, ...(lists.notizKategorien||[]).filter(c=>!DEFAULT_NOTE_CATEGORIES.includes(c))];
-  function addNoteCategory() {
+  function addNoteCategory(i) {
     const v = prompt('New category name:', '');
     if (!v || !v.trim()) return;
     const val = v.trim();
-    if (noteCategories.includes(val)) return;
-    const updated = { ...lists, notizKategorien: [...(lists.notizKategorien||[]), val] };
-    onSaveLists(updated);
+    if (!noteCategories.includes(val)) {
+      const updated = { ...lists, notizKategorien: [...(lists.notizKategorien||[]), val] };
+      onSaveLists(updated);
+    }
+    updateEntry(i, 'cat', val);
   }
   const [munition, setMunition] = useState(session?.munition || '');
   const [ort, setOrt] = useState(session?.ort ?? prefill?.ort ?? lastSession?.ort ?? '');
@@ -2853,12 +2863,12 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       max   = (type==='competition' || hasScore) ? totalMax   : null;
       passenArr = (type==='competition' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
-    const cleanNotesCat = Object.fromEntries(Object.entries(notesCat).filter(([k,v]) => v && v.trim()));
-    const legacyNotes = Object.entries(cleanNotesCat).map(([k,v]) => `${k}: ${v}`).join('\n\n');
+    const cleanEntries = notesEntries.filter(e => e.text && e.text.trim()).map(e => ({ cat: e.cat || 'Sonstiges', text: e.text.trim() }));
+    const legacyNotes = cleanEntries.map(e => `${e.cat}: ${e.text}`).join('\n\n');
     const s = {
       id: session?.id || crypto.randomUUID(),
       type, name, disziplin, date,
-      notes: legacyNotes, notesCat: cleanNotesCat,
+      notes: legacyNotes, notesCat: cleanEntries,
       munition: parseInt(munition)||0,
       ort, waffe, munition_typ: munitionTyp,
       score, max, passen: passenArr,
@@ -2922,19 +2932,28 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
             onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setRoundsVals(nv); }} />
         )}
 
-        {/* Notes by category */}
+        {/* Notes by selectable category */}
         <div className="form-group" style={{marginTop:8}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
             <label style={{margin:0}}>Notes</label>
-            <span onClick={addNoteCategory} style={{fontSize:13,color:'var(--accent)',cursor:'pointer',fontWeight:600}}>+ Category</span>
           </div>
-          {noteCategories.map(cat => (
-            <div key={cat} style={{marginBottom:10}}>
-              <label style={{fontSize:'var(--fs-xs,12px)',color:'var(--muted)',marginBottom:5}}>{cat}</label>
-              <textarea value={notesCat[cat]||''} onChange={e=>setCat(cat,e.target.value)}
-                placeholder={`${cat}…`} style={{minHeight:60}} />
+          {notesEntries.map((entry, i) => (
+            <div key={i} style={{marginBottom:12,paddingBottom: i<notesEntries.length-1 ? 12 : 0, borderBottom: i<notesEntries.length-1 ? '1px solid var(--border)' : 'none'}}>
+              <div className="select-row" style={{marginBottom:6}}>
+                <select value={entry.cat} onChange={e=>updateEntry(i,'cat',e.target.value)}>
+                  <option value="">– Category –</option>
+                  {noteCategories.map(c=><option key={c}>{c}</option>)}
+                </select>
+                <button className="add-btn" onClick={()=>addNoteCategory(i)} title="Add category">+</button>
+                {notesEntries.length > 1 && (
+                  <button className="add-btn" onClick={()=>removeEntry(i)} title="Remove" style={{color:'var(--red)'}}>×</button>
+                )}
+              </div>
+              <textarea value={entry.text} onChange={e=>updateEntry(i,'text',e.target.value)}
+                placeholder="How did it go? What worked, what didn't?" style={{minHeight:70}} />
             </div>
           ))}
+          <span onClick={addEntry} style={{fontSize:13,color:'var(--accent)',cursor:'pointer',fontWeight:600}}>+ Add field</span>
         </div>
 
         {/* Shells + Location */}
@@ -3153,14 +3172,14 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
         )}
 
         {(() => {
-          const cats = session.notesCat && Object.keys(session.notesCat).length
-            ? Object.entries(session.notesCat).filter(([k,v]) => v && v.trim())
-            : (session.notes && session.notes.trim() ? [['Notes', session.notes]] : []);
+          const cats = Array.isArray(session.notesCat) && session.notesCat.length
+            ? session.notesCat.map((e,i) => [e.cat||'Sonstiges', e.text, i])
+            : (session.notes && session.notes.trim() ? [['Notes', session.notes, 0]] : []);
           if (!cats.length) return null;
           return (
             <div className="detail-section">
-              {cats.map(([cat, text]) => (
-                <div key={cat} style={{marginBottom:10}}>
+              {cats.map(([cat, text, i]) => (
+                <div key={i} style={{marginBottom:10}}>
                   <div className="detail-label">{cat}</div>
                   <div className="detail-val" style={{lineHeight:1.6}}>{text}</div>
                 </div>
@@ -3368,7 +3387,10 @@ function App() {
         max: r.max ?? null,
         passen: Array.isArray(r.passen) ? r.passen : [],
         notes: r.notes || '',
-        notesCat: (r.notes_cat && typeof r.notes_cat === 'object') ? r.notes_cat : {},
+        notesCat: Array.isArray(r.notes_cat) ? r.notes_cat
+          : (r.notes_cat && typeof r.notes_cat === 'object' && Object.keys(r.notes_cat).length)
+            ? Object.entries(r.notes_cat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat,text}))
+            : [],
         waffe: r.waffe || '',
         ort: r.ort || '',
         munition: r.munition || 0,
