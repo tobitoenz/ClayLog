@@ -2701,7 +2701,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>🔫 Guns / Locations / Ammo</div>
-        {[['waffe','Gun'],['ort','Location'],['munition','Ammo']].map(([key,label]) => (
+        {[['waffe','Gun'],['ort','Location'],['munition','Ammo'],['notizKategorien','Note categories (custom)']].map(([key,label]) => (
           <div key={key} style={{marginBottom:12}}>
             <label style={{marginBottom:6}}>{label}</label>
             <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
@@ -2735,7 +2735,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c9 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c10 · Comfort Edition</p>
     </div>
   );
 }
