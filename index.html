@@ -1767,7 +1767,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 /* ════════════════════════════════════════════════════════════════
    NOTES PAGE
 ════════════════════════════════════════════════════════════════ */
-function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
+function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession }) {
   const [filter, setFilter] = useState('all');
   const [catFilter, setCatFilter] = useState(''); // '' = all
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
@@ -1824,7 +1824,7 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
           : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
         const cats = catFilter ? allEntryCats.filter(([c]) => c === catFilter) : allEntryCats;
         return (
-          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`}>
+          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`} onClick={()=>onOpenSession && onOpenSession(s)} style={{cursor: onOpenSession ? 'pointer' : 'default'}}>
             <div className="notiz-meta">
               <span>{icon} {s.disziplin}</span>
               <span>📅 {fmtDate(s.date)}{score}</span>
@@ -1838,11 +1838,11 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists }) {
             ))}
             <div className="notiz-actions">
               <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
-                onClick={()=>onToggleNote(s.id, st==='open'?'normal':'open')}>
+                onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='open'?'normal':'open');}}>
                 📌 Task{st==='open' ? ' ✓' : ''}
               </span>
               <span className={`notiz-tag done-tag ${st==='done'?'active':''}`}
-                onClick={()=>onToggleNote(s.id, st==='done'?'normal':'done')}>
+                onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='done'?'normal':'done');}}>
                 ✅ Done{st==='done' ? ' ✓' : ''}
               </span>
             </div>
@@ -2735,7 +2735,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c10 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c11 · Comfort Edition</p>
     </div>
   );
 }
@@ -3596,7 +3596,7 @@ function App() {
         {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} />}
+        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} onOpenSession={openDetail} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
