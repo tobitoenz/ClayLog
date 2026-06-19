@@ -1060,6 +1060,33 @@ const NAV_ITEMS = [
   { id: 'settings',  icon: '⚙️', label: 'Settings', hideable: false },
 ];
 
+function loadFormMode() {
+  try { return localStorage.getItem('claylog_formmode') || 'full'; } catch { return 'full'; }
+}
+function saveFormMode(mode) {
+  try { localStorage.setItem('claylog_formmode', mode); } catch {}
+}
+
+function FormModeSettings() {
+  const [mode, setMode] = useState(() => loadFormMode());
+  function select(m) { setMode(m); saveFormMode(m); }
+  return (
+    <div style={{display:'flex',gap:8}}>
+      {[['simple','Simple'],['full','Full']].map(([id,label]) => (
+        <div key={id} onClick={()=>select(id)} style={{
+          flex:1, cursor:'pointer', borderRadius:10, padding:'10px 12px', textAlign:'center',
+          border: mode===id ? '2px solid var(--accent)' : '2px solid var(--border)',
+          background: mode===id ? 'rgba(255,255,255,0.06)' : 'var(--surface)',
+          color: mode===id ? 'var(--accent)' : 'var(--text)', fontWeight:600, fontSize:14,
+          transition:'all .15s'
+        }}>
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function loadNavHidden() {
   try { return JSON.parse(localStorage.getItem('claylog_navhidden') || '{}'); }
   catch { return {}; }
@@ -2399,6 +2426,14 @@ function AppearanceSettings() {
       <NavVisibilitySettings />
 
       <div style={{marginTop:16}}>
+        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>ENTRY FORM</div>
+        <div style={{fontSize:13,color:'var(--muted)',marginBottom:10,lineHeight:1.5}}>
+          Simple shows only Type, Discipline, Date, Result, Shells and Location.
+        </div>
+        <FormModeSettings />
+      </div>
+
+      <div style={{marginTop:16}}>
         <FontScaleSettings />
       </div>
     </div>
@@ -2735,7 +2770,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c11 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c12 · Comfort Edition</p>
     </div>
   );
 }
@@ -2754,6 +2789,8 @@ const DISZ_CONFIG = {
 };
 
 function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
+  const formMode = loadFormMode(); // 'simple' or 'full'
+  const isSimple = formMode === 'simple';
   useModalLock(true);
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
@@ -2914,11 +2951,13 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         </div>
 
         {/* Name (optional) */}
-        <div className="form-group">
-          <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
-          <input type="text" value={name} onChange={e=>setName(e.target.value)}
-            placeholder={type==='competition' ? 'e.g. Blaser Cup Bern' : 'e.g. Morning practice'}/>
-        </div>
+        {!isSimple && (
+          <div className="form-group">
+            <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
+            <input type="text" value={name} onChange={e=>setName(e.target.value)}
+              placeholder={type==='competition' ? 'e.g. Blaser Cup Bern' : 'e.g. Morning practice'}/>
+          </div>
+        )}
 
         {/* Discipline + Date */}
         <div className="input-row">
@@ -2955,28 +2994,30 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         )}
 
         {/* Notes by selectable category */}
-        <div className="form-group" style={{marginTop:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
-            <label style={{margin:0}}>Notes</label>
-          </div>
-          {notesEntries.map((entry, i) => (
-            <div key={i} style={{marginBottom:12,paddingBottom: i<notesEntries.length-1 ? 12 : 0, borderBottom: i<notesEntries.length-1 ? '1px solid var(--border)' : 'none'}}>
-              <div className="select-row" style={{marginBottom:6}}>
-                <select value={entry.cat} onChange={e=>updateEntry(i,'cat',e.target.value)}>
-                  <option value="">– Category –</option>
-                  {noteCategories.map(c=><option key={c}>{c}</option>)}
-                </select>
-                <button className="add-btn" onClick={()=>addNoteCategory(i)} title="Add category">+</button>
-                {notesEntries.length > 1 && (
-                  <button className="add-btn" onClick={()=>removeEntry(i)} title="Remove" style={{color:'var(--red)'}}>×</button>
-                )}
-              </div>
-              <textarea value={entry.text} onChange={e=>updateEntry(i,'text',e.target.value)}
-                placeholder="How did it go? What worked, what didn't?" style={{minHeight:70}} />
+        {!isSimple && (
+          <div className="form-group" style={{marginTop:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+              <label style={{margin:0}}>Notes</label>
             </div>
-          ))}
-          <span onClick={addEntry} style={{fontSize:13,color:'var(--accent)',cursor:'pointer',fontWeight:600}}>+ Add field</span>
-        </div>
+            {notesEntries.map((entry, i) => (
+              <div key={i} style={{marginBottom:12,paddingBottom: i<notesEntries.length-1 ? 12 : 0, borderBottom: i<notesEntries.length-1 ? '1px solid var(--border)' : 'none'}}>
+                <div className="select-row" style={{marginBottom:6}}>
+                  <select value={entry.cat} onChange={e=>updateEntry(i,'cat',e.target.value)}>
+                    <option value="">– Category –</option>
+                    {noteCategories.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                  <button className="add-btn" onClick={()=>addNoteCategory(i)} title="Add category">+</button>
+                  {notesEntries.length > 1 && (
+                    <button className="add-btn" onClick={()=>removeEntry(i)} title="Remove" style={{color:'var(--red)'}}>×</button>
+                  )}
+                </div>
+                <textarea value={entry.text} onChange={e=>updateEntry(i,'text',e.target.value)}
+                  placeholder="How did it go? What worked, what didn't?" style={{minHeight:70}} />
+              </div>
+            ))}
+            <span onClick={addEntry} style={{fontSize:13,color:'var(--accent)',cursor:'pointer',fontWeight:600}}>+ Add field</span>
+          </div>
+        )}
 
         {/* Shells + Location */}
         <div className="input-row">
@@ -2997,28 +3038,30 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         </div>
 
         {/* Ammo + Gun */}
-        <div className="input-row">
-          <div className="form-group">
-            <label>Ammo</label>
-            <div className="select-row">
-              <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
-                <option value="">– Ammo –</option>
-                {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
-              </select>
-              <button className="add-btn" onClick={()=>addToList('munition','ammo',setMunitionTyp)} title="Add ammo">+</button>
+        {!isSimple && (
+          <div className="input-row">
+            <div className="form-group">
+              <label>Ammo</label>
+              <div className="select-row">
+                <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
+                  <option value="">– Ammo –</option>
+                  {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
+                </select>
+                <button className="add-btn" onClick={()=>addToList('munition','ammo',setMunitionTyp)} title="Add ammo">+</button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Gun</label>
+              <div className="select-row">
+                <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
+                  <option value="">– Gun –</option>
+                  {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
+                </select>
+                <button className="add-btn" onClick={()=>addToList('waffe','gun',setWaffe)} title="Add gun">+</button>
+              </div>
             </div>
           </div>
-          <div className="form-group">
-            <label>Gun</label>
-            <div className="select-row">
-              <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
-                <option value="">– Gun –</option>
-                {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
-              </select>
-              <button className="add-btn" onClick={()=>addToList('waffe','gun',setWaffe)} title="Add gun">+</button>
-            </div>
-          </div>
-        </div>
+        )}
 
         <button className="btn btn-primary" onClick={handleSave}>Save</button>
         {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={()=>onDelete(session.id)}>🗑 Delete</button>}
