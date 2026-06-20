@@ -1060,29 +1060,62 @@ const NAV_ITEMS = [
   { id: 'settings',  icon: '⚙️', label: 'Settings', hideable: false },
 ];
 
-function loadFormMode() {
-  try { return localStorage.getItem('claylog_formmode') || 'full'; } catch { return 'full'; }
+const OPTIONAL_FIELDS = [
+  { id: 'name',     label: 'Name' },
+  { id: 'notes',    label: 'Notes' },
+  { id: 'shells',   label: 'Shells' },
+  { id: 'location', label: 'Location' },
+  { id: 'ammo',     label: 'Ammo' },
+  { id: 'gun',      label: 'Gun' },
+];
+
+function loadFieldConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('claylog_fieldconfig') || 'null');
+    if (saved) return saved;
+  } catch {}
+  // Default: all fields visible
+  return Object.fromEntries(OPTIONAL_FIELDS.map(f => [f.id, true]));
 }
-function saveFormMode(mode) {
-  try { localStorage.setItem('claylog_formmode', mode); } catch {}
+function saveFieldConfig(cfg) {
+  try { localStorage.setItem('claylog_fieldconfig', JSON.stringify(cfg)); } catch {}
 }
 
 function FormModeSettings() {
-  const [mode, setMode] = useState(() => loadFormMode());
-  function select(m) { setMode(m); saveFormMode(m); }
+  const [cfg, setCfg] = useState(() => loadFieldConfig());
+  function toggle(id) {
+    const next = { ...cfg, [id]: !cfg[id] };
+    setCfg(next);
+    saveFieldConfig(next);
+  }
   return (
-    <div style={{display:'flex',gap:8}}>
-      {[['simple','Simple'],['full','Full']].map(([id,label]) => (
-        <div key={id} onClick={()=>select(id)} style={{
-          flex:1, cursor:'pointer', borderRadius:10, padding:'10px 12px', textAlign:'center',
-          border: mode===id ? '2px solid var(--accent)' : '2px solid var(--border)',
-          background: mode===id ? 'rgba(255,255,255,0.06)' : 'var(--surface)',
-          color: mode===id ? 'var(--accent)' : 'var(--text)', fontWeight:600, fontSize:14,
-          transition:'all .15s'
-        }}>
-          {label}
-        </div>
-      ))}
+    <div>
+      {OPTIONAL_FIELDS.map(f => {
+        const on = cfg[f.id] !== false;
+        return (
+          <div key={f.id} onClick={()=>toggle(f.id)} style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'10px 14px', borderRadius:12, border:'1px solid var(--border)',
+            background: on ? 'rgba(255,255,255,0.04)' : 'var(--surface)',
+            marginBottom:8, cursor:'pointer', transition:'all .15s'
+          }}>
+            <span style={{fontSize:15,fontWeight:600,color: on ? 'var(--text)' : 'var(--muted)'}}>{f.label}</span>
+            <div style={{
+              width:44, height:26, borderRadius:13,
+              background: on ? 'var(--accent)' : 'var(--border)',
+              position:'relative', transition:'background .2s', flexShrink:0
+            }}>
+              <div style={{
+                position:'absolute', top:3,
+                left: on ? 21 : 3,
+                width:20, height:20, borderRadius:'50%',
+                background: on ? '#000' : 'var(--muted)',
+                transition:'left .2s'
+              }}/>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -2426,9 +2459,9 @@ function AppearanceSettings() {
       <NavVisibilitySettings />
 
       <div style={{marginTop:16}}>
-        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>ENTRY FORM</div>
+        <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>ENTRY FORM FIELDS</div>
         <div style={{fontSize:13,color:'var(--muted)',marginBottom:10,lineHeight:1.5}}>
-          Simple shows only Type, Discipline, Date, Result, Shells and Location.
+          Hide fields you don't need. Type, Discipline, Date and Result always show.
         </div>
         <FormModeSettings />
       </div>
@@ -2770,7 +2803,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c12 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c13 · Comfort Edition</p>
     </div>
   );
 }
@@ -2789,8 +2822,7 @@ const DISZ_CONFIG = {
 };
 
 function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
-  const formMode = loadFormMode(); // 'simple' or 'full'
-  const isSimple = formMode === 'simple';
+  const fields = loadFieldConfig(); // { name, notes, shells, location, ammo, gun }
   useModalLock(true);
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
@@ -2951,7 +2983,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         </div>
 
         {/* Name (optional) */}
-        {!isSimple && (
+        {fields.name !== false && (
           <div className="form-group">
             <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
             <input type="text" value={name} onChange={e=>setName(e.target.value)}
@@ -2994,7 +3026,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         )}
 
         {/* Notes by selectable category */}
-        {!isSimple && (
+        {fields.notes !== false && (
           <div className="form-group" style={{marginTop:8}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
               <label style={{margin:0}}>Notes</label>
@@ -3020,46 +3052,56 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         )}
 
         {/* Shells + Location */}
-        <div className="input-row">
-          <div className="form-group">
-            <label>Shells</label>
-            <input type="number" value={munition} onChange={e=>setMunition(e.target.value)} placeholder="25" min="0" />
+        {(fields.shells !== false || fields.location !== false) && (
+          <div className="input-row">
+            {fields.shells !== false && (
+              <div className="form-group">
+                <label>Shells</label>
+                <input type="number" value={munition} onChange={e=>setMunition(e.target.value)} placeholder="25" min="0" />
+              </div>
+            )}
+            {fields.location !== false && (
+              <div className="form-group">
+                <label>Location</label>
+                <div className="select-row">
+                  <select value={ort} onChange={e=>setOrt(e.target.value)}>
+                    <option value="">– Location –</option>
+                    {(lists.ort||[]).map(o=><option key={o}>{o}</option>)}
+                  </select>
+                  <button className="add-btn" onClick={()=>addToList('ort','location',setOrt)} title="Add location">+</button>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="form-group">
-            <label>Location</label>
-            <div className="select-row">
-              <select value={ort} onChange={e=>setOrt(e.target.value)}>
-                <option value="">– Location –</option>
-                {(lists.ort||[]).map(o=><option key={o}>{o}</option>)}
-              </select>
-              <button className="add-btn" onClick={()=>addToList('ort','location',setOrt)} title="Add location">+</button>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Ammo + Gun */}
-        {!isSimple && (
+        {(fields.ammo !== false || fields.gun !== false) && (
           <div className="input-row">
-            <div className="form-group">
-              <label>Ammo</label>
-              <div className="select-row">
-                <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
-                  <option value="">– Ammo –</option>
-                  {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
-                </select>
-                <button className="add-btn" onClick={()=>addToList('munition','ammo',setMunitionTyp)} title="Add ammo">+</button>
+            {fields.ammo !== false && (
+              <div className="form-group">
+                <label>Ammo</label>
+                <div className="select-row">
+                  <select value={munitionTyp} onChange={e=>setMunitionTyp(e.target.value)}>
+                    <option value="">– Ammo –</option>
+                    {(lists.munition||[]).map(m=><option key={m}>{m}</option>)}
+                  </select>
+                  <button className="add-btn" onClick={()=>addToList('munition','ammo',setMunitionTyp)} title="Add ammo">+</button>
+                </div>
               </div>
-            </div>
-            <div className="form-group">
-              <label>Gun</label>
-              <div className="select-row">
-                <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
-                  <option value="">– Gun –</option>
-                  {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
-                </select>
-                <button className="add-btn" onClick={()=>addToList('waffe','gun',setWaffe)} title="Add gun">+</button>
+            )}
+            {fields.gun !== false && (
+              <div className="form-group">
+                <label>Gun</label>
+                <div className="select-row">
+                  <select value={waffe} onChange={e=>setWaffe(e.target.value)}>
+                    <option value="">– Gun –</option>
+                    {(lists.waffe||[]).map(w=><option key={w}>{w}</option>)}
+                  </select>
+                  <button className="add-btn" onClick={()=>addToList('waffe','gun',setWaffe)} title="Add gun">+</button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
