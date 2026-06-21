@@ -2803,7 +2803,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c14 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c15 · Comfort Edition</p>
     </div>
   );
 }
@@ -3106,7 +3106,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         )}
 
         <button className="btn btn-primary" onClick={handleSave}>Save</button>
-        {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={()=>onDelete(session.id)}>🗑 Delete</button>}
+        {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={()=>{ if(confirm('Delete this session? This cannot be undone.')) onDelete(session.id); }}>🗑 Delete</button>}
         <button className="btn btn-ghost" style={{marginTop:8}} onClick={onClose}>Cancel</button>
       </div>
     </div>
@@ -3304,7 +3304,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
 
         <div className="btn-row">
           <button className="btn btn-ghost" style={{flex:1,marginTop:0}} onClick={()=>onEdit(session)}>✏️ Edit</button>
-          <button className="btn btn-danger" style={{flex:1,marginTop:0}} onClick={()=>onDelete(session.id)}>🗑 Delete</button>
+          <button className="btn btn-danger" style={{flex:1,marginTop:0}} onClick={()=>{ if(confirm('Delete this session? This cannot be undone.')) onDelete(session.id); }}>🗑 Delete</button>
         </div>
         <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
           style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,
