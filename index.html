@@ -1545,7 +1545,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
 
   // Long-press to enter edit mode on mobile
   function handleTouchStart() {
-    longPressTimer.current = setTimeout(() => setEditMode(true), 2000);
+    longPressTimer.current = setTimeout(() => setEditMode(true), 1000);
   }
   function handleTouchEnd() {
     clearTimeout(longPressTimer.current);
@@ -2803,7 +2803,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c13 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c14 · Comfort Edition</p>
     </div>
   );
 }
