@@ -60,14 +60,16 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .bottom-nav {
   display: flex; background: var(--surface);
   border-top: 1px solid var(--border); padding: 6px 0 28px; flex-shrink: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
+.bottom-nav::-webkit-scrollbar { display: none; }
 .nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  flex: 1 1 0; min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 5px;
   padding: 10px 4px 8px; cursor: pointer; transition: all .2s; user-select: none;
-  border-radius: 14px; margin: 0 2px;
+  border-radius: 14px; margin: 0 2px; white-space: nowrap;
 }
-.nav-icon { font-size: 28px; transition: transform .2s; line-height: 1; }
-.nav-label { font-size: var(--fs-xs, 11px); letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; }
+.nav-icon { font-size: calc(28px * (0.7 + 0.3 * min(var(--font-scale, 1), 1.6))); transition: transform .2s; line-height: 1; }
+.nav-label { font-size: var(--fs-nav, 11px); letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; white-space: nowrap; }
 .nav-item.active { background: rgba(255,255,255,.06); }
 .nav-item.active .nav-icon { transform: scale(1.12); }
 .nav-item.active .nav-label { color: var(--accent); font-weight: 700; }
@@ -313,6 +315,9 @@ function applyFontScale(factor) {
   document.documentElement.style.setProperty('--fs-xs',   (11 * factor) + 'px');
   document.documentElement.style.setProperty('--fs-lg',   (17 * factor) + 'px');
   document.documentElement.style.setProperty('--fs-xl',   (20 * factor) + 'px');
+  // Dampened scale for bottom nav labels: full growth up to 1.0, half growth beyond
+  const navFactor = factor <= 1.0 ? factor : 1.0 + (factor - 1.0) * 0.5;
+  document.documentElement.style.setProperty('--fs-nav', (11 * navFactor) + 'px');
 }
 
 (function() { applyFontScale(loadFontScale().factor); })();
@@ -2803,7 +2808,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c16 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c17 · Comfort Edition</p>
     </div>
   );
 }
