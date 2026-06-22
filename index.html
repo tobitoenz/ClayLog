@@ -1880,7 +1880,7 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession })
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
         const allEntryCats = Array.isArray(s.notesCat) && s.notesCat.length
-          ? s.notesCat.map((e,i) => [e.cat||'Other', e.text, i])
+          ? s.notesCat.map((e,i) => [normalizeCat(e.cat), e.text, i])
           : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
         const cats = catFilter ? allEntryCats.filter(([c]) => c === catFilter) : allEntryCats;
         return (
@@ -2803,7 +2803,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c15 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c16 · Comfort Edition</p>
     </div>
   );
 }
@@ -2813,6 +2813,12 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
 const DEFAULT_NOTE_CATEGORIES = ['Technique','Material','Mental/Fitness','Other'];
+function normalizeCat(cat) {
+  if (!cat) return 'Other';
+  if (cat === 'Sonstiges') return 'Other';
+  if (cat === 'Technik') return 'Technique';
+  return cat;
+}
 const DISZ_CONFIG = {
   Fitasc: { passen: 4, maxPro: 25, scoreOnly: false },
   Compak: { passen: 4, maxPro: 25, scoreOnly: false },
@@ -2835,7 +2841,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     if (Array.isArray(session?.notesCat)) return session.notesCat.map(e => ({...e}));
     // Migrate old object-shape {cat: text} into array form
     if (session?.notesCat && typeof session.notesCat === 'object' && Object.keys(session.notesCat).length) {
-      return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat,text}));
+      return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: cat==='Sonstiges'?'Other':cat, text}));
     }
     // Migrate legacy plain-text notes into "Sonstiges" on first edit
     if (session?.notes && session.notes.trim()) return [{ cat: 'Other', text: session.notes }];
@@ -3280,7 +3286,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
 
         {(() => {
           const cats = Array.isArray(session.notesCat) && session.notesCat.length
-            ? session.notesCat.map((e,i) => [e.cat||'Other', e.text, i])
+            ? session.notesCat.map((e,i) => [normalizeCat(e.cat), e.text, i])
             : (session.notes && session.notes.trim() ? [['Notes', session.notes, 0]] : []);
           if (!cats.length) return null;
           return (
@@ -3496,7 +3502,7 @@ function App() {
         notes: r.notes || '',
         notesCat: Array.isArray(r.notes_cat) ? r.notes_cat
           : (r.notes_cat && typeof r.notes_cat === 'object' && Object.keys(r.notes_cat).length)
-            ? Object.entries(r.notes_cat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat,text}))
+            ? Object.entries(r.notes_cat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: cat==='Sonstiges'?'Other':cat, text}))
             : [],
         waffe: r.waffe || '',
         ort: r.ort || '',
