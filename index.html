@@ -2860,7 +2860,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c19 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c20 · Comfort Edition</p>
     </div>
   );
 }
@@ -3457,6 +3457,102 @@ function getRecoveryTokenFromURL() {
 }
 const INITIAL_RECOVERY_TOKEN = getRecoveryTokenFromURL();
 
+/* ─── INSTALL BANNER ────────────────────────────────────────── */
+function loadInstallDismissed() {
+  try { return localStorage.getItem('claylog_install_dismissed') === '1'; } catch { return false; }
+}
+function dismissInstallBanner() {
+  try { localStorage.setItem('claylog_install_dismissed', '1'); } catch {}
+}
+
+function isStandalone() {
+  return window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+}
+
+function InstallBanner() {
+  const [dismissed, setDismissed] = useState(() => loadInstallDismissed());
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [standalone, setStandalone] = useState(() => isStandalone());
+  const [platform, setPlatform] = useState('other'); // 'ios' | 'android' | 'other'
+
+  useEffect(() => {
+    const ua = window.navigator.userAgent || '';
+    if (/iphone|ipad|ipod/i.test(ua)) setPlatform('ios');
+    else if (/android/i.test(ua)) setPlatform('android');
+
+    function onBeforeInstall(e) {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    }
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+
+    function onAppInstalled() {
+      setStandalone(true);
+      dismissInstallBanner();
+    }
+    window.addEventListener('appinstalled', onAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  function handleClose() {
+    setDismissed(true);
+    dismissInstallBanner();
+  }
+
+  async function handleInstallClick() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') dismissInstallBanner();
+    setDeferredPrompt(null);
+  }
+
+  if (standalone || dismissed) return null;
+  // On platforms we don't have specific guidance for, stay silent rather than guess
+  if (platform === 'other' && !deferredPrompt) return null;
+
+  return (
+    <div style={{
+      position:'fixed', bottom:90, left:16, right:16, zIndex:9998,
+      background:'var(--card)', border:'1px solid var(--border)', borderRadius:16,
+      padding:'14px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
+      display:'flex', alignItems:'center', gap:12
+    }}>
+      <div style={{fontSize:28,flexShrink:0}}>🎯</div>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontSize:14,fontWeight:700,color:'var(--text)',marginBottom:2}}>
+          Add ClayLog to your Home Screen
+        </div>
+        {platform === 'ios' ? (
+          <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.5}}>
+            Tap <strong>Share</strong> <span style={{fontSize:14}}>⎋</span> below, then <strong>"Add to Home Screen"</strong> — for the full app experience, even offline.
+          </div>
+        ) : (
+          <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.5}}>
+            Install ClayLog for the full app experience, even offline.
+          </div>
+        )}
+      </div>
+      {platform === 'android' && deferredPrompt ? (
+        <button onClick={handleInstallClick} style={{
+          background:'var(--accent)', color:'#000', border:'none', borderRadius:10,
+          padding:'10px 14px', fontSize:13, fontWeight:700, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap'
+        }}>
+          Install
+        </button>
+      ) : null}
+      <span onClick={handleClose} style={{
+        fontSize:18, color:'var(--muted)', cursor:'pointer', padding:'0 4px', flexShrink:0, lineHeight:1
+      }}>×</span>
+    </div>
+  );
+}
+
 function App() {
   // Auth state
   const [authToken, setAuthToken] = useState(null);
@@ -3825,6 +3921,7 @@ function App() {
           onDelete={deleteSession}
           onClose={closeModal} />
       )}
+      <InstallBanner />
       {toastMsg && (
         <div style={{position:'fixed',bottom:90,left:16,right:16,background:'#c0392b',color:'#fff',
           borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
