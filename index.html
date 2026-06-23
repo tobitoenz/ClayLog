@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ClayLog">
 <title>ClayLog</title>
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22ClayLog%22%2C%22short_name%22%3A%22ClayLog%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a0f%22%2C%22theme_color%22%3A%22%230a0a0f%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22logo.png%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+<meta name="theme-color" content="#0a0a0f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -363,6 +365,43 @@ function getHeaders(token) {
   };
 }
 
+/* ─── OFFLINE SYNC QUEUE ────────────────────────────────────── */
+function loadSyncQueue() {
+  try { return JSON.parse(localStorage.getItem('claylog_syncqueue') || '[]'); }
+  catch { return []; }
+}
+function saveSyncQueue(q) {
+  try { localStorage.setItem('claylog_syncqueue', JSON.stringify(q)); } catch {}
+}
+function queueSyncOp(op) {
+  const q = loadSyncQueue();
+  q.push({ ...op, ts: Date.now() });
+  saveSyncQueue(q);
+}
+function isNetworkError(e) {
+  // Failed fetch (offline) vs. a real HTTP error from the server
+  return e instanceof TypeError || /network|fetch/i.test(e.message || '');
+}
+async function flushSyncQueue(token) {
+  let q = loadSyncQueue();
+  if (!q.length) return { ok: 0, failed: 0 };
+  const remaining = [];
+  let ok = 0;
+  for (const op of q) {
+    try {
+      await sbFetch(op.method, op.table, op.body, op.filter, token);
+      ok++;
+    } catch (e) {
+      if (isNetworkError(e)) {
+        remaining.push(op); // still offline, keep for next try
+      }
+      // Non-network errors (e.g. bad data) are dropped to avoid an infinite stuck queue
+    }
+  }
+  saveSyncQueue(remaining);
+  return { ok, failed: remaining.length };
+}
+
 async function sbFetch(method, table, body, filter, token, retry = true) {
   const headers = {
     'Content-Type': 'application/json',
@@ -370,11 +409,20 @@ async function sbFetch(method, table, body, filter, token, retry = true) {
     'Authorization': 'Bearer ' + (token || SUPABASE_KEY),
     'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
   };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${filter || ''}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : null
-  });
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${filter || ''}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : null
+    });
+  } catch (e) {
+    // Network failure (offline) — queue the write so it can be retried later
+    if ((method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+      queueSyncOp({ method, table, body, filter });
+    }
+    throw e;
+  }
   if (res.status === 401 && retry) throw new Error('AUTH_EXPIRED');
   if (!res.ok) { const e = await res.text(); throw new Error(`[${res.status}] ${e}`); }
   if (method === 'DELETE' || method === 'PATCH' || method === 'POST') return null;
@@ -552,8 +600,10 @@ function AuthScreen({ onLogin }) {
 function Header({ user, syncStatus }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
   const dateStr = new Date().toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' }).toUpperCase();
-  const statusIcon = syncStatus === 'syncing' ? '⟳' : syncStatus === 'ok' ? '✓' : syncStatus === 'error' ? '✗' : '';
-  const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : 'var(--muted)';
+  const queueLen = (() => { try { return JSON.parse(localStorage.getItem('claylog_syncqueue')||'[]').length; } catch { return 0; } })();
+  const statusIcon = syncStatus === 'syncing' ? '⟳' : syncStatus === 'ok' ? '✓' : syncStatus === 'error' ? '✗' : syncStatus === 'offline' ? '📡' : '';
+  const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : syncStatus === 'offline' ? 'var(--muted)' : 'var(--muted)';
+  const statusTitle = syncStatus === 'offline' ? (queueLen > 0 ? `Offline · ${queueLen} pending` : 'Offline') : '';
 
   return (
     <header className="header">
@@ -564,7 +614,9 @@ function Header({ user, syncStatus }) {
         </div>
         <div className="header-date">{name ? `${name.toUpperCase()} · ` : ''}{dateStr}</div>
       </div>
-      <span className="sync-status" style={{color: statusColor}}>{statusIcon}</span>
+      <span className="sync-status" style={{color: statusColor}} title={statusTitle}>
+        {statusIcon}{syncStatus === 'offline' && queueLen > 0 ? ` ${queueLen}` : ''}
+      </span>
     </header>
   );
 }
@@ -2808,7 +2860,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c18 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c19 · Comfort Edition</p>
     </div>
   );
 }
@@ -3418,6 +3470,7 @@ function App() {
   const [lists, setLists] = useState({ waffe:[], ort:[], munition:[] });
   const [customDisz, setCustomDisz] = useState(() => LS.get('claylog_customdisz', []));
   const [syncStatus, setSyncStatus] = useState('idle');
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [toastMsg, setToastMsg] = useState(null);
 
   // UI state
@@ -3442,6 +3495,33 @@ function App() {
       loadData(saved.token);
     }
   }, []);
+
+  // Offline detection + automatic queue flush on reconnect
+  useEffect(() => {
+    function handleOnline() {
+      setIsOffline(false);
+      if (authToken) {
+        setSyncStatus('syncing');
+        flushSyncQueue(authToken).then(({ ok, failed }) => {
+          setSyncStatus(failed > 0 ? 'error' : 'ok');
+          if (ok > 0) {
+            setToastMsg(`Synced ${ok} change${ok>1?'s':''} from offline`);
+            setTimeout(() => setToastMsg(null), 4000);
+          }
+        });
+      }
+    }
+    function handleOffline() { setIsOffline(true); }
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOffline(!navigator.onLine);
+    // Attempt a flush on initial load too, in case items were queued last session
+    if (navigator.onLine && authToken) handleOnline();
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [authToken]);
 
   function saveAuth(data) {
     const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
@@ -3548,7 +3628,7 @@ function App() {
       })));
       setNoteStates(LS.get('claylog_notestates', {}));
       setLists(LS.get('claylog_lists', { waffe:[], ort:[], munition:[] }));
-      setSyncStatus('error');
+      setSyncStatus(isNetworkError(e) ? 'offline' : 'error');
     }
   }
 
@@ -3582,10 +3662,16 @@ function App() {
       await sbFetch('POST', 'sessions', [row], '', authToken);
       setSyncStatus('ok');
     } catch(e) {
-      console.error('saveSession error:', e);
-      setSyncStatus('error');
-      setToastMsg('Sync error: ' + e.message);
-      setTimeout(() => setToastMsg(null), 6000);
+      if (isNetworkError(e)) {
+        setSyncStatus('offline');
+        setToastMsg('Saved offline — will sync when back online');
+        setTimeout(() => setToastMsg(null), 4000);
+      } else {
+        console.error('saveSession error:', e);
+        setSyncStatus('error');
+        setToastMsg('Sync error: ' + e.message);
+        setTimeout(() => setToastMsg(null), 6000);
+      }
     }
   }
 
@@ -3598,7 +3684,15 @@ function App() {
       setSyncStatus('syncing');
       await sbFetch('DELETE', 'sessions', null, `?id=eq.${id}&user_id=eq.${currentUser?.id}`, authToken);
       setSyncStatus('ok');
-    } catch { setSyncStatus('error'); }
+    } catch(e) {
+      if (isNetworkError(e)) {
+        setSyncStatus('offline');
+        setToastMsg('Deleted offline — will sync when back online');
+        setTimeout(() => setToastMsg(null), 4000);
+      } else {
+        setSyncStatus('error');
+      }
+    }
   }
 
   async function toggleNote(sessionId, newState) {
@@ -3743,6 +3837,17 @@ function App() {
 }
 
 ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+<script>
+  // Register service worker for offline support (registration must live outside
+  // the Babel/JSX block since it has nothing to do with React).
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(err => {
+        console.warn('ClayLog: service worker registration failed', err);
+      });
+    });
+  }
 </script>
 </body>
 </html>
