@@ -384,22 +384,31 @@ function isNetworkError(e) {
 }
 async function flushSyncQueue(token) {
   let q = loadSyncQueue();
-  if (!q.length) return { ok: 0, failed: 0 };
+  if (!q.length) return { ok: 0, failed: 0, authFailed: false };
   const remaining = [];
   let ok = 0;
+  let authFailed = false;
   for (const op of q) {
+    if (authFailed) { remaining.push(op); continue; } // stop trying, keep the rest
+    // Use the freshest token: sbFetch may have refreshed it mid-flush.
+    let tok = token;
+    try { tok = JSON.parse(localStorage.getItem('claylog_auth'))?.token || token; } catch {}
     try {
-      await sbFetch(op.method, op.table, op.body, op.filter, token);
+      await sbFetch(op.method, op.table, op.body, op.filter, tok);
       ok++;
     } catch (e) {
-      if (isNetworkError(e)) {
+      if (e.message === 'AUTH_EXPIRED') {
+        // Token refresh failed (real logout). Keep this + all remaining ops.
+        authFailed = true;
+        remaining.push(op);
+      } else if (isNetworkError(e)) {
         remaining.push(op); // still offline, keep for next try
       }
-      // Non-network errors (e.g. bad data) are dropped to avoid an infinite stuck queue
+      // Genuine non-network errors (e.g. bad data) are dropped to avoid a stuck queue.
     }
   }
   saveSyncQueue(remaining);
-  return { ok, failed: remaining.length };
+  return { ok, failed: remaining.length, authFailed };
 }
 
 async function sbFetch(method, table, body, filter, token, retry = true) {
@@ -423,7 +432,20 @@ async function sbFetch(method, table, body, filter, token, retry = true) {
     }
     throw e;
   }
-  if (res.status === 401 && retry) throw new Error('AUTH_EXPIRED');
+  if (res.status === 401) {
+    // Token expired. Try a single refresh + retry before giving up.
+    if (retry) {
+      try {
+        const newToken = await refreshAccessToken();
+        return await sbFetch(method, table, body, filter, newToken, false);
+      } catch (_) { /* refresh failed → user is effectively logged out */ }
+    }
+    // Refresh didn't help: preserve writes so they sync after re-login.
+    if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
+      queueSyncOp({ method, table, body, filter });
+    }
+    throw new Error('AUTH_EXPIRED');
+  }
   if (!res.ok) { const e = await res.text(); throw new Error(`[${res.status}] ${e}`); }
   if (method === 'DELETE' || method === 'PATCH' || method === 'POST') return null;
   return res.json();
@@ -459,6 +481,38 @@ async function authRefresh(refreshToken) {
   });
   if (!res.ok) throw new Error('Refresh failed');
   return res.json();
+}
+
+/* ─── REACTIVE TOKEN REFRESH ────────────────────────────────────
+   Used by sbFetch when a request comes back 401 (token expired,
+   e.g. the proactive timer was missed while the device slept).
+   Reads the refresh token from localStorage, gets a fresh access
+   token, persists it, and notifies React via _onAuthStateChange.
+   Concurrent 401s share a single in-flight refresh. */
+let _authRefreshInFlight = null;
+let _onAuthStateChange = null; // App registers this on mount
+
+async function refreshAccessToken() {
+  if (_authRefreshInFlight) return _authRefreshInFlight;
+  _authRefreshInFlight = (async () => {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem('claylog_auth')) || null; } catch { saved = null; }
+    if (!saved?.refresh_token) throw new Error('NO_REFRESH_TOKEN');
+    const data = await authRefresh(saved.refresh_token);
+    const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+    const merged = {
+      token: data.access_token,
+      refresh_token: data.refresh_token || saved.refresh_token,
+      user: data.user || saved.user,
+      expires_at: expiresAt
+    };
+    try { localStorage.setItem('claylog_auth', JSON.stringify(merged)); } catch {}
+    // Keep React state + the proactive refresh timer in sync
+    try { _onAuthStateChange && _onAuthStateChange(data, expiresAt); } catch {}
+    return data.access_token;
+  })();
+  try { return await _authRefreshInFlight; }
+  finally { _authRefreshInFlight = null; }
 }
 
 async function authForgotPassword(email) {
@@ -3627,6 +3681,13 @@ function App() {
     scheduleRefresh(data.refresh_token, expiresAt);
   }
 
+  // Let the reactive token refresh (triggered by a 401 inside sbFetch)
+  // push the new session back into React state + reschedule the timer.
+  useEffect(() => {
+    _onAuthStateChange = (data) => { saveAuth(data); };
+    return () => { _onAuthStateChange = null; };
+  }, []);
+
   function scheduleRefresh(refreshTok, expiresAt) {
     if (!refreshTok) return;
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -3762,6 +3823,11 @@ function App() {
         setSyncStatus('offline');
         setToastMsg('Saved offline — will sync when back online');
         setTimeout(() => setToastMsg(null), 4000);
+      } else if (e.message === 'AUTH_EXPIRED') {
+        // Already queued by sbFetch — will sync after the next sign-in.
+        setSyncStatus('error');
+        setToastMsg('Session expired — saved locally, will sync after sign-in');
+        setTimeout(() => setToastMsg(null), 5000);
       } else {
         console.error('saveSession error:', e);
         setSyncStatus('error');
@@ -3785,6 +3851,10 @@ function App() {
         setSyncStatus('offline');
         setToastMsg('Deleted offline — will sync when back online');
         setTimeout(() => setToastMsg(null), 4000);
+      } else if (e.message === 'AUTH_EXPIRED') {
+        setSyncStatus('error');
+        setToastMsg('Session expired — change will sync after sign-in');
+        setTimeout(() => setToastMsg(null), 5000);
       } else {
         setSyncStatus('error');
       }
