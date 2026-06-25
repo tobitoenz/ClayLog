@@ -3629,6 +3629,14 @@ function App() {
   const [selectedSession, setSelectedSession] = useState(null);
 
   const refreshTimerRef = useRef(null);
+  const toastTimerRef = useRef(null);
+
+  // Typed toast: type drives colour + icon. type = 'success' | 'info' | 'warning' | 'error'
+  function showToast(text, type = 'info', ms = 4000) {
+    setToastMsg({ text, type });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(null), ms);
+  }
 
   /* ── AUTH ── */
   useEffect(() => {
@@ -3655,8 +3663,7 @@ function App() {
         flushSyncQueue(authToken).then(({ ok, failed }) => {
           setSyncStatus(failed > 0 ? 'error' : 'ok');
           if (ok > 0) {
-            setToastMsg(`Synced ${ok} change${ok>1?'s':''} from offline`);
-            setTimeout(() => setToastMsg(null), 4000);
+            showToast(`Synced ${ok} change${ok>1?'s':''} from offline`, 'success');
           }
         });
       }
@@ -3821,18 +3828,15 @@ function App() {
     } catch(e) {
       if (isNetworkError(e)) {
         setSyncStatus('offline');
-        setToastMsg('Saved offline — will sync when back online');
-        setTimeout(() => setToastMsg(null), 4000);
+        showToast('Saved offline — will sync when back online', 'info');
       } else if (e.message === 'AUTH_EXPIRED') {
         // Already queued by sbFetch — will sync after the next sign-in.
         setSyncStatus('error');
-        setToastMsg('Session expired — saved locally, will sync after sign-in');
-        setTimeout(() => setToastMsg(null), 5000);
+        showToast('Session expired — saved locally, will sync after sign-in', 'warning', 5000);
       } else {
         console.error('saveSession error:', e);
         setSyncStatus('error');
-        setToastMsg('Sync error: ' + e.message);
-        setTimeout(() => setToastMsg(null), 6000);
+        showToast('Sync error: ' + e.message, 'error', 6000);
       }
     }
   }
@@ -3849,12 +3853,10 @@ function App() {
     } catch(e) {
       if (isNetworkError(e)) {
         setSyncStatus('offline');
-        setToastMsg('Deleted offline — will sync when back online');
-        setTimeout(() => setToastMsg(null), 4000);
+        showToast('Deleted offline — will sync when back online', 'info');
       } else if (e.message === 'AUTH_EXPIRED') {
         setSyncStatus('error');
-        setToastMsg('Session expired — change will sync after sign-in');
-        setTimeout(() => setToastMsg(null), 5000);
+        showToast('Session expired — change will sync after sign-in', 'warning', 5000);
       } else {
         setSyncStatus('error');
       }
@@ -3992,13 +3994,22 @@ function App() {
           onClose={closeModal} />
       )}
       <InstallBanner />
-      {toastMsg && (
-        <div style={{position:'fixed',bottom:90,left:16,right:16,background:'#c0392b',color:'#fff',
-          borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
-          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',lineHeight:1.4}}>
-          ⚠️ {toastMsg}
-        </div>
-      )}
+      {toastMsg && (() => {
+        const TOAST = {
+          success: { bg:'#1e7d5a', icon:'✓' },
+          info:    { bg:'#2c5d8a', icon:'ℹ️' },
+          warning: { bg:'#b8860b', icon:'⚠️' },
+          error:   { bg:'#c0392b', icon:'✕' },
+        };
+        const t = TOAST[toastMsg.type] || TOAST.info;
+        return (
+          <div style={{position:'fixed',bottom:90,left:16,right:16,background:t.bg,color:'#fff',
+            borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
+            boxShadow:'0 4px 20px rgba(0,0,0,0.4)',lineHeight:1.4}}>
+            {t.icon} {toastMsg.text}
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // ClayLog Service Worker — offline app-shell caching
 // Bump CACHE_VERSION whenever you ship a new app version so old caches get replaced.
-const CACHE_VERSION = 'claylog-c18-v1';
+const CACHE_VERSION = 'claylog-c18-v2';
 const CACHE_NAME = `claylog-cache-${CACHE_VERSION}`;
 
 // Core files + CDN dependencies needed to boot the app offline.
@@ -45,6 +45,10 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+
+  // Ignore non-http(s) requests (chrome-extension://, data:, etc.). The Cache API
+  // can't store those, and trying to cache.put() them throws an uncaught error.
+  if (!req.url.startsWith('http')) return;
 
   // Never cache/interfere with Supabase API calls — those need to hit the network
   // (or fail fast so the app's own offline-queue logic can take over).
