@@ -3820,8 +3820,10 @@ function App() {
     // Supabase upsert
     try {
       setSyncStatus('syncing');
-      // Only send columns that exist in the Supabase sessions table
-      const { name: _n, notesCat: _nc, ...sessionFields } = session;
+      // Only send columns that exist in the Supabase sessions table.
+      // notesCat is camelCase and gets remapped to notes_cat below; name IS a
+      // real column and must be kept, otherwise it never persists to the server.
+      const { notesCat: _nc, ...sessionFields } = session;
       const row = { ...sessionFields, notes_cat: session.notesCat || {}, user_id: currentUser?.id };
       await sbFetch('POST', 'sessions', [row], '', authToken);
       setSyncStatus('ok');
