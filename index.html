@@ -1938,7 +1938,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 /* ════════════════════════════════════════════════════════════════
    NOTES PAGE
 ════════════════════════════════════════════════════════════════ */
-function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession }) {
+function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession, pinnedNotes = [], onTogglePin }) {
   const [filter, setFilter] = useState('all');
   const [catFilter, setCatFilter] = useState(''); // '' = all
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
@@ -1960,7 +1960,13 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession })
       if (!sCats.includes(catFilter)) return false;
     }
     return true;
-  }).sort((a,b) => b.date > a.date ? 1 : -1);
+  }).sort((a,b) => {
+    // Pinned notes always float to the top, regardless of the active filter.
+    const aPinned = pinnedNotes.includes(a.id);
+    const bPinned = pinnedNotes.includes(b.id);
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    return b.date > a.date ? 1 : -1;
+  });
 
   const filterLabels = { all: 'All', open: 'Open', done: 'Done' };
 
@@ -1988,6 +1994,7 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession })
         </div>
       ) : filtered.map(s => {
         const st = noteStates[s.id] || 'normal';
+        const pinned = pinnedNotes.includes(s.id);
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
         const allEntryCats = Array.isArray(s.notesCat) && s.notesCat.length
@@ -1995,14 +2002,20 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession })
           : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
         const cats = catFilter ? allEntryCats.filter(([c]) => c === catFilter) : allEntryCats;
         return (
-          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`} onClick={()=>onOpenSession && onOpenSession(s)} style={{cursor: onOpenSession ? 'pointer' : 'default'}}>
-            <div className="notiz-meta">
+          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`} style={pinned ? {borderColor:'var(--accent)'} : null}>
+            <div className="notiz-meta" style={{cursor: onOpenSession ? 'pointer' : 'default'}} onClick={()=>onOpenSession && onOpenSession(s)}>
               <span>{icon} {s.disziplin}</span>
               <span>📅 {fmtDate(s.date)}{score}</span>
               {s.ort ? <span>📍 {s.ort}</span> : null}
+              <span
+                onClick={(e)=>{e.stopPropagation(); onTogglePin && onTogglePin(s.id);}}
+                style={{marginLeft:'auto', cursor:'pointer', fontSize:16, opacity: pinned ? 1 : .35}}
+                title={pinned ? 'Unpin' : 'Pin to top'}>
+                📍
+              </span>
             </div>
             {cats.map(([cat, text, i]) => (
-              <div key={i} style={{marginBottom:10}}>
+              <div key={i} style={{marginBottom:10, cursor: onOpenSession ? 'pointer' : 'default'}} onClick={()=>onOpenSession && onOpenSession(s)}>
                 <div style={{fontSize:'var(--fs-xs,11px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{cat}</div>
                 <div className="notiz-text">{text}</div>
               </div>
@@ -2010,7 +2023,7 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession })
             <div className="notiz-actions">
               <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
                 onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='open'?'normal':'open');}}>
-                📌 Task{st==='open' ? ' ✓' : ''}
+                📌 Open{st==='open' ? ' ✓' : ''}
               </span>
               <span className={`notiz-tag done-tag ${st==='done'?'active':''}`}
                 onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='done'?'normal':'done');}}>
@@ -2914,7 +2927,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
 
       <ShareCard />
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c21 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c22 · Comfort Edition</p>
     </div>
   );
 }
@@ -3619,6 +3632,7 @@ function App() {
   const [noteStates, setNoteStates] = useState({});
   const [lists, setLists] = useState({ waffe:[], ort:[], munition:[] });
   const [customDisz, setCustomDisz] = useState(() => LS.get('claylog_customdisz', []));
+  const [pinnedNotes, setPinnedNotes] = useState(() => LS.get('claylog_pinnednotes', []));
   const [syncStatus, setSyncStatus] = useState('idle');
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [toastMsg, setToastMsg] = useState(null);
@@ -3771,12 +3785,16 @@ function App() {
       // Lists + custom disciplines
       if (listData?.length) {
         const ld = listData[0]?.data || { waffe:[], ort:[], munition:[] };
-        const { customDisz: cdFromSb, ...listsOnly } = ld;
+        const { customDisz: cdFromSb, pinnedNotes: pnFromSb, ...listsOnly } = ld;
         setLists(listsOnly);
         LS.set('claylog_lists', listsOnly);
         if (cdFromSb?.length) {
           setCustomDisz(cdFromSb);
           LS.set('claylog_customdisz', cdFromSb);
+        }
+        if (pnFromSb?.length) {
+          setPinnedNotes(pnFromSb);
+          LS.set('claylog_pinnednotes', pnFromSb);
         }
       } else {
         const saved = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
@@ -3881,7 +3899,8 @@ function App() {
     LS.set('claylog_lists', newLists);
     try {
       const cd = LS.get('claylog_customdisz', []);
-      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...newLists, customDisz: cd } }], '', authToken);
+      const pn = LS.get('claylog_pinnednotes', []);
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...newLists, customDisz: cd, pinnedNotes: pn } }], '', authToken);
     } catch {}
   }
 
@@ -3891,8 +3910,27 @@ function App() {
     // Sync to Supabase alongside lists
     try {
       const currentLists = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
-      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: arr } }], '', authToken);
+      const pn = LS.get('claylog_pinnednotes', []);
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: arr, pinnedNotes: pn } }], '', authToken);
     } catch {}
+  }
+
+  async function savePinnedNotes(arr) {
+    setPinnedNotes(arr);
+    LS.set('claylog_pinnednotes', arr);
+    // Sync to Supabase alongside lists
+    try {
+      const currentLists = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
+      const cd = LS.get('claylog_customdisz', []);
+      await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: cd, pinnedNotes: arr } }], '', authToken);
+    } catch {}
+  }
+
+  function togglePinNote(sessionId) {
+    const newPinned = pinnedNotes.includes(sessionId)
+      ? pinnedNotes.filter(id => id !== sessionId)
+      : [...pinnedNotes, sessionId];
+    savePinnedNotes(newPinned);
   }
 
   function exportData() {
@@ -3905,8 +3943,8 @@ function App() {
 
   async function clearAllData() {
     if (!confirm('Delete ALL data? This cannot be undone!')) return;
-    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]);
-    LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists'); LS.del('claylog_customdisz');
+    setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]); setPinnedNotes([]);
+    LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists'); LS.del('claylog_customdisz'); LS.del('claylog_pinnednotes');
     try {
       await sbFetch('DELETE', 'sessions', null, `?user_id=eq.${currentUser?.id}`, authToken);
     } catch {}
@@ -3956,7 +3994,7 @@ function App() {
         {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} onOpenSession={openDetail} />}
+        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
