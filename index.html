@@ -669,7 +669,7 @@ function AuthScreen({ onLogin }) {
 /* ════════════════════════════════════════════════════════════════
    HEADER
 ════════════════════════════════════════════════════════════════ */
-function Header({ user, syncStatus }) {
+function Header({ user, syncStatus, showEdit, editMode, onToggleEdit }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
   const dateStr = new Date().toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' }).toUpperCase();
   const queueLen = (() => { try { return JSON.parse(localStorage.getItem('claylog_syncqueue')||'[]').length; } catch { return 0; } })();
@@ -686,9 +686,26 @@ function Header({ user, syncStatus }) {
         </div>
         <div className="header-date">{name ? `${name.toUpperCase()} · ` : ''}{dateStr}</div>
       </div>
-      <span className="sync-status" style={{color: statusColor}} title={statusTitle}>
-        {statusIcon}{syncStatus === 'offline' && queueLen > 0 ? ` ${queueLen}` : ''}
-      </span>
+      <div style={{display:'flex', alignItems:'center', gap:12}}>
+        {showEdit && (
+          <button
+            onClick={onToggleEdit}
+            title={editMode ? 'Finish editing layout' : 'Edit layout'}
+            aria-label="Edit layout"
+            style={{
+              background: editMode ? 'var(--accent)' : 'var(--card)',
+              color: editMode ? '#000' : 'var(--muted)',
+              border: '1px solid ' + (editMode ? 'var(--accent)' : 'var(--border)'),
+              borderRadius: 10, padding: '6px 10px', fontSize: 16, cursor: 'pointer',
+              lineHeight: 1
+            }}>
+            {editMode ? '✓' : '✎'}
+          </button>
+        )}
+        <span className="sync-status" style={{color: statusColor}} title={statusTitle}>
+          {statusIcon}{syncStatus === 'offline' && queueLen > 0 ? ` ${queueLen}` : ''}
+        </span>
+      </div>
     </header>
   );
 }
@@ -1622,7 +1639,7 @@ function saveBlocks(blocks) {
   localStorage.setItem('claylog_blocks', JSON.stringify(blocks));
 }
 
-function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEvents }) {
+function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEvents, editMode, setEditMode }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
 
@@ -1631,7 +1648,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const compAllTotal = sessions.filter(s => s.type==='competition');
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
-  const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 5);
+  const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 2);
 
   const now = new Date();
 
@@ -1651,10 +1668,8 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const nextEvent = allUpcoming[0] || null;
 
   const [blocks, setBlocks]     = useState(() => loadBlocks());
-  const [editMode, setEditMode] = useState(false);
   const [dragging, setDragging] = useState(null);   // id of dragged block
   const [dragOver, setDragOver] = useState(null);   // id of hovered target
-  const longPressTimer           = useRef(null);
 
   function updateBlocks(next) { setBlocks(next); saveBlocks(next); }
 
@@ -1670,14 +1685,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
     const [item] = next.splice(fi, 1);
     next.splice(ti, 0, item);
     updateBlocks(next);
-  }
-
-  // Long-press to enter edit mode on mobile
-  function handleTouchStart() {
-    longPressTimer.current = setTimeout(() => setEditMode(true), 1000);
-  }
-  function handleTouchEnd() {
-    clearTimeout(longPressTimer.current);
   }
 
   // Drag handlers (desktop)
@@ -1761,7 +1768,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   };
 
   return (
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div>
       {/* Edit mode toolbar */}
       {editMode && (
         <div style={{
@@ -1836,12 +1843,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
         );
       })}
 
-      {/* Long-press hint */}
-      {!editMode && (
-        <div style={{textAlign:'center',color:'var(--muted)',fontSize:10,fontFamily:'DM Mono,monospace',opacity:.4,marginTop:4,marginBottom:8}}>
-          Hold to rearrange
-        </div>
-      )}
     </div>
   );
 }
@@ -3660,6 +3661,7 @@ function App() {
 
   // UI state
   const [tab, setTab] = useState('dashboard');
+  const [editMode, setEditMode] = useState(false);
   const [modal, setModal] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
 
@@ -4009,10 +4011,12 @@ function App() {
 
   return (
     <div className="app">
-      <Header user={currentUser} syncStatus={syncStatus} />
+      <Header user={currentUser} syncStatus={syncStatus}
+        showEdit={tab === 'dashboard'} editMode={editMode}
+        onToggleEdit={() => setEditMode(e => !e)} />
 
       <div className="main">
-        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} />}
+        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} editMode={editMode} setEditMode={setEditMode} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
         {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
@@ -4032,7 +4036,7 @@ function App() {
       </div>
 
       {!modal && <button className="fab" onClick={openNew}>+</button>}
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={(t) => { if (t !== 'dashboard') setEditMode(false); setTab(t); }} />
 
       {(modal === 'new' || modal === 'edit') && (
         <SessionModal
