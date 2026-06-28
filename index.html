@@ -1769,19 +1769,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
 
   return (
     <div>
-      {/* Edit mode toolbar */}
-      {editMode && (
-        <div style={{
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          background:'var(--surface)', border:'1px solid var(--accent)',
-          borderRadius:12, padding:'10px 14px', marginBottom:12,
-          fontFamily:'DM Mono,monospace', fontSize:12
-        }}>
-          <span style={{color:'var(--accent)'}}>✎ Edit Layout</span>
-          <button className="btn btn-primary" style={{padding:'4px 14px',fontSize:12}} onClick={() => setEditMode(false)}>Done</button>
-        </div>
-      )}
-
       {/* Blocks */}
       {blocks.map(block => {
         const isDraggingThis = dragging === block.id;
@@ -2945,6 +2932,16 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       </div>
 
       <ShareCard />
+
+      <div className="card" style={{marginTop:16, textAlign:'center'}}>
+        <div className="card-header" style={{justifyContent:'center'}}><span className="card-title">Support & Feedback</span></div>
+        <p style={{color:'var(--muted)', fontSize:14, lineHeight:1.5, margin:'4px 0 14px'}}>
+          Fragen, Feedback oder Hilfe benötigt? Schreib mir gerne:
+        </p>
+        <a href="mailto:tobitoenz@gmx.ch?subject=ClayLog%20Feedback" className="btn btn-primary settings-btn" style={{display:'inline-block', textDecoration:'none'}}>
+          ✉ tobitoenz@gmx.ch
+        </a>
+      </div>
 
       <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c22 · Comfort Edition</p>
     </div>
