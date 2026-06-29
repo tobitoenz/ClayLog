@@ -1322,10 +1322,74 @@ function SessionItem({ s, compact, onClick }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   CHART HELPERS — smoothing, gradients, interaction
+════════════════════════════════════════════════════════════════ */
+
+// Catmull-Rom → cubic Bézier: smooth line through all points.
+// Falls back to straight segments for <3 points.
+function smoothPath(pts) {
+  if (!pts.length) return '';
+  if (pts.length < 3) {
+    return pts.map((p,i) => `${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  }
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i-1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i+1];
+    const p3 = pts[i+2] || p2;
+    const t = 0.16; // tension
+    const c1x = p1.x + (p2.x - p0.x) * t;
+    const c1y = p1.y + (p2.y - p0.y) * t;
+    const c2x = p2.x - (p3.x - p1.x) * t;
+    const c2y = p2.y - (p3.y - p1.y) * t;
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+// Reusable <defs>: soft area gradients + a subtle glow filter.
+// Rendered once per SVG; ids are namespaced to avoid collisions.
+function ChartDefs({ id, colors = [] }) {
+  return (
+    <defs>
+      {colors.map((c, i) => (
+        <linearGradient key={i} id={`${id}-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={c} stopOpacity="0.28"/>
+          <stop offset="60%" stopColor={c} stopOpacity="0.08"/>
+          <stop offset="100%" stopColor={c} stopOpacity="0"/>
+        </linearGradient>
+      ))}
+      <filter id={`${id}-glow`} x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+  );
+}
+
+// Finds nearest point to a tap/drag on an SVG, in viewBox coordinates.
+// Returns the index into `pts` (array of {x,...}) or null.
+function nearestPointIdx(evt, svgEl, pts, viewW) {
+  if (!svgEl || !pts.length) return null;
+  const rect = svgEl.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const xView = ((clientX - rect.left) / rect.width) * viewW;
+  let best = 0, bestD = Infinity;
+  pts.forEach((p, i) => {
+    const d = Math.abs(p.x - xView);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+/* ════════════════════════════════════════════════════════════════
    DASHBOARD
 ════════════════════════════════════════════════════════════════ */
 function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, year }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const svgRef = React.useRef(null);
+  const [sel, setSel] = React.useState(null);
 
   // Build cumulative data
   let cum = 0;
@@ -1335,8 +1399,8 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
   // Draw up to last month that has any data
   const lastIdx = monthlyData.reduce((last, v, i) => v > 0 ? i : last, 0);
 
-  const W = 280, H = 130;
-  const padL = 8, padR = 8, padT = 16, padB = 22;
+  const W = 280, H = 140;
+  const padL = 8, padR = 8, padT = 18, padB = 24;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
 
@@ -1345,10 +1409,15 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
 
   // Build line path only up to lastIdx
   const pts = cumData.slice(0, lastIdx + 1).map((v, i) => ({ x: toX(i), y: toY(v), v, i }));
-  const linePath = pts.map((p, i) => `${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const linePath = smoothPath(pts);
   const areaPath = pts.length > 0
-    ? `M${toX(0)},${padT+chartH} ` + pts.map(p=>`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${toX(lastIdx)},${padT+chartH} Z`
+    ? `M${toX(0)},${padT+chartH} ` + smoothPath(pts).replace(/^M/, 'L') + ` L${toX(lastIdx)},${padT+chartH} Z`
     : '';
+
+  function handleMove(e) {
+    const idx = nearestPointIdx(e, svgRef.current, pts, W);
+    if (idx !== null) setSel(idx);
+  }
 
   // Y axis: 3 evenly spaced lines at 25%, 50%, 75% of cumMax, rounded to nice numbers
   function niceRound(v) {
@@ -1357,28 +1426,29 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
     return Math.round(v / mag) * mag;
   }
   const gridVals = [0.25, 0.5, 0.75].map(f => niceRound(cumMax * f)).filter((v,i,a) => a.indexOf(v) === i && v > 0);
+  const selPt = sel !== null ? pts[sel] : null;
 
   return (
     <div style={{position:'relative'}}>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
+
+        <ChartDefs id="cum" colors={['#4ae8c8']} />
 
         {/* Grid lines */}
         {gridVals.map(v => (
           <g key={v}>
             <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
               stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-            <text x={padL} y={toY(v)-2} textAnchor="start"
-              fill="#5a5a78" fontSize="7" fontFamily="DM Mono,monospace">
+            <text x={padL} y={toY(v)-3} textAnchor="start"
+              fill="#7a7a98" fontSize="9" fontFamily="DM Mono,monospace">
               {v >= 1000 ? (v/1000).toFixed(0)+'k' : v}
             </text>
           </g>
         ))}
 
-        {/* Area fill */}
-        {areaPath && <path d={areaPath} fill="rgba(74,232,200,0.08)"/>}
-
-        {/* Cumulative line */}
-        {linePath && <path d={linePath} fill="none" stroke="var(--accent2,#4ae8c8)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>}
+        {/* Area fill (gradient) */}
+        {areaPath && <path d={areaPath} fill="url(#cum-grad-0)"/>}
 
         {/* Monthly bars (subtle, in background) */}
         {monthlyData.map((val, i) => {
@@ -1393,26 +1463,48 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
           ) : null;
         })}
 
+        {/* Cumulative line (smooth + glow) */}
+        {linePath && <path d={linePath} fill="none" stroke="var(--accent2,#4ae8c8)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" filter="url(#cum-glow)"/>}
+
+        {/* Selection guide line */}
+        {selPt && <line x1={selPt.x} y1={padT} x2={selPt.x} y2={padT+chartH} stroke="var(--accent2,#4ae8c8)" strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.5"/>}
+
         {/* Dots on cumulative line */}
         {pts.map((p, i) => {
           const isCur = p.i === currentMonth;
+          const isSel = sel === i;
           return (
-            <circle key={i} cx={p.x} cy={p.y} r={isCur ? 4 : 3}
+            <circle key={i} cx={p.x} cy={p.y} r={isSel ? 6 : isCur ? 4.5 : 3.5}
               fill={isCur ? 'var(--accent)' : 'var(--accent2,#4ae8c8)'}
+              stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 1.5 : 0}
             />
           );
         })}
 
         {/* Month labels */}
         {monthlyData.map((_, i) => (
-          <text key={i} x={toX(i)} y={H-5} textAnchor="middle"
-            fill={i===currentMonth ? 'var(--accent)' : '#5a5a78'}
-            fontSize="7.5" fontFamily="DM Mono,monospace"
+          <text key={i} x={toX(i)} y={H-6} textAnchor="middle"
+            fill={i===currentMonth ? 'var(--accent)' : '#7a7a98'}
+            fontSize="9" fontFamily="DM Mono,monospace"
             fontWeight={i===currentMonth?'bold':'normal'}>
             {MONTHS[i].slice(0,1)}
           </text>
         ))}
       </svg>
+
+      {/* Tooltip */}
+      {selPt && (
+        <div style={{
+          position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
+          transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
+          background:'var(--surface)', border:'1px solid var(--accent2,#4ae8c8)',
+          borderRadius:8, padding:'4px 9px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
+        }}>
+          <span style={{color:'var(--muted)'}}>{MONTHS[selPt.i]} · </span>
+          <span style={{color:'var(--accent2,#4ae8c8)',fontWeight:'bold'}}>{selPt.v.toLocaleString()}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1441,7 +1533,7 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
             <g key={i}>
               {/* Month label */}
               <text x={padL-3} y={y + H*0.75} textAnchor="end"
-                fill={labelColor} fontSize={8.5} fontFamily="DM Mono,monospace"
+                fill={labelColor} fontSize={9.5} fontFamily="DM Mono,monospace"
                 fontWeight={isCur ? 'bold' : 'normal'}>
                 {MONTHS[i]}
               </text>
@@ -1451,7 +1543,7 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
               {val > 0 && <rect x={padL} y={y+1} width={bw} height={H-2} fill={color} rx="3"/>}
               {/* Value */}
               <text x={padL + chartW + 4} y={y + H*0.75} textAnchor="start"
-                fill={labelColor} fontSize={8.5} fontFamily="DM Mono,monospace" fontWeight="bold">
+                fill={labelColor} fontSize={9.5} fontFamily="DM Mono,monospace" fontWeight="bold">
                 {val > 0 ? val.toLocaleString() : '–'}
               </text>
               {/* Current month dot */}
@@ -2063,9 +2155,15 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const [viewMode, setViewMode] = useState('overlapped');
   const [typeFilter, setTypeFilter] = useState('competition');
   const [disziplin, setDisziplin] = useState('all');
+  const tlRef = React.useRef(null);
+  const [tlSel, setTlSel] = React.useState(null);
+  const ovRef = React.useRef(null);
+  const [ovSel, setOvSel] = React.useState(null);
 
   const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
   const TRAIN_COLOR = 'var(--accent,#e8c84a)';
+  const COMP_COLOR_HEX  = '#4ae8c8';
+  const TRAIN_COLOR_HEX = '#e8c84a';
   const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
   const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
   const MONTH_DAYS = [0,31,59,90,120,151,181,212,243,273,304,334];
@@ -2121,6 +2219,10 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     const minY=Math.max(0,Math.min(...vals)-8), maxY=Math.min(100,Math.max(...vals)+4), yR=maxY-minY||1;
     const tx = d => padL + ((new Date(d)-minD)/range)*cW;
     const ty = v => padT + cH - ((v-minY)/yR)*cH;
+    const mPts = pts.map(p=>({...p, x:tx(p.date), y:ty(p.avg)}));
+    const mArea = mPts.length>1
+      ? `M${mPts[0].x.toFixed(1)},${padT+cH} ` + smoothPath(mPts).replace(/^M/,'L') + ` L${mPts[mPts.length-1].x.toFixed(1)},${padT+cH} Z`
+      : '';
     return (
       <div className="card" style={{marginBottom:8}}>
         <div className="card-header" style={{marginBottom:4}}>
@@ -2128,11 +2230,12 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           {compYear && <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:COMP_COLOR}}>{compYear}%</span>}
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+          <ChartDefs id="mini" colors={['#4ae8c8']} />
           {/* Y grid + labels */}
           {[minY, maxY].map(v => (
             <g key={v}>
               <line x1={padL} y1={ty(v)} x2={W-padR} y2={ty(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-              <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#6a6a88" fontSize="7" fontFamily="DM Mono,monospace">{Math.round(v)}%</text>
+              <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#8a8aaa" fontSize="8" fontFamily="DM Mono,monospace">{Math.round(v)}%</text>
             </g>
           ))}
           {/* All 12 months */}
@@ -2140,14 +2243,15 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
             const d = new Date(currentYear+'-'+String(m+1).padStart(2,'0')+'-01');
             const x = padL+((d-minD)/range)*cW;
             return (
-              <text key={m} x={x} y={H-1} textAnchor="middle" fill="#6a6a88" fontSize="6" fontFamily="DM Mono,monospace">
+              <text key={m} x={x} y={H-1} textAnchor="middle" fill="#8a8aaa" fontSize="7" fontFamily="DM Mono,monospace">
                 {['J','F','M','A','M','J','J','A','S','O','N','D'][m]}
               </text>
             );
           })}
-          <path d={pts.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' ')}
-            fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.6"/>
-          {pts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="2.5" fill={COMP_COLOR}/>)}
+          {mArea && <path d={mArea} fill="url(#mini-grad-0)"/>}
+          <path d={smoothPath(mPts)}
+            fill="none" stroke={COMP_COLOR} strokeWidth="2.5" strokeLinecap="round" filter="url(#mini-glow)"/>
+          {mPts.map(p=><circle key={p.id} cx={p.x} cy={p.y} r="3" fill={COMP_COLOR}/>)}
         </svg>
       </div>
     );
@@ -2162,7 +2266,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     );
     if (!pts.length) return <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>;
 
-    const W=300, H=200, padL=30, padR=8, padT=12, padB=28;
+    const W=300, H=210, padL=32, padR=10, padT=14, padB=30;
     const cW=W-padL-padR, cH=H-padT-padB;
     const dates = pts.map(p=>new Date(p.date));
     const minD = new Date(Math.min(...dates)); minD.setDate(1);
@@ -2174,30 +2278,54 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     const ty = v => padT+cH-((v-minY)/yR)*cH;
     const years = [...new Set(pts.map(p=>p.year))].sort();
     const gridVals=[]; for(let v=Math.ceil(minY/25)*25;v<=maxY;v+=25) gridVals.push(v);
-    const compPts = pts.filter(p=>p.type==='competition');
-    const trainPts= pts.filter(p=>p.type==='practice');
-    function ld(arr) { return arr.map((p,i)=>`${i===0?'M':'L'}${tx(p.date).toFixed(1)},${ty(p.avg).toFixed(1)}`).join(' '); }
+    const compPts = pts.filter(p=>p.type==='competition').map(p=>({...p, x:tx(p.date), y:ty(p.avg)}));
+    const trainPts= pts.filter(p=>p.type==='practice').map(p=>({...p, x:tx(p.date), y:ty(p.avg)}));
+    // All rendered points for hit-testing
+    const allPlotted = [...compPts, ...trainPts].sort((a,b)=>a.x-b.x);
+
+    function handleMove(e) {
+      const idx = nearestPointIdx(e, tlRef.current, allPlotted, W);
+      if (idx !== null) setTlSel(allPlotted[idx]);
+    }
+    const selPt = tlSel;
 
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+      <div style={{position:'relative'}}>
+      <svg ref={tlRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setTlSel(null)}>
+        <ChartDefs id="tl" colors={[COMP_COLOR_HEX, TRAIN_COLOR_HEX]} />
         {gridVals.map(v=>(
           <g key={v}>
             <line x1={padL} y1={ty(v)} x2={W-padR} y2={ty(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-            <text x={padL-3} y={ty(v)+3} textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+            <text x={padL-4} y={ty(v)+3} textAnchor="end" fill="#8a8aaa" fontSize="9" fontFamily="DM Mono,monospace">{v}%</text>
           </g>
         ))}
         {years.map(yr=>{
           const x=padL+((new Date(yr+'-01-01')-minD)/range)*cW;
           return (<g key={yr}>
             {x>padL+2&&x<W-padR-2&&<line x1={x} y1={padT} x2={x} y2={padT+cH} stroke="#3a3a5a" strokeWidth="1" strokeDasharray="2,4"/>}
-            <text x={Math.max(x,padL+12)} y={H-4} textAnchor="middle" fill="#9a9abb" fontSize="9" fontWeight="bold" fontFamily="DM Mono,monospace">{yr}</text>
+            <text x={Math.max(x,padL+12)} y={H-6} textAnchor="middle" fill="#aaaacc" fontSize="10" fontWeight="bold" fontFamily="DM Mono,monospace">{yr}</text>
           </g>);
         })}
-        {showComp&&compPts.length>1&&<path d={ld(compPts)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>}
-        {showTrain&&trainPts.length>1&&<path d={ld(trainPts)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeOpacity="0.5"/>}
-        {showComp&&compPts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="3" fill={COMP_COLOR}/>)}
-        {showTrain&&trainPts.map(p=><circle key={p.id} cx={tx(p.date)} cy={ty(p.avg)} r="3" fill={TRAIN_COLOR}/>)}
+        {showComp&&compPts.length>1&&<path d={smoothPath(compPts)} fill="none" stroke={COMP_COLOR} strokeWidth="2.5" strokeOpacity="0.85" strokeLinecap="round" filter="url(#tl-glow)"/>}
+        {showTrain&&trainPts.length>1&&<path d={smoothPath(trainPts)} fill="none" stroke={TRAIN_COLOR} strokeWidth="2.5" strokeOpacity="0.85" strokeLinecap="round" filter="url(#tl-glow)"/>}
+        {selPt && <line x1={selPt.x} y1={padT} x2={selPt.x} y2={padT+cH} stroke="#fff" strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.4"/>}
+        {showComp&&compPts.map(p=><circle key={p.id} cx={p.x} cy={p.y} r={selPt&&selPt.id===p.id?6:4} fill={COMP_COLOR} stroke={selPt&&selPt.id===p.id?'#fff':'none'} strokeWidth={selPt&&selPt.id===p.id?1.5:0}/>)}
+        {showTrain&&trainPts.map(p=><circle key={p.id} cx={p.x} cy={p.y} r={selPt&&selPt.id===p.id?6:4} fill={TRAIN_COLOR} stroke={selPt&&selPt.id===p.id?'#fff':'none'} strokeWidth={selPt&&selPt.id===p.id?1.5:0}/>)}
       </svg>
+      {selPt && (
+        <div style={{
+          position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
+          transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
+          background:'var(--surface)', border:`1px solid ${selPt.type==='competition'?COMP_COLOR_HEX:TRAIN_COLOR_HEX}`,
+          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
+        }}>
+          <div style={{color:'var(--muted)',fontSize:10}}>{selPt.type==='competition'?'🏆':'🏋️'} {fmtDate(selPt.date)}</div>
+          <div style={{color:selPt.type==='competition'?COMP_COLOR_HEX:TRAIN_COLOR_HEX,fontWeight:'bold',fontSize:13}}>{selPt.avg}%</div>
+        </div>
+      )}
+      </div>
     );
   }
 
@@ -2205,7 +2333,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   function renderOverlapped() {
     const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
     const TRAIN_COLOR = 'var(--accent,#e8c84a)';
-    const W=300, H=200, padL=28, padR=8, padT=12, padB=22;
+    const W=300, H=210, padL=30, padR=10, padT=14, padB=24;
     const cW=W-padL-padR, cH=H-padT-padB;
 
     function toX(dateStr) {
@@ -2215,7 +2343,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     }
     function toXM(m) { return padL+(MONTH_DAYS[m]/364)*cW; }
     function toY(v)  { return padT+cH-(v/100)*cH; }
-    function ld(pts) { return pts.map((p,i)=>`${i===0?'M':'L'}${toX(p.date).toFixed(1)},${toY(p.avg).toFixed(1)}`).join(' '); }
+    function ld(pts) { return smoothPath(pts.map(p=>({...p, x:toX(p.date), y:toY(p.avg)}))); }
 
     function getPts(year) {
       const src = base.filter(s=>s.date.startsWith(year)&&(typeFilter==='all'||s.type===typeFilter));
@@ -2228,37 +2356,75 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
       };
     }
 
+    // Collect every plotted point across active years for hit-testing
+    const plotted = [];
+    allYears.forEach((year, yi) => {
+      if (!activeYears.includes(year)) return;
+      const { comp, train, all } = getPts(year);
+      const yc = YEAR_COLORS[yi%YEAR_COLORS.length];
+      if (typeFilter === 'all') {
+        comp.forEach(p => plotted.push({...p, x:toX(p.date), y:toY(p.avg), color:COMP_COLOR_HEX, year}));
+        train.forEach(p => plotted.push({...p, x:toX(p.date), y:toY(p.avg), color:TRAIN_COLOR_HEX, year}));
+      } else {
+        all.forEach(p => plotted.push({...p, x:toX(p.date), y:toY(p.avg), color:yc, year}));
+      }
+    });
+    plotted.sort((a,b)=>a.x-b.x);
+
+    function handleMove(e) {
+      const idx = nearestPointIdx(e, ovRef.current, plotted, W);
+      if (idx !== null) setOvSel(plotted[idx]);
+    }
+    const oSel = ovSel;
+
     return (<>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible'}}>
+      <div style={{position:'relative'}}>
+      <svg ref={ovRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setOvSel(null)}>
+        <ChartDefs id="ov" colors={YEAR_COLORS} />
         {[0,25,50,75,100].map(v=>(
           <g key={v}>
             <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
-            <text x={padL-3} y={toY(v)+3} textAnchor="end" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{v}%</text>
+            <text x={padL-3} y={toY(v)+3} textAnchor="end" fill="#8a8aaa" fontSize="9" fontFamily="DM Mono,monospace">{v}%</text>
           </g>
         ))}
         {MONTHS.map((lbl,i)=>(
-          <text key={i} x={toXM(i)} y={H-4} textAnchor="middle" fill="#6a6a88" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>
+          <text key={i} x={toXM(i)} y={H-6} textAnchor="middle" fill="#8a8aaa" fontSize="9" fontFamily="DM Mono,monospace">{lbl}</text>
         ))}
+        {oSel && <line x1={oSel.x} y1={padT} x2={oSel.x} y2={padT+cH} stroke="#fff" strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.4"/>}
         {allYears.map((year,yi)=>{
           if(!activeYears.includes(year)) return null;
           const {comp,train,all} = getPts(year);
           const yc = YEAR_COLORS[yi%YEAR_COLORS.length];
           if(typeFilter==='all') return (
             <g key={year}>
-              {comp.length>1&&<path d={ld(comp)} fill="none" stroke={COMP_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
-              {train.length>1&&<path d={ld(train)} fill="none" stroke={TRAIN_COLOR} strokeWidth="1.5" strokeOpacity="0.45"/>}
-              {comp.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={COMP_COLOR}/>)}
-              {train.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={TRAIN_COLOR}/>)}
+              {comp.length>1&&<path d={ld(comp)} fill="none" stroke={COMP_COLOR} strokeWidth="2.5" strokeOpacity="0.8" strokeLinecap="round" filter="url(#ov-glow)"/>}
+              {train.length>1&&<path d={ld(train)} fill="none" stroke={TRAIN_COLOR} strokeWidth="2.5" strokeOpacity="0.8" strokeLinecap="round" filter="url(#ov-glow)"/>}
+              {comp.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r={oSel&&oSel.id===p.id?6:4} fill={COMP_COLOR} stroke={oSel&&oSel.id===p.id?'#fff':'none'} strokeWidth={oSel&&oSel.id===p.id?1.5:0}/>)}
+              {train.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r={oSel&&oSel.id===p.id?6:4} fill={TRAIN_COLOR} stroke={oSel&&oSel.id===p.id?'#fff':'none'} strokeWidth={oSel&&oSel.id===p.id?1.5:0}/>)}
             </g>
           );
           return (
             <g key={year}>
-              {all.length>1&&<path d={ld(all)} fill="none" stroke={yc} strokeWidth="1.5" strokeOpacity="0.5"/>}
-              {all.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r="3.5" fill={yc}/>)}
+              {all.length>1&&<path d={ld(all)} fill="none" stroke={yc} strokeWidth="2.5" strokeOpacity="0.85" strokeLinecap="round" filter="url(#ov-glow)"/>}
+              {all.map(p=><circle key={p.id} cx={toX(p.date)} cy={toY(p.avg)} r={oSel&&oSel.id===p.id?6:4} fill={yc} stroke={oSel&&oSel.id===p.id?'#fff':'none'} strokeWidth={oSel&&oSel.id===p.id?1.5:0}/>)}
             </g>
           );
         })}
       </svg>
+      {oSel && (
+        <div style={{
+          position:'absolute', top:0, left:`${(oSel.x/W)*100}%`,
+          transform:`translateX(${oSel.x > W*0.6 ? '-105%' : '5%'})`,
+          background:'var(--surface)', border:`1px solid ${oSel.color}`,
+          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
+        }}>
+          <div style={{color:'var(--muted)',fontSize:10}}>{oSel.type==='competition'?'🏆':'🏋️'} {fmtDate(oSel.date)}</div>
+          <div style={{color:oSel.color,fontWeight:'bold',fontSize:13}}>{oSel.avg}%</div>
+        </div>
+      )}
+      </div>
 
       {/* Year toggles */}
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
