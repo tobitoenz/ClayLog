@@ -1848,8 +1848,8 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
     ),
     shells: <MunitionsChart sessions={sessions} year={year} />,
     recent: (
-      <div className="card">
-        <div className="card-header"><span className="card-title">Recent</span></div>
+      <div className="card" style={{padding:'10px 12px'}}>
+        <div className="card-header" style={{marginBottom:6}}><span className="card-title">Recent</span></div>
         {recent.length === 0 ? (
           <div className="empty"><div className="empty-icon">🎯</div><div className="empty-text">No entries yet.<br/>Tap + to get started.</div></div>
         ) : (
@@ -3132,14 +3132,14 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       <div className="card" style={{marginTop:16, textAlign:'center'}}>
         <div className="card-header" style={{justifyContent:'center'}}><span className="card-title">Support & Feedback</span></div>
         <p style={{color:'var(--muted)', fontSize:14, lineHeight:1.5, margin:'4px 0 14px'}}>
-          Fragen, Feedback oder Hilfe benötigt? Schreib mir gerne:
+          Questions, feedback, or need help? Feel free to reach out:
         </p>
         <a href="mailto:tobitoenz@gmx.ch?subject=ClayLog%20Feedback" className="btn btn-primary settings-btn" style={{display:'inline-block', textDecoration:'none'}}>
           ✉ tobitoenz@gmx.ch
         </a>
       </div>
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog c22 · Comfort Edition</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.1</p>
     </div>
   );
 }
