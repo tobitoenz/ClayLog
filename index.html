@@ -2036,7 +2036,7 @@ function SessionsPage({ sessions, onSessionClick }) {
 /* ════════════════════════════════════════════════════════════════
    NOTES PAGE
 ════════════════════════════════════════════════════════════════ */
-function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession, pinnedNotes = [], onTogglePin }) {
+function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, lists, onOpenSession, pinnedNotes = [], onTogglePin }) {
   const [filter, setFilter] = useState('all');
   const [catFilter, setCatFilter] = useState(''); // '' = all
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
@@ -2049,21 +2049,37 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession, p
   const allCats = [...DEFAULT_NOTE_CATEGORIES, ...(lists?.notizKategorien||[]), ...usedCats]
     .filter((c,i,arr) => c && arr.indexOf(c)===i);
 
-  const filtered = withNotes.filter(s => {
-    const st = noteStates[s.id] || 'normal';
-    if (filter === 'open' && st !== 'open') return false;
-    if (filter === 'done' && st !== 'done') return false;
-    if (catFilter) {
-      const sCats = Array.isArray(s.notesCat) ? s.notesCat.map(e=>e.cat||'Other') : (s.notes ? ['Other'] : []);
-      if (!sCats.includes(catFilter)) return false;
+  // One card per note-category entry, so Technique / Material etc. captured in
+  // the same session appear as separate notes — each with its own Open/Done state.
+  // notesCat entries carry their state in e.state (persisted in notes_cat jsonb);
+  // legacy plain-text notes fall back to the per-session noteStates map.
+  const noteItems = [];
+  withNotes.forEach(s => {
+    if (Array.isArray(s.notesCat) && s.notesCat.length) {
+      s.notesCat.forEach((e, i) => {
+        const cat = normalizeCat(e.cat);
+        const st = e.state || 'normal';
+        if (filter === 'open' && st !== 'open') return;
+        if (filter === 'done' && st !== 'done') return;
+        if (catFilter && cat !== catFilter) return;
+        noteItems.push({ s, cat, text: e.text, i, legacy: false, st });
+      });
+    } else if (s.notes && s.notes.trim()) {
+      const st = noteStates[s.id] || 'normal';
+      if (filter === 'open' && st !== 'open') return;
+      if (filter === 'done' && st !== 'done') return;
+      if (catFilter && catFilter !== 'Other') return;
+      noteItems.push({ s, cat: 'Other', text: s.notes, i: 0, legacy: true, st });
     }
-    return true;
-  }).sort((a,b) => {
-    // Pinned notes always float to the top, regardless of the active filter.
-    const aPinned = pinnedNotes.includes(a.id);
-    const bPinned = pinnedNotes.includes(b.id);
+  });
+
+  noteItems.sort((a, b) => {
+    // Pinned sessions float to the top, regardless of the active filter.
+    const aPinned = pinnedNotes.includes(a.s.id);
+    const bPinned = pinnedNotes.includes(b.s.id);
     if (aPinned !== bPinned) return aPinned ? -1 : 1;
-    return b.date > a.date ? 1 : -1;
+    if (a.s.date !== b.s.date) return b.s.date > a.s.date ? 1 : -1;
+    return a.i - b.i; // keep a session's entries in their captured order
   });
 
   const filterLabels = { all: 'All', open: 'Open', done: 'Done' };
@@ -2085,22 +2101,20 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession, p
           </select>
         </div>
       )}
-      {filtered.length === 0 ? (
+      {noteItems.length === 0 ? (
         <div className="empty">
           <div className="empty-icon">📝</div>
           <div className="empty-text">No notes found.</div>
         </div>
-      ) : filtered.map(s => {
-        const st = noteStates[s.id] || 'normal';
+      ) : noteItems.map(({ s, cat, text, i, legacy, st }) => {
         const pinned = pinnedNotes.includes(s.id);
         const icon = s.type === 'competition' ? '🏆' : '🏋️';
         const score = s.score > 0 && s.max > 0 ? ` · ${s.score}/${s.max} (${Math.round(s.score/s.max*100)}%)` : '';
-        const allEntryCats = Array.isArray(s.notesCat) && s.notesCat.length
-          ? s.notesCat.map((e,i) => [normalizeCat(e.cat), e.text, i])
-          : (s.notes && s.notes.trim() ? [['Other', s.notes, 0]] : []);
-        const cats = catFilter ? allEntryCats.filter(([c]) => c === catFilter) : allEntryCats;
+        const toggle = (target) => legacy
+          ? onToggleNote(s.id, st===target ? 'normal' : target)
+          : onToggleNoteEntry(s, i, st===target ? 'normal' : target);
         return (
-          <div key={s.id} className={`notiz-card ${st==='done'?'done':''}`} style={pinned ? {borderColor:'var(--accent)'} : null}>
+          <div key={s.id + '::' + i} className={`notiz-card ${st==='done'?'done':''}`} style={pinned ? {borderColor:'var(--accent)'} : null}>
             <div className="notiz-meta" style={{cursor: onOpenSession ? 'pointer' : 'default'}} onClick={()=>onOpenSession && onOpenSession(s)}>
               <span>{icon} {s.disziplin}</span>
               <span>📅 {fmtDate(s.date)}{score}</span>
@@ -2112,19 +2126,17 @@ function NotesPage({ sessions, noteStates, onToggleNote, lists, onOpenSession, p
                 📍
               </span>
             </div>
-            {cats.map(([cat, text, i]) => (
-              <div key={i} style={{marginBottom:10, cursor: onOpenSession ? 'pointer' : 'default'}} onClick={()=>onOpenSession && onOpenSession(s)}>
-                <div style={{fontSize:'var(--fs-xs,11px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{cat}</div>
-                <div className="notiz-text">{text}</div>
-              </div>
-            ))}
+            <div style={{marginBottom:10, cursor: onOpenSession ? 'pointer' : 'default'}} onClick={()=>onOpenSession && onOpenSession(s)}>
+              <div style={{fontSize:'var(--fs-xs,11px)',color:'var(--accent)',fontFamily:'DM Mono,monospace',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>{cat}</div>
+              <div className="notiz-text">{text}</div>
+            </div>
             <div className="notiz-actions">
               <span className={`notiz-tag open-tag ${st==='open'?'active':''}`}
-                onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='open'?'normal':'open');}}>
+                onClick={(e)=>{e.stopPropagation(); toggle('open');}}>
                 📌 Open{st==='open' ? ' ✓' : ''}
               </span>
               <span className={`notiz-tag done-tag ${st==='done'?'active':''}`}
-                onClick={(e)=>{e.stopPropagation(); onToggleNote(s.id, st==='done'?'normal':'done');}}>
+                onClick={(e)=>{e.stopPropagation(); toggle('done');}}>
                 ✅ Done{st==='done' ? ' ✓' : ''}
               </span>
             </div>
@@ -3139,7 +3151,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         </a>
       </div>
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.1</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.2</p>
     </div>
   );
 }
@@ -3296,7 +3308,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
       max   = (type==='competition' || hasScore) ? totalMax   : null;
       passenArr = (type==='competition' || hasScore) ? passenVals.map(v => v === '' || v === null ? null : parseInt(v)) : [];
     }
-    const cleanEntries = notesEntries.filter(e => e.text && e.text.trim()).map(e => ({ cat: e.cat || 'Other', text: e.text.trim() }));
+    const cleanEntries = notesEntries.filter(e => e.text && e.text.trim()).map(e => ({ cat: e.cat || 'Other', text: e.text.trim(), ...(e.state ? { state: e.state } : {}) }));
     const legacyNotes = cleanEntries.map(e => `${e.cat}: ${e.text}`).join('\n\n');
     const s = {
       id: session?.id || crypto.randomUUID(),
@@ -4110,6 +4122,27 @@ function App() {
     } catch {}
   }
 
+  // Per-note Open/Done: the state lives on the individual notesCat entry and is
+  // persisted inside the notes_cat jsonb column, so two notes in the same session
+  // (e.g. Technique vs Material) can be marked independently.
+  async function toggleNoteEntry(session, entryIndex, newState) {
+    const entries = Array.isArray(session.notesCat) ? session.notesCat.map(e => ({...e})) : [];
+    if (!entries[entryIndex]) return;
+    if (newState === 'normal') delete entries[entryIndex].state;
+    else entries[entryIndex].state = newState;
+    const updated = { ...session, notesCat: entries };
+    const newSessions = sessions.map(s => s.id === session.id ? updated : s);
+    setSessions(newSessions);
+    LS.set('claylog_sessions', newSessions);
+    try {
+      setSyncStatus('syncing');
+      await sbFetch('PATCH', 'sessions', { notes_cat: entries }, `?id=eq.${session.id}`, authToken);
+      setSyncStatus('ok');
+    } catch (e) {
+      setSyncStatus(isNetworkError(e) ? 'offline' : 'error');
+    }
+  }
+
   async function saveLists(newLists) {
     setLists(newLists);
     LS.set('claylog_lists', newLists);
@@ -4212,7 +4245,7 @@ function App() {
         {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} editMode={editMode} setEditMode={setEditMode} />}
         {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
         {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
+        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} onToggleNoteEntry={toggleNoteEntry} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
         {tab === 'analyse' && <AnalysePage sessions={sessions} />}
         {tab === 'settings' && (
           <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
