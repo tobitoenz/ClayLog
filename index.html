@@ -309,6 +309,31 @@ canvas { width: 100% !important; }
 .select-row { display: flex; gap: 6px; }
 .select-row select { flex: 1; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ─── DESKTOP (PC browser) ──────────────────────────────────── */
+/* On wide screens, constrain the app to a phone-like column so
+   charts and cards don't blow up to full screen width.
+   Mobile is untouched — this only kicks in above 700px. */
+@media (min-width: 700px) {
+  .app {
+    max-width: 560px;
+    margin: 0 auto;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  /* Keep the FAB anchored to the app column, not the screen edge */
+  .fab {
+    right: calc(50vw - 280px + 20px);
+  }
+  /* Center modals horizontally and match the app column width;
+     they still slide up from the bottom (align-items: flex-end inherited) */
+  .modal-backdrop {
+    justify-content: center;
+  }
+  .modal {
+    max-width: 560px;
+  }
+}
 </style>
 </head>
 <body>
@@ -391,9 +416,12 @@ function loadSyncQueue() {
 function saveSyncQueue(q) {
   try { localStorage.setItem('claylog_syncqueue', JSON.stringify(q)); } catch {}
 }
+function newOpId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
 function queueSyncOp(op) {
   const q = loadSyncQueue();
-  q.push({ ...op, ts: Date.now() });
+  q.push({ ...op, id: newOpId(), ts: Date.now() });
   saveSyncQueue(q);
 }
 function isNetworkError(e) {
@@ -403,33 +431,44 @@ function isNetworkError(e) {
 async function flushSyncQueue(token) {
   let q = loadSyncQueue();
   if (!q.length) return { ok: 0, failed: 0, authFailed: false };
-  const remaining = [];
+  // Migrate legacy ops (queued before v1.0.3) that have no id yet,
+  // so the reconcile step below can match them reliably.
+  if (q.some(op => !op.id)) {
+    q = q.map(op => op.id ? op : { ...op, id: newOpId() });
+    saveSyncQueue(q);
+  }
+  const doneIds = new Set();   // synced successfully → remove from queue
+  const dropIds = new Set();   // genuine server errors (bad data) → drop to avoid a stuck queue
   let ok = 0;
   let authFailed = false;
   for (const op of q) {
-    if (authFailed) { remaining.push(op); continue; } // stop trying, keep the rest
+    if (authFailed) continue; // stop trying, keep the rest in the queue
     // Use the freshest token: sbFetch may have refreshed it mid-flush.
     let tok = token;
     try { tok = JSON.parse(localStorage.getItem('claylog_auth'))?.token || token; } catch {}
     try {
-      await sbFetch(op.method, op.table, op.body, op.filter, tok);
+      // noQueue=true: don't let sbFetch re-queue this op on failure — we manage it here.
+      await sbFetch(op.method, op.table, op.body, op.filter, tok, true, true);
       ok++;
+      doneIds.add(op.id);
     } catch (e) {
       if (e.message === 'AUTH_EXPIRED') {
         // Token refresh failed (real logout). Keep this + all remaining ops.
         authFailed = true;
-        remaining.push(op);
-      } else if (isNetworkError(e)) {
-        remaining.push(op); // still offline, keep for next try
+      } else if (!isNetworkError(e)) {
+        dropIds.add(op.id); // genuine non-network error (e.g. bad data)
       }
-      // Genuine non-network errors (e.g. bad data) are dropped to avoid a stuck queue.
+      // Network errors: keep the op in the queue for the next try.
     }
   }
-  saveSyncQueue(remaining);
-  return { ok, failed: remaining.length, authFailed };
+  // Reconcile against the CURRENT queue instead of overwriting it, so ops
+  // queued by the user while this flush was running are never lost.
+  const current = loadSyncQueue().filter(op => !doneIds.has(op.id) && !dropIds.has(op.id));
+  saveSyncQueue(current);
+  return { ok, failed: current.length, authFailed };
 }
 
-async function sbFetch(method, table, body, filter, token, retry = true) {
+async function sbFetch(method, table, body, filter, token, retry = true, noQueue = false) {
   const headers = {
     'Content-Type': 'application/json',
     'apikey': SUPABASE_KEY,
@@ -445,7 +484,7 @@ async function sbFetch(method, table, body, filter, token, retry = true) {
     });
   } catch (e) {
     // Network failure (offline) — queue the write so it can be retried later
-    if ((method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+    if (!noQueue && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
       queueSyncOp({ method, table, body, filter });
     }
     throw e;
@@ -455,11 +494,11 @@ async function sbFetch(method, table, body, filter, token, retry = true) {
     if (retry) {
       try {
         const newToken = await refreshAccessToken();
-        return await sbFetch(method, table, body, filter, newToken, false);
+        return await sbFetch(method, table, body, filter, newToken, false, noQueue);
       } catch (_) { /* refresh failed → user is effectively logged out */ }
     }
     // Refresh didn't help: preserve writes so they sync after re-login.
-    if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
+    if (!noQueue && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
       queueSyncOp({ method, table, body, filter });
     }
     throw new Error('AUTH_EXPIRED');
@@ -476,7 +515,7 @@ async function authSignIn(email, password) {
     body: JSON.stringify({ email, password })
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || 'Login fehlgeschlagen');
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Login failed');
   return data;
 }
 
@@ -487,7 +526,7 @@ async function authSignUp(email, password, name) {
     body: JSON.stringify({ email, password, data: { name } })
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || 'Registrierung fehlgeschlagen');
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Sign up failed');
   return data;
 }
 
@@ -1546,8 +1585,6 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
                 fill={labelColor} fontSize={9.5} fontFamily="DM Mono,monospace" fontWeight="bold">
                 {val > 0 ? val.toLocaleString() : '–'}
               </text>
-              {/* Current month dot */}
-              {isCur && <circle cx={padL - 12} cy={y + H/2} r="2.5" fill="var(--accent)"/>}
             </g>
           );
         })}
@@ -3151,7 +3188,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         </a>
       </div>
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.2</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.4</p>
     </div>
   );
 }
