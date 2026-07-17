@@ -339,7 +339,7 @@ canvas { width: 100% !important; }
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
 // ── Font scale system ────────────────────────────────────────
 const FONT_SCALES = [
@@ -3188,7 +3188,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         </a>
       </div>
 
-      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.4</p>
+      <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.5</p>
     </div>
   );
 }
@@ -4251,6 +4251,19 @@ function App() {
     setSelectedSession(null);
     setModal('new');
   }
+  // For a new entry, prefill ammo/gun/location from the most recent session
+  // that actually has those fields set. We sort by date (newest first) rather
+  // than relying on array order, since a reload re-sorts by date and entries
+  // sharing a date have no guaranteed order. Falling through to the newest
+  // non-empty entry means a stray blank session never wipes the prefill.
+  const lastFilledSession = useMemo(() => {
+    const byDateDesc = [...sessions].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+    return (
+      byDateDesc.find(s => s.ort || s.waffe || s.munition_typ) ||
+      byDateDesc[0] ||
+      null
+    );
+  }, [sessions]);
   function openDetail(s) {
     setSelectedSession(s);
     setModal('detail');
@@ -4312,7 +4325,7 @@ function App() {
           onDelete={deleteSession}
           onClose={closeModal}
           onSaveLists={saveLists}
-          lastSession={modal === 'new' ? (sessions[0] || null) : null} />
+          lastSession={modal === 'new' ? lastFilledSession : null} />
       )}
       {modal === 'detail' && selectedSession && (
         <DetailModal

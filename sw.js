@@ -1,6 +1,6 @@
 // ClayLog Service Worker — offline app-shell caching
 // Bump CACHE_VERSION whenever you ship a new app version so old caches get replaced.
-const CACHE_VERSION = 'claylog-v1.0.4';
+const CACHE_VERSION = 'claylog-v1.0.5';
 const CACHE_NAME = `claylog-cache-${CACHE_VERSION}`;
 
 // Core files + CDN dependencies needed to boot the app offline.
