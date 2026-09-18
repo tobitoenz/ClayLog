@@ -5,16 +5,23 @@ const CACHE_NAME = `claylog-cache-${CACHE_VERSION}`;
 
 // Core files + CDN dependencies needed to boot the app offline.
 // IMPORTANT: keep this in sync with the <script>/<link> tags in the HTML head.
+// 2. Google-Fonts-CSS durch die konkreten woff2-URLs ergänzen
 const PRECACHE_URLS = [
   './',
   './index.html',
   './logo.png',
-  'https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap',
+  // Google Fonts CSS + die tatsächlichen Schriftdateien
+  'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap',
+  'https://fonts.gstatic.com/s/chakrapetch/v11/cIflMapbsEk7TDLdtEz1BwkeNIhFQJXE3AY.woff2',
+  'https://fonts.gstatic.com/s/chakrapetch/v11/cIflMapbsEk7TDLdtEz1BwkeNIhFQJXE3AY.woff2',
+  'https://fonts.gstatic.com/s/dmsans/v15/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxRR232VGM.woff2',
+  'https://fonts.gstatic.com/s/dmmono/v15/aFTU7PB1QTsUX8KYthqQBA.woff2',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js',
 ];
+
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

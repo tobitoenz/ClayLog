@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
   <link rel="apple-touch-icon" href="logo.png">
   <link rel="icon" type="image/png" href="logo.png">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,97 +13,100 @@
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%20%22ClayLog%22%2C%20%22short_name%22%3A%20%22ClayLog%22%2C%20%22start_url%22%3A%20%22.%22%2C%20%22display%22%3A%20%22standalone%22%2C%20%22background_color%22%3A%20%22%230a0a0c%22%2C%20%22theme_color%22%3A%20%22%230a0a0c%22%2C%20%22icons%22%3A%20%5B%7B%22src%22%3A%20%22logo.png%22%2C%20%22sizes%22%3A%20%22512x512%22%2C%20%22type%22%3A%20%22image%2Fpng%22%2C%20%22purpose%22%3A%20%22any%22%7D%2C%20%7B%22src%22%3A%20%22logo.png%22%2C%20%22sizes%22%3A%20%22512x512%22%2C%20%22type%22%3A%20%22image%2Fpng%22%2C%20%22purpose%22%3A%20%22maskable%22%7D%5D%7D">
 <meta name="theme-color" content="#0a0a0f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
-/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 :root {
   --font-scale: 1;
   --bg: #0a0a0c;
   --surface: #13131a;
   --card: #1a1a24;
+  --card-elev: #1f1f2c;
   --border: #2a2a3a;
   --accent: #e8c84a;
   --accent2: #4ae8c8;
   --red: #e84a4a;
+  --green: #22c55e;
   --text: #f0f0f8;
   --muted: #6a6a88;
   --radius: 14px;
+  --font-display: 'Chakra Petch', 'DM Sans', system-ui, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; max-width: 100vw; }
 @keyframes wiggle { 0% { transform: rotate(-1.2deg); } 100% { transform: rotate(1.2deg); } }
-
-/* ─── APP SHELL ─────────────────────────────────────────────── */
 #root { height: 100%; }
 .app { display: flex; flex-direction: column; height: 100dvh; }
-
-/* ─── HEADER ────────────────────────────────────────────────── */
 .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px;
+  padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
   background: linear-gradient(180deg, #0d0d18 0%, transparent 100%);
   position: relative; z-index: 10; flex-shrink: 0;
 }
 .header-logo-row { display: flex; align-items: center; gap: 10px; }
-.logo { font-family: 'Arial', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--accent); }
+.logo { font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: 2px; color: var(--accent); }
 .header-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
 .sync-status { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
-
-/* ─── MAIN ──────────────────────────────────────────────────── */
 .main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; -webkit-overflow-scrolling: touch; }
 .page { display: none; }
 .page.active { display: block; }
-
-/* ─── BOTTOM NAV ────────────────────────────────────────────── */
 .bottom-nav {
   display: flex; background: var(--surface);
-  border-top: 1px solid var(--border); padding: 6px 0 28px; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 8px 0 calc(20px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .bottom-nav::-webkit-scrollbar { display: none; }
 .nav-item {
-  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 10px 2px 8px; cursor: pointer; transition: all .2s; user-select: none;
-  border-radius: 14px; margin: 0 1px; white-space: nowrap; overflow: visible;
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 2px 6px; cursor: pointer; transition: all .2s; user-select: none;
+  border-radius: 14px; margin: 0 1px; white-space: nowrap;
+  color: var(--muted);
 }
-.nav-icon { font-size: calc(26px * (1 + 0.3 * max(min(var(--font-scale, 1), 2) - 1.3, 0))); transition: transform .2s; line-height: 1; }
-.nav-label { font-size: var(--fs-nav, 11px); letter-spacing: .3px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; white-space: nowrap; }
-.nav-item.active { background: rgba(255,255,255,.06); }
-.nav-item.active .nav-icon { transform: scale(1.12); }
+.nav-icon {
+  width: calc(24px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
+  height: calc(24px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
+  transition: transform .2s; line-height: 1; display: block;
+}
+.nav-label {
+  font-size: var(--fs-nav, 11px); letter-spacing: .3px; text-transform: uppercase;
+  color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500;
+  white-space: nowrap;
+}
+.nav-item.active { background: rgba(255,255,255,.06); color: var(--accent); }
+.nav-item.active .nav-icon { transform: scale(1.08); }
 .nav-item.active .nav-label { color: var(--accent); font-weight: 700; }
-
-/* ─── FAB ───────────────────────────────────────────────────── */
 .fab {
-  position: fixed; bottom: 104px; right: 20px;
-  width: 64px; height: 64px; border-radius: 50%;
+  position: fixed; bottom: calc(100px + env(safe-area-inset-bottom)); right: 20px;
+  width: 60px; height: 60px; border-radius: 50%;
   background: var(--accent); color: #000;
-  font-size: 32px; font-weight: bold;
+  font-size: 28px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 32px rgba(232,200,74,.4);
+  box-shadow: 0 6px 24px rgba(232,200,74,.35), 0 2px 6px rgba(0,0,0,.4);
   cursor: pointer; z-index: 100; border: none;
-  transition: all .2s;
+  transition: transform .15s, box-shadow .15s;
 }
-.fab:active { transform: scale(.92); }
-
-/* ─── CARDS ─────────────────────────────────────────────────── */
+.fab:active { transform: scale(.94); box-shadow: 0 3px 12px rgba(232,200,74,.3); }
 .card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
 }
+.card-elev {
+  background: linear-gradient(180deg, var(--card-elev) 0%, var(--card) 100%);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .card-title { font-size: var(--fs-xs, 13px); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
-
-/* ─── STAT GRID ─────────────────────────────────────────────── */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.stat-box { background: var(--surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
-.stat-val { font-family: 'Arial', sans-serif; font-size: 40px; color: var(--accent); line-height: 1; }
+.stat-box { background: var(--surface); border-radius: 12px; padding: 14px; border: 1px solid var(--border); }
+.stat-val { font-family: var(--font-display); font-weight: 700; font-size: 38px; color: var(--accent); line-height: 1; letter-spacing: .5px; }
 .stat-label { font-size: var(--fs-xs, 13px); color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
-
-/* ─── SESSION ITEMS ─────────────────────────────────────────── */
 .session-item {
   display: flex; align-items: center; gap: 14px;
   padding: 14px 0; border-bottom: 1px solid var(--border);
@@ -121,36 +124,36 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .session-info { flex: 1; min-width: 0; }
 .session-name { font-weight: 600; font-size: var(--fs-lg, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .session-meta { font-size: var(--fs-sm, 13px); color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
-.session-score { font-family: 'Arial', sans-serif; font-size: 30px; color: var(--accent); flex-shrink: 0; }
-.score-max { font-size: var(--fs-sm, 14px); color: var(--muted); }
-
-/* ─── EMPTY STATE ───────────────────────────────────────────── */
-.empty { text-align: center; padding: 40px 20px; }
-.empty-icon { font-size: 40px; margin-bottom: 12px; }
-.empty-text { color: var(--muted); font-size: 14px; line-height: 1.6; }
-
-/* ─── MODAL ─────────────────────────────────────────────────── */
+.session-score { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--accent); flex-shrink: 0; letter-spacing: .5px; }
+.score-max { font-size: var(--fs-sm, 14px); color: var(--muted); font-weight: 500; }
+.empty { text-align: center; padding: 32px 20px; }
+.empty-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 14px; color: var(--muted);
+}
+.empty-text { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,.75);
   backdrop-filter: blur(8px); z-index: 200;
   display: flex; align-items: flex-end;
   touch-action: none;
   overscroll-behavior: contain;
-  /* iOS: stay pinned even when keyboard opens */
   height: 100%; width: 100%;
   top: 0; left: 0;
 }
 body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 .modal {
   background: var(--surface); border-radius: 24px 24px 0 0;
-  width: 100%; padding: 16px 16px 36px;
+  width: 100%; padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
   border: 1px solid var(--border); border-bottom: none;
   animation: slideUp .3s cubic-bezier(.34,1.56,.64,1);
   max-height: 92dvh; overflow-y: auto;
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 12px; }
-.modal-title { font-family: 'Arial', sans-serif; font-size: 20px; letter-spacing: 2px; margin-bottom: 12px; }
+.modal-title { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 2px; margin-bottom: 12px; }
 .modal-header-sticky {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
@@ -164,13 +167,13 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 .btn-round {
   width: 52px; height: 52px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: bold; border: none; cursor: pointer;
+  font-size: 24px; font-weight: 700; border: none; cursor: pointer;
   flex-shrink: 0; padding: 0; line-height: 1;
+  transition: transform .1s;
 }
-.btn-round.save { background: #22c55e; color: #fff; }
-.btn-round.cancel { background: #ef4444; color: #fff; }
-
-/* ─── FORMS ─────────────────────────────────────────────────── */
+.btn-round:active { transform: scale(.92); }
+.btn-round.save { background: var(--green); color: #fff; }
+.btn-round.cancel { background: var(--red); color: #fff; }
 .form-group { margin-bottom: 10px; }
 label { display: block; font-size: var(--fs-xs, 13px); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
 input, select, textarea {
@@ -191,56 +194,49 @@ select {
 }
 textarea { resize: none; min-height: 80px; }
 .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-/* ─── BUTTONS ───────────────────────────────────────────────── */
 .btn {
-  width: 100%; padding: 13px; border-radius: 12px; border: none;
-  font-family: 'Arial', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px;
-  cursor: pointer; transition: all .15s; margin-top: 6px;
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer; transition: transform .1s, box-shadow .15s, background .15s;
+  margin-top: 6px;
 }
 .btn-primary {
-  background: linear-gradient(180deg, #f0d060 0%, #c8a030 100%);
-  color: #000;
-  box-shadow: 0 4px 0 #8a6a10, 0 6px 12px rgba(0,0,0,.4);
+  background: var(--accent); color: #111;
+  box-shadow: 0 2px 10px rgba(240,200,74,.22);
 }
-.btn-primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a6a10; }
+.btn-primary:active { transform: scale(.97); box-shadow: 0 1px 5px rgba(240,200,74,.18); }
 .btn-danger {
-  background: linear-gradient(180deg, #f06060 0%, #c03030 100%);
-  color: #fff;
-  box-shadow: 0 4px 0 #801010, 0 6px 12px rgba(0,0,0,.4);
+  background: var(--red); color: #fff;
+  box-shadow: 0 2px 10px rgba(232,74,74,.22);
 }
-.btn-danger:active { transform: translateY(3px); box-shadow: 0 1px 0 #801010; }
+.btn-danger:active { transform: scale(.97); box-shadow: 0 1px 5px rgba(232,74,74,.18); }
 .btn-ghost {
-  background: linear-gradient(180deg, #2a2a3e 0%, #1a1a2e 100%);
-  color: var(--muted); border: 1px solid var(--border);
-  box-shadow: 0 4px 0 #0a0a14, 0 6px 10px rgba(0,0,0,.3);
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
 }
-.btn-ghost:active { transform: translateY(3px); box-shadow: 0 1px 0 #0a0a14; }
-
-/* ─── AUTH SCREEN ───────────────────────────────────────────── */
+.btn-ghost:active { transform: scale(.97); background: var(--surface); }
 .auth-screen {
   position: fixed; inset: 0; background: var(--bg); z-index: 999;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 24px;
 }
-.auth-logo { font-family: 'Arial', sans-serif; font-size: 40px; font-weight: 700; letter-spacing: 4px; color: var(--accent); margin-bottom: 4px; }
+.auth-logo { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: 4px; color: var(--accent); margin-bottom: 4px; }
 .auth-subtitle { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-bottom: 40px; text-transform: uppercase; }
-.auth-title { font-family: 'Arial', sans-serif; font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; color: var(--text); }
+.auth-title { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; color: var(--text); }
 .auth-box { width: 100%; max-width: 340px; }
 .auth-error { color: var(--red); font-size: 13px; margin-bottom: 12px; min-height: 18px; font-family: 'DM Mono', monospace; }
 .auth-success { color: var(--accent2); font-size: 13px; margin-bottom: 12px; font-family: 'DM Mono', monospace; }
 .auth-link { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; margin-top: 6px; }
 .auth-forgot { width: 100%; padding: 10px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; text-decoration: underline; margin-top: 4px; }
-
-/* ─── DETAIL MODAL ──────────────────────────────────────────── */
 .detail-section { margin-bottom: 20px; }
 .detail-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
 .detail-val { font-size: 15px; color: var(--text); }
-.detail-score-big { font-family: 'Arial', sans-serif; font-size: 56px; color: var(--accent); line-height: 1; }
+.detail-score-big { font-family: var(--font-display); font-weight: 700; font-size: 44px; color: var(--accent); line-height: 1; letter-spacing: 1px; }
+.detail-score-line { display: flex; align-items: baseline; gap: 6px; justify-content: flex-end; }
 .btn-row { display: flex; gap: 8px; }
 .btn-row .btn { margin-top: 0; }
-
-/* ─── SETTINGS ──────────────────────────────────────────────── */
 .settings-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 0; border-bottom: 1px solid var(--border);
@@ -248,17 +244,13 @@ textarea { resize: none; min-height: 80px; }
 .settings-row:last-child { border-bottom: none; }
 .settings-label { font-size: var(--fs-lg, 16px); font-weight: 500; }
 .settings-sub { font-size: var(--fs-sm, 13px); color: var(--muted); margin-top: 3px; }
-.settings-btn { padding: 10px 18px; font-size: var(--fs-base, 15px); margin: 0; width: auto; }
-
-/* ─── CHART ─────────────────────────────────────────────────── */
-.chart-wrap { padding: 4px 0; }
+.settings-btn { padding: 10px 18px; font-size: var(--fs-base, 15px); margin: 0; width: auto; text-transform: none; letter-spacing: 0; }
 canvas { width: 100% !important; }
-
-/* ─── ANALYSE ───────────────────────────────────────────────── */
 .analyse-tab {
-  padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border);
   background: var(--card); color: var(--muted); font-size: var(--fs-sm, 14px); font-weight: 600;
   cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
 }
 .analyse-tab.active { background: rgba(232,200,74,.15); color: var(--accent); border-color: var(--accent); }
 .tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
@@ -269,13 +261,10 @@ canvas { width: 100% !important; }
 .a-table .num { text-align: right; font-family: 'DM Mono', monospace; font-weight: 600; }
 .a-bar-wrap { background: var(--border); border-radius: 3px; height: 5px; margin-top: 4px; }
 .a-bar { height: 5px; border-radius: 3px; background: var(--accent); }
-
-/* ─── NOTES ───────────────────────────────────────────────── */
 .notiz-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
 .notiz-meta { display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:6px; }
 .notiz-card.done { opacity: .5; }
 .notiz-card.done .notiz-text { text-decoration: line-through; color: var(--muted); }
-.notiz-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
 .notiz-text { font-size: var(--fs-lg, 16px); line-height: 1.7; }
 .notiz-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .notiz-tag {
@@ -287,19 +276,16 @@ canvas { width: 100% !important; }
 .notiz-tag.open-tag { background: rgba(232,200,74,.1); color: var(--accent); border-color: rgba(232,200,74,.3); }
 .notiz-tag.done-tag { background: rgba(74,232,200,.1); color: var(--accent2); border-color: rgba(74,232,200,.3); }
 .notiz-tag.active { background: rgba(232,200,74,.25); border-color: var(--accent); }
-
-/* ─── PASSEN GRID ───────────────────────────────────────────── */
 .passen-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
-.passen-input { text-align: center; font-family: 'Arial', sans-serif; font-size: 22px; padding: 10px 6px; }
-.serie-total { font-family: 'Arial', sans-serif; font-size: 32px; color: var(--accent); text-align: center; padding: 10px 0; }
-.serie-max { font-size: 15px; color: var(--muted); }
-
-/* ─── MISC ──────────────────────────────────────────────────── */
+.passen-input { text-align: center; font-family: var(--font-display); font-weight: 600; font-size: 22px; padding: 10px 6px; }
+.serie-total { font-family: var(--font-display); font-weight: 700; font-size: 32px; color: var(--accent); text-align: center; padding: 10px 0; letter-spacing: 1px; }
+.serie-max { font-size: 15px; color: var(--muted); font-weight: 500; }
 .divider { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
 .divider-line { flex: 1; height: 1px; background: var(--border); }
 .divider-text { font-size: 10px; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; }
 .type-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.type-btn { padding: 13px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+.type-btn { padding: 13px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; font-family: var(--font-display); font-weight: 600; letter-spacing: .5px; transition: transform .1s; }
+.type-btn:active { transform: scale(.97); }
 .score-check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; margin-bottom: 4px; }
 .check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); background: var(--card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .check-box.checked { background: var(--accent); border-color: var(--accent); }
@@ -309,11 +295,37 @@ canvas { width: 100% !important; }
 .select-row { display: flex; gap: 6px; }
 .select-row select { flex: 1; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-/* ─── DESKTOP (PC browser) ──────────────────────────────────── */
-/* On wide screens, constrain the app to a phone-like column so
-   charts and cards don't blow up to full screen width.
-   Mobile is untouched — this only kicks in above 700px. */
+/* ─── IN-APP DIALOG (replaces prompt/alert/confirm) ─────────── */
+.dlg-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65);
+  backdrop-filter: blur(6px); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 20px;
+  animation: dlgFade .15s ease;
+}
+@keyframes dlgFade { from { opacity: 0; } to { opacity: 1; } }
+.dlg-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; width: 100%; max-width: 340px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.7);
+  animation: dlgPop .2s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+@keyframes dlgPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.dlg-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 1px; padding: 18px 20px 4px; }
+.dlg-msg { font-size: 14px; color: var(--text); line-height: 1.55; padding: 0 20px 18px; }
+.dlg-msg input { margin-top: 12px; }
+.dlg-actions { display: flex; gap: 8px; padding: 0 16px 16px; }
+.dlg-btn {
+  flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: transparent; color: var(--text);
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  letter-spacing: .5px; cursor: pointer; transition: transform .1s, background .15s;
+  text-transform: uppercase;
+}
+.dlg-btn:active { transform: scale(.97); }
+.dlg-btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+.dlg-btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
 @media (min-width: 700px) {
   .app {
     max-width: 560px;
@@ -321,38 +333,24 @@ canvas { width: 100% !important; }
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
   }
-  /* Keep the FAB anchored to the app column, not the screen edge */
-  .fab {
-    right: calc(50vw - 280px + 20px);
-  }
-  /* Center modals horizontally and match the app column width;
-     they still slide up from the bottom (align-items: flex-end inherited) */
-  .modal-backdrop {
-    justify-content: center;
-  }
-  .modal {
-    max-width: 560px;
-  }
+  .fab { right: calc(50vw - 280px + 20px); }
+  .modal-backdrop { justify-content: center; }
+  .modal { max-width: 560px; }
 }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } = React;
 
-// ── Font scale system ────────────────────────────────────────
-const FONT_SCALES = [
-  { id:'normal', label:'Normal', factor:1.0 },
-  { id:'large',  label:'Large',  factor:1.25 },
-  { id:'xlarge', label:'X-Large',factor:1.5 },
-];
-
+/* ════════════════════════════════════════════════════════════════
+   FONT SCALE
+════════════════════════════════════════════════════════════════ */
 function loadFontScale() {
   try { return JSON.parse(localStorage.getItem('claylog_fontscale') || '{"id":"normal","factor":1.0}'); }
   catch { return { id:'normal', factor:1.0 }; }
 }
-
 function applyFontScale(factor) {
   document.documentElement.style.setProperty('--font-scale', factor);
   document.documentElement.style.setProperty('--fs-base', (15 * factor) + 'px');
@@ -360,53 +358,193 @@ function applyFontScale(factor) {
   document.documentElement.style.setProperty('--fs-xs',   (11 * factor) + 'px');
   document.documentElement.style.setProperty('--fs-lg',   (17 * factor) + 'px');
   document.documentElement.style.setProperty('--fs-xl',   (20 * factor) + 'px');
-  // Dampened scale for bottom nav labels: nearly flat until 1.3, then grows moderately
   const navFactor = factor <= 1.3 ? 1.0 + (factor - 1.0) * 0.25 : 1.075 + (factor - 1.3) * 0.5;
   document.documentElement.style.setProperty('--fs-nav', (11 * Math.max(navFactor, 0.7)) + 'px');
 }
-
+// Module-level cache — read once, never hit localStorage on re-render.
+let _fontScaleCache = null;
+function getFontScaleFactor() {
+  if (_fontScaleCache === null) _fontScaleCache = loadFontScale().factor;
+  return _fontScaleCache;
+}
 (function() { applyFontScale(loadFontScale().factor); })();
 
-// ── Theme system ──────────────────────────────────────────────
+/* ════════════════════════════════════════════════════════════════
+   THEME
+════════════════════════════════════════════════════════════════ */
 const THEMES = [
   { id:'mint',   label:'Mint',   accent:'#4ae8c8', accent2:'#e8c84a' },
   { id:'gold',   label:'Gold',   accent:'#f0c030', accent2:'#e87a4a' },
   { id:'purple', label:'Purple', accent:'#b06af0', accent2:'#f06ab0' },
   { id:'custom', label:'Custom', accent:'#4ae8c8', accent2:'#e8c84a' },
 ];
-
 function loadTheme() {
   try {
     const saved = localStorage.getItem('claylog_theme');
     return saved ? JSON.parse(saved) : { id:'gold', accent:'#f0c030', accent2:'#e87a4a' };
   } catch { return { id:'gold', accent:'#f0c030', accent2:'#e87a4a' }; }
 }
-
 function applyTheme(accent, accent2) {
   document.documentElement.style.setProperty('--accent', accent);
   document.documentElement.style.setProperty('--accent2', accent2);
+  try { window.dispatchEvent(new Event('themechange')); } catch {}
 }
-
-// Apply on load
+function useThemeColors() {
+  const read = () => {
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      accent:  (cs.getPropertyValue('--accent').trim())  || '#f0c030',
+      accent2: (cs.getPropertyValue('--accent2').trim()) || '#e87a4a',
+    };
+  };
+  const [colors, setColors] = useState(read);
+  useEffect(() => {
+    const update = () => setColors(read());
+    window.addEventListener('themechange', update);
+    return () => window.removeEventListener('themechange', update);
+  }, []);
+  return colors;
+}
 (function() {
   const t = loadTheme();
-  applyTheme(t.accent, t.accent2);
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--accent2', t.accent2);
 })();
+
+/* ════════════════════════════════════════════════════════════════
+   NAV ICONS
+════════════════════════════════════════════════════════════════ */
+const NAV_ICONS = {
+  dashboard: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  sessions: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/>
+      <circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"/>
+      <circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+      <circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  events: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="16" rx="2.5"/>
+      <line x1="3.5" y1="10" x2="20.5" y2="10"/>
+      <line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>
+    </svg>
+  ),
+  notizen: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/>
+      <polyline points="16 4 16 7 19 7"/>
+      <line x1="7" y1="11" x2="14" y2="11"/><line x1="7" y1="15" x2="16" y2="15"/><line x1="7" y1="19" x2="12" y2="19"/>
+    </svg>
+  ),
+  analyse: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="3.5" y1="20" x2="20.5" y2="20"/>
+      <rect x="5.5" y="11" width="3" height="7" rx="0.6"/>
+      <rect x="10.5" y="6" width="3" height="12" rx="0.6"/>
+      <rect x="15.5" y="14" width="3" height="4" rx="0.6"/>
+    </svg>
+  ),
+  settings: (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+};
+
+/* ════════════════════════════════════════════════════════════════
+   IN-APP DIALOG SYSTEM
+   Replaces window.prompt / window.alert / window.confirm which
+   are blocked or ugly inside iOS standalone PWAs.
+════════════════════════════════════════════════════════════════ */
+const DialogContext = createContext(null);
+function useDialog() { return useContext(DialogContext); }
+
+function DialogHost({ state, onResolve }) {
+  const [text, setText] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => {
+    setText(state?.defaultValue || '');
+    if (state?.kind === 'prompt') {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }
+  }, [state]);
+
+  if (!state) return null;
+  const { kind, title, message, confirmLabel, cancelLabel, danger, placeholder } = state;
+
+  function handleConfirm() { onResolve(kind === 'prompt' ? text : true); }
+  function handleCancel()  { onResolve(kind === 'alert' ? true : (kind === 'prompt' ? null : false)); }
+
+  return (
+    <div className="dlg-backdrop" onClick={e => { if (e.target === e.currentTarget) handleCancel(); }}>
+      <div className="dlg-box" role="dialog" aria-modal="true">
+        {title && <div className="dlg-title">{title}</div>}
+        <div className="dlg-msg">
+          {message}
+          {kind === 'prompt' && (
+            <input
+              ref={inputRef}
+              type="text"
+              value={text}
+              placeholder={placeholder || ''}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirm(); if (e.key === 'Escape') handleCancel(); }}
+            />
+          )}
+        </div>
+        <div className="dlg-actions">
+          {kind !== 'alert' && (
+            <button className="dlg-btn" onClick={handleCancel}>
+              {cancelLabel || 'Cancel'}
+            </button>
+          )}
+          <button className={`dlg-btn ${danger ? 'danger' : 'primary'}`} onClick={handleConfirm}>
+            {confirmLabel || (kind === 'alert' ? 'OK' : 'Confirm')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Hook API: const dlg = useDialog(); await dlg.prompt(...), dlg.confirm(...), dlg.alert(...)
+function useDialogApi() {
+  const [state, setState] = useState(null);
+  const resolverRef = useRef(null);
+
+  function open(opts) {
+    return new Promise(resolve => {
+      resolverRef.current = resolve;
+      setState(opts);
+    });
+  }
+  function resolve(value) {
+    const r = resolverRef.current;
+    resolverRef.current = null;
+    setState(null);
+    if (r) r(value);
+  }
+  return {
+    state,
+    resolve,
+    prompt:  (title, defaultValue='', opts={}) => open({ kind:'prompt', title, defaultValue, ...opts }),
+    confirm: (title, message='', opts={}) => open({ kind:'confirm', title, message, ...opts }),
+    alert:   (title, message='', opts={}) => open({ kind:'alert', title, message, ...opts }),
+  };
+}
 
 /* ════════════════════════════════════════════════════════════════
    SUPABASE CONFIG & API
 ════════════════════════════════════════════════════════════════ */
 const SUPABASE_URL = 'https://zdgpuclshewqgsoqgwmq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZ3B1Y2xzaGV3cWdzb3Fnd21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTQxMjYsImV4cCI6MjA5Mjk3MDEyNn0.F8CcstgVYRYJ_-7UUCAg40wED8VTy95nP2qCPVGNlKs';
-
-function getHeaders(token) {
-  return {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': 'Bearer ' + (token || SUPABASE_KEY),
-    'Prefer': 'return=representation'
-  };
-}
 
 /* ─── OFFLINE SYNC QUEUE ────────────────────────────────────── */
 function loadSyncQueue() {
@@ -415,6 +553,7 @@ function loadSyncQueue() {
 }
 function saveSyncQueue(q) {
   try { localStorage.setItem('claylog_syncqueue', JSON.stringify(q)); } catch {}
+  try { window.dispatchEvent(new Event('syncqueuechange')); } catch {}
 }
 function newOpId() {
   return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
@@ -425,44 +564,35 @@ function queueSyncOp(op) {
   saveSyncQueue(q);
 }
 function isNetworkError(e) {
-  // Failed fetch (offline) vs. a real HTTP error from the server
   return e instanceof TypeError || /network|fetch/i.test(e.message || '');
 }
 async function flushSyncQueue(token) {
   let q = loadSyncQueue();
   if (!q.length) return { ok: 0, failed: 0, authFailed: false };
-  // Migrate legacy ops (queued before v1.0.3) that have no id yet,
-  // so the reconcile step below can match them reliably.
   if (q.some(op => !op.id)) {
     q = q.map(op => op.id ? op : { ...op, id: newOpId() });
     saveSyncQueue(q);
   }
-  const doneIds = new Set();   // synced successfully → remove from queue
-  const dropIds = new Set();   // genuine server errors (bad data) → drop to avoid a stuck queue
+  const doneIds = new Set();
+  const dropIds = new Set();
   let ok = 0;
   let authFailed = false;
   for (const op of q) {
-    if (authFailed) continue; // stop trying, keep the rest in the queue
-    // Use the freshest token: sbFetch may have refreshed it mid-flush.
+    if (authFailed) continue;
     let tok = token;
     try { tok = JSON.parse(localStorage.getItem('claylog_auth'))?.token || token; } catch {}
     try {
-      // noQueue=true: don't let sbFetch re-queue this op on failure — we manage it here.
       await sbFetch(op.method, op.table, op.body, op.filter, tok, true, true);
       ok++;
       doneIds.add(op.id);
     } catch (e) {
       if (e.message === 'AUTH_EXPIRED') {
-        // Token refresh failed (real logout). Keep this + all remaining ops.
         authFailed = true;
       } else if (!isNetworkError(e)) {
-        dropIds.add(op.id); // genuine non-network error (e.g. bad data)
+        dropIds.add(op.id);
       }
-      // Network errors: keep the op in the queue for the next try.
     }
   }
-  // Reconcile against the CURRENT queue instead of overwriting it, so ops
-  // queued by the user while this flush was running are never lost.
   const current = loadSyncQueue().filter(op => !doneIds.has(op.id) && !dropIds.has(op.id));
   saveSyncQueue(current);
   return { ok, failed: current.length, authFailed };
@@ -483,21 +613,18 @@ async function sbFetch(method, table, body, filter, token, retry = true, noQueue
       body: body ? JSON.stringify(body) : null
     });
   } catch (e) {
-    // Network failure (offline) — queue the write so it can be retried later
     if (!noQueue && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
       queueSyncOp({ method, table, body, filter });
     }
     throw e;
   }
   if (res.status === 401) {
-    // Token expired. Try a single refresh + retry before giving up.
     if (retry) {
       try {
         const newToken = await refreshAccessToken();
         return await sbFetch(method, table, body, filter, newToken, false, noQueue);
-      } catch (_) { /* refresh failed → user is effectively logged out */ }
+      } catch (_) {}
     }
-    // Refresh didn't help: preserve writes so they sync after re-login.
     if (!noQueue && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
       queueSyncOp({ method, table, body, filter });
     }
@@ -518,7 +645,6 @@ async function authSignIn(email, password) {
   if (!res.ok) throw new Error(data.error_description || data.msg || 'Login failed');
   return data;
 }
-
 async function authSignUp(email, password, name) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: 'POST',
@@ -529,7 +655,6 @@ async function authSignUp(email, password, name) {
   if (!res.ok) throw new Error(data.error_description || data.msg || 'Sign up failed');
   return data;
 }
-
 async function authRefresh(refreshToken) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
@@ -539,16 +664,8 @@ async function authRefresh(refreshToken) {
   if (!res.ok) throw new Error('Refresh failed');
   return res.json();
 }
-
-/* ─── REACTIVE TOKEN REFRESH ────────────────────────────────────
-   Used by sbFetch when a request comes back 401 (token expired,
-   e.g. the proactive timer was missed while the device slept).
-   Reads the refresh token from localStorage, gets a fresh access
-   token, persists it, and notifies React via _onAuthStateChange.
-   Concurrent 401s share a single in-flight refresh. */
 let _authRefreshInFlight = null;
-let _onAuthStateChange = null; // App registers this on mount
-
+let _onAuthStateChange = null;
 async function refreshAccessToken() {
   if (_authRefreshInFlight) return _authRefreshInFlight;
   _authRefreshInFlight = (async () => {
@@ -564,14 +681,12 @@ async function refreshAccessToken() {
       expires_at: expiresAt
     };
     try { localStorage.setItem('claylog_auth', JSON.stringify(merged)); } catch {}
-    // Keep React state + the proactive refresh timer in sync
     try { _onAuthStateChange && _onAuthStateChange(data, expiresAt); } catch {}
     return data.access_token;
   })();
   try { return await _authRefreshInFlight; }
   finally { _authRefreshInFlight = null; }
 }
-
 async function authForgotPassword(email) {
   await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
     method: 'POST',
@@ -580,25 +695,15 @@ async function authForgotPassword(email) {
   });
 }
 
-/* ════════════════════════════════════════════════════════════════
-   LOCAL STORAGE HELPERS
-════════════════════════════════════════════════════════════════ */
 const LS = {
   get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   del: (k) => { try { localStorage.removeItem(k); } catch {} }
 };
 
-/* ════════════════════════════════════════════════════════════════
-   HELPERS
-════════════════════════════════════════════════════════════════ */
 function fmtDate(dateStr) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-function fmtScore(s) {
-  if (!s || s.score == null) return '';
-  return `${s.score}/${s.max}`;
 }
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -608,7 +713,7 @@ function todayStr() {
    AUTH SCREEN
 ════════════════════════════════════════════════════════════════ */
 function AuthScreen({ onLogin }) {
-  const [mode, setMode] = useState('login'); // login | register
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -622,11 +727,9 @@ function AuthScreen({ onLogin }) {
     try {
       const data = await authSignIn(email, password);
       onLogin(data);
-    } catch(e) {
-      setError(e.message);
-    } finally { setLoading(false); }
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
   }
-
   async function handleRegister() {
     if (!email || !password || !name) { setError('Please fill in all fields.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
@@ -642,11 +745,9 @@ function AuthScreen({ onLogin }) {
         setSuccess('✅ Account created! Please confirm your email and sign in.');
         setTimeout(() => { setMode('login'); setSuccess(''); }, 3000);
       }
-    } catch(e) {
-      setError(e.message);
-    } finally { setLoading(false); }
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
   }
-
   async function handleForgot() {
     if (!email) { setError('Bitte zuerst E-Mail eingeben.'); return; }
     setLoading(true);
@@ -656,7 +757,6 @@ function AuthScreen({ onLogin }) {
     } catch { setError('Error sending email.'); }
     finally { setLoading(false); }
   }
-
   return (
     <div className="auth-screen">
       <div style={{marginBottom:'8px',textAlign:'center'}}>
@@ -706,14 +806,23 @@ function AuthScreen({ onLogin }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   HEADER
+   HEADER — queueLen is now reactive state, not a per-render read
 ════════════════════════════════════════════════════════════════ */
 function Header({ user, syncStatus, showEdit, editMode, onToggleEdit }) {
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || '';
   const dateStr = new Date().toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' }).toUpperCase();
-  const queueLen = (() => { try { return JSON.parse(localStorage.getItem('claylog_syncqueue')||'[]').length; } catch { return 0; } })();
+  const [queueLen, setQueueLen] = useState(() => loadSyncQueue().length);
+  useEffect(() => {
+    const update = () => setQueueLen(loadSyncQueue().length);
+    window.addEventListener('syncqueuechange', update);
+    window.addEventListener('online', update);
+    return () => {
+      window.removeEventListener('syncqueuechange', update);
+      window.removeEventListener('online', update);
+    };
+  }, []);
   const statusIcon = syncStatus === 'syncing' ? '⟳' : syncStatus === 'ok' ? '✓' : syncStatus === 'error' ? '✗' : syncStatus === 'offline' ? '📡' : '';
-  const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : syncStatus === 'offline' ? 'var(--muted)' : 'var(--muted)';
+  const statusColor = syncStatus === 'ok' ? 'var(--accent2)' : syncStatus === 'error' ? 'var(--red)' : 'var(--muted)';
   const statusTitle = syncStatus === 'offline' ? (queueLen > 0 ? `Offline · ${queueLen} pending` : 'Offline') : '';
 
   return (
@@ -750,14 +859,10 @@ function Header({ user, syncStatus, showEdit, editMode, onToggleEdit }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   BOTTOM NAV
-════════════════════════════════════════════════════════════════ */
-/* ════════════════════════════════════════════════════════════════
-   ICS FEED — parse & fetch
+   ICS FEED
 ════════════════════════════════════════════════════════════════ */
 function parseICS(text) {
   if (!text) return [];
-  // Unfold long lines (ICS spec: lines split with CRLF + space/tab)
   text = text.replace(/\r\n[ \t]/g, '').replace(/\r/g, '');
   const events = [];
   const blocks = text.split('BEGIN:VEVENT');
@@ -798,11 +903,10 @@ function parseICS(text) {
 }
 
 const ICS_CACHE_KEY = 'claylog_ics_cache';
-const ICS_CACHE_TTL = 30 * 60 * 1000; // 30 min
+const ICS_CACHE_TTL = 30 * 60 * 1000;
 
 function useICSFeed(url) {
-  const [events, setEvents]   = useState(() => {
-    // Load from cache immediately on mount
+  const [events, setEvents] = useState(() => {
     try {
       const c = JSON.parse(localStorage.getItem(ICS_CACHE_KEY)||'{}');
       if (c.url === url && c.data && Date.now() - c.ts < ICS_CACHE_TTL) {
@@ -812,28 +916,25 @@ function useICSFeed(url) {
     return [];
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
-  const [debugInfo, setDebugInfo] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!url) { setEvents([]); return; }
-
-    // Check cache — if fresh, skip fetch
     try {
       const c = JSON.parse(localStorage.getItem(ICS_CACHE_KEY)||'{}');
       if (c.url === url && c.data && Date.now() - c.ts < ICS_CACHE_TTL) {
         setEvents(c.data.map(e => ({ ...e, start: new Date(e.start) })));
-        setDebugInfo('from cache');
-        return; // skip network request
+        return;
       }
     } catch {}
 
     setLoading(true); setError(null);
 
-    // Helper: fetch via one proxy with 5s timeout
+    // Stagger proxy attempts: try a proxy, and only start the next one if this
+    // one fails. Reduces traffic vs. racing all 4 in parallel.
     async function tryProxy(proxyUrl) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
+      const timer = setTimeout(() => controller.abort(), 6000);
       try {
         const r = await fetch(proxyUrl, { signal: controller.signal });
         clearTimeout(timer);
@@ -858,17 +959,14 @@ function useICSFeed(url) {
         `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
         `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
       ];
-
-      // Race all proxies in parallel — take first success
-      const text = await Promise.any(
-        proxies.map(p => tryProxy(p).then(t => { if (!t) throw new Error('no data'); return t; }))
-      ).catch(() => null);
-
+      let text = null;
+      for (const p of proxies) {
+        text = await tryProxy(p);
+        if (text) break;
+      }
       if (text) {
         const parsed = parseICS(text);
         setEvents(parsed);
-        setDebugInfo(`OK: ${parsed.length} events`);
-        // Save to cache
         try {
           localStorage.setItem(ICS_CACHE_KEY, JSON.stringify({
             url, ts: Date.now(),
@@ -880,14 +978,12 @@ function useICSFeed(url) {
       }
       setLoading(false);
     }
-
     fetchFeed();
   }, [url]);
 
-  return { events, loading, error, debugInfo };
+  return { events, loading, error };
 }
 
-/* ── Modal body-scroll lock (iOS fix) ── */
 function useModalLock(open) {
   useEffect(() => {
     if (!open) return;
@@ -909,24 +1005,24 @@ function useModalLock(open) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   EVENT FORM — minimal centered dialog (alert-style)
+   EVENT FORM MODAL
 ════════════════════════════════════════════════════════════════ */
 function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }) {
   useModalLock(true);
-  const [name, setName]           = useState(existing?.name || '');
-  const [ort, setOrt]             = useState(existing?.ort || '');
+  const dlg = useDialog();
+  const [name, setName] = useState(existing?.name || '');
+  const [ort, setOrt] = useState(existing?.ort || '');
   const [dateStart, setDateStart] = useState(existing?.dateStart || new Date().toISOString().slice(0,10));
-  const [dateEnd, setDateEnd]     = useState(existing?.dateEnd || existing?.dateStart || new Date().toISOString().slice(0,10));
+  const [dateEnd, setDateEnd] = useState(existing?.dateEnd || existing?.dateStart || new Date().toISOString().slice(0,10));
   const isEdit = !!existing?.id;
 
-  // Keep dateEnd in sync when dateStart moves forward
   function handleDateStart(val) {
     setDateStart(val);
     if (!dateEnd || dateEnd < val) setDateEnd(val);
   }
 
   function handleSave() {
-    if (!name.trim()) { alert('Please enter a name.'); return; }
+    if (!name.trim()) { dlg.alert('Missing name', 'Please enter a name for this competition.'); return; }
     const ev = {
       id: existing?.id || crypto.randomUUID(),
       name: name.trim(), ort: ort.trim(),
@@ -936,7 +1032,10 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
     onSave(ev);
   }
 
-  const gcalUrl = makeGCalUrl({ title: name||'Competition', date: dateStart, dateEnd, location: ort });
+  async function handleDelete() {
+    const ok = await dlg.confirm('Delete competition?', 'This cannot be undone.', { danger: true, confirmLabel: 'Delete' });
+    if (ok) { onDelete(existing.id); onClose(); }
+  }
 
   return (
     <div style={{
@@ -944,11 +1043,9 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
       zIndex:500, display:'flex', alignItems:'center', justifyContent:'center',
       pointerEvents:'all',
     }}>
-      {/* Dim backdrop — does NOT scroll */}
       <div style={{position:'absolute', inset:0, background:'rgba(0,0,0,0.6)'}}
         onClick={onClose}/>
 
-      {/* Dialog box — stays centered, never scrolls */}
       <div style={{
         position:'relative', zIndex:1,
         background:'var(--surface)',
@@ -957,12 +1054,12 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
         width:'calc(100% - 48px)',
         maxWidth:340,
         padding:'20px 18px 16px',
+        boxShadow:'0 24px 64px rgba(0,0,0,.6)'
       }}>
-        <div style={{fontWeight:700, fontSize:15, marginBottom:14, textAlign:'center'}}>
+        <div style={{fontFamily:'var(--font-display)',fontWeight:700, fontSize:15, marginBottom:14, textAlign:'center', letterSpacing:1}}>
           {isEdit ? 'Edit competition' : 'Add competition'}
         </div>
 
-        {/* Name */}
         <div style={{marginBottom:10}}>
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
             letterSpacing:1,marginBottom:5}}>NAME</div>
@@ -971,7 +1068,6 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             style={{fontSize:15}}/>
         </div>
 
-        {/* Location */}
         <div style={{marginBottom:10}}>
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
             letterSpacing:1,marginBottom:5}}>LOCATION</div>
@@ -980,7 +1076,6 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
             style={{fontSize:15}}/>
         </div>
 
-        {/* Dates — native iOS picker */}
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16}}>
           <div>
             <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',
@@ -998,32 +1093,22 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
           </div>
         </div>
 
-        {/* Buttons */}
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
           <button onClick={onClose} style={{
             padding:'11px', borderRadius:10, border:'1px solid var(--border)',
             background:'transparent', color:'var(--muted)',
-            fontFamily:'DM Mono,monospace', fontSize:13, cursor:'pointer'
+            fontFamily:'var(--font-display)', fontSize:13, cursor:'pointer', fontWeight:600
           }}>Cancel</button>
-          <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
-            onClick={e => {
-              if (!name.trim()) { e.preventDefault(); alert('Please enter a name.'); return; }
-              handleSave();
-            }}
-            style={{
+          <button onClick={handleSave} style={{
               padding:'11px', borderRadius:10, border:'none',
               background:'var(--accent)', color:'#111',
-              fontFamily:'DM Mono,monospace', fontSize:13, fontWeight:700,
-              cursor:'pointer', textDecoration:'none',
-              display:'flex', alignItems:'center', justifyContent:'center', gap:6
+              fontFamily:'var(--font-display)', fontSize:13, fontWeight:700,
+              cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6
             }}>
-            <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png"
-              style={{width:16,height:16}} alt=""/>
             Save
-          </a>
+          </button>
         </div>
 
-        {/* Secondary actions for edit mode */}
         {isEdit && (
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8}}>
             {onCreateSession && (
@@ -1034,7 +1119,7 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
                 🏆 Session
               </button>
             )}
-            <button onClick={()=>{ if(confirm('Delete?')){ onDelete(existing.id); onClose(); } }}
+            <button onClick={handleDelete}
               style={{padding:'9px', borderRadius:10, border:'1px solid var(--red)',
                 background:'transparent', color:'var(--red)',
                 fontFamily:'DM Mono,monospace', fontSize:12, cursor:'pointer'}}>
@@ -1048,44 +1133,44 @@ function EventFormModal({ existing, onSave, onDelete, onClose, onCreateSession }
 }
 
 /* ════════════════════════════════════════════════════════════════
-   EVENTS PAGE — ICS feed + manual events combined
+   EVENTS PAGE
 ════════════════════════════════════════════════════════════════ */
 function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreateSession }) {
-  const { events: icsEvents, loading, error, debugInfo } = useICSFeed(icsUrl);
+  const { events: icsEvents, loading, error } = useICSFeed(icsUrl);
   const [selected, setSelected] = useState(null);
-  const [editEvent, setEditEvent] = useState(null); // null=closed, {}=new, ev=edit
+  const [editEvent, setEditEvent] = useState(null);
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
   useModalLock(!!(selected || editEvent));
 
-  // Normalise manual events to same shape as ICS
-  const manualNorm = manualEvents.filter(ev => ev.id && ev.name && ev.dateStart).map(ev => ({
-    uid: ev.id,
-    title: ev.name,
-    location: ev.ort || '',
-    notes: ev.notes || '',
-    date: ev.dateStart,
-    dateEnd: ev.dateEnd || ev.dateStart,
-    start: new Date(ev.dateStart + 'T00:00:00'),
-    allDay: true,
-    source: 'manual',
-    _raw: ev,
-  }));
+  // Manual events: derive a stable id even if the stored one is missing,
+  // so entries never silently disappear.
+  const manualNorm = manualEvents.map((ev, idx) => {
+    const dateStart = ev.dateStart || ev.date || '';
+    if (!ev.name || !dateStart) return null;
+    return {
+      uid: ev.id || `manual-${idx}-${dateStart}-${ev.name}`,
+      title: ev.name,
+      location: ev.ort || '',
+      notes: ev.notes || '',
+      date: dateStart,
+      dateEnd: ev.dateEnd || dateStart,
+      start: new Date(dateStart + 'T00:00:00'),
+      allDay: true,
+      source: 'manual',
+      _raw: ev.id ? ev : { ...ev, id: ev.id || `manual-${idx}-${dateStart}-${ev.name}` },
+    };
+  }).filter(Boolean);
 
-  // Deduplicate: remove manual events that already exist in ICS (by date + title)
   const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
   const manualDeduped = manualNorm.filter(m =>
     !icsEvents.some(ics =>
-      ics.date === m.date &&
-      normalize(ics.title) === normalize(m.title)
+      ics.date === m.date && normalize(ics.title) === normalize(m.title)
     )
   );
 
-  // Merge + sort
-  const allEvents = [...manualDeduped, ...icsEvents]
-    .sort((a,b) => a.start - b.start);
-
+  const allEvents = [...manualDeduped, ...icsEvents].sort((a,b) => a.start - b.start);
   const upcoming = allEvents.filter(e => (e.dateEnd || e.date) >= todayStr);
   const past     = allEvents.filter(e => (e.dateEnd || e.date) < todayStr);
 
@@ -1142,7 +1227,6 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
 
   return (
     <div>
-      {/* + Competition Button */}
       <button className="btn btn-primary" style={{width:'100%',marginBottom:12,marginTop:4}}
         onClick={()=>setEditEvent({})}>
         + Add competition
@@ -1152,11 +1236,11 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
       {error && <div style={{padding:'8px 0',color:'var(--red)',fontFamily:'DM Mono,monospace',fontSize:12}}>{error}</div>}
 
       {!loading && allEvents.length === 0 && (
-        <div style={{padding:'32px 0',textAlign:'center'}}>
-          <div style={{fontSize:40,marginBottom:12}}>📅</div>
-          <div style={{color:'var(--muted)',fontFamily:'DM Mono,monospace',fontSize:13}}>
-            No events yet.<br/>Add a competition or connect an ICS feed in Settings.
+        <div className="empty">
+          <div className="empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
           </div>
+          <div className="empty-text">No events yet.<br/>Add a competition or connect an ICS feed in Settings.</div>
         </div>
       )}
 
@@ -1173,7 +1257,6 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
         </div>
       )}
 
-      {/* ICS detail popup */}
       {selected && (
         <div onClick={()=>setSelected(null)} style={{
           position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',
@@ -1185,7 +1268,7 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
           }}>
             <div style={{background:'var(--accent)',padding:'16px 16px 14px',
               display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
-              <div style={{fontWeight:800,fontSize:18,color:'#111',lineHeight:1.3,flex:1}}>{selected.title}</div>
+              <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:18,color:'#111',lineHeight:1.3,flex:1,letterSpacing:.5}}>{selected.title}</div>
               <button onClick={()=>setSelected(null)} style={{
                 background:'#c0392b',border:'none',borderRadius:10,width:36,height:36,
                 fontSize:22,fontWeight:700,color:'#fff',cursor:'pointer',
@@ -1202,7 +1285,7 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
                   {selected.notes}
                 </div>
               )}
-              <button className="btn btn-primary" style={{width:'100%',marginTop:4,fontSize:15,padding:'13px'}}
+              <button className="btn btn-primary" style={{width:'100%',marginTop:4,fontSize:14,padding:'13px'}}
                 onClick={()=>{
                   onCreateSession({ date:selected.date, name:selected.title, ort:selected.location, type:'competition' });
                   setSelected(null);
@@ -1222,7 +1305,6 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
         </div>
       )}
 
-      {/* EventFormModal */}
       {editEvent !== null && (
         <EventFormModal
           existing={editEvent?.id ? editEvent : null}
@@ -1237,12 +1319,12 @@ function EventsPage({ icsUrl, manualEvents, onSaveEvent, onDeleteEvent, onCreate
 }
 
 const NAV_ITEMS = [
-  { id: 'dashboard', icon: '🎯', label: 'Home',     hideable: false },
-  { id: 'sessions',  icon: '📋', label: 'Sessions', hideable: true  },
-  { id: 'events',    icon: '📅', label: 'Events',   hideable: true  },
-  { id: 'notizen',   icon: '📝', label: 'Notes',    hideable: true  },
-  { id: 'analyse',   icon: '🔬', label: 'Stats',    hideable: true  },
-  { id: 'settings',  icon: '⚙️', label: 'Settings', hideable: false },
+  { id: 'dashboard', icon: 'dashboard', label: 'Home',     hideable: false },
+  { id: 'sessions',  icon: 'sessions',  label: 'Sessions', hideable: true  },
+  { id: 'events',    icon: 'events',    label: 'Events',   hideable: true  },
+  { id: 'notizen',   icon: 'notizen',   label: 'Notes',    hideable: true  },
+  { id: 'analyse',   icon: 'analyse',   label: 'Stats',    hideable: true  },
+  { id: 'settings',  icon: 'settings',  label: 'Settings', hideable: false },
 ];
 
 const OPTIONAL_FIELDS = [
@@ -1253,17 +1335,20 @@ const OPTIONAL_FIELDS = [
   { id: 'ammo',     label: 'Ammo' },
   { id: 'gun',      label: 'Gun' },
 ];
-
+const FIELD_CONFIG_KEY = 'claylog_fieldconfig';
+let _fieldConfigCache = null;
 function loadFieldConfig() {
+  if (_fieldConfigCache !== null) return _fieldConfigCache;
   try {
-    const saved = JSON.parse(localStorage.getItem('claylog_fieldconfig') || 'null');
-    if (saved) return saved;
+    const saved = JSON.parse(localStorage.getItem(FIELD_CONFIG_KEY) || 'null');
+    if (saved) { _fieldConfigCache = saved; return saved; }
   } catch {}
-  // Default: all fields visible
-  return Object.fromEntries(OPTIONAL_FIELDS.map(f => [f.id, true]));
+  _fieldConfigCache = Object.fromEntries(OPTIONAL_FIELDS.map(f => [f.id, true]));
+  return _fieldConfigCache;
 }
 function saveFieldConfig(cfg) {
-  try { localStorage.setItem('claylog_fieldconfig', JSON.stringify(cfg)); } catch {}
+  _fieldConfigCache = cfg;
+  try { localStorage.setItem(FIELD_CONFIG_KEY, JSON.stringify(cfg)); } catch {}
 }
 
 function FormModeSettings() {
@@ -1325,7 +1410,7 @@ function BottomNav({ active, onChange }) {
     <nav className="bottom-nav">
       {visible.map(item => (
         <div key={item.id} className={`nav-item ${active===item.id?'active':''}`} onClick={()=>onChange(item.id)}>
-          <div className="nav-icon">{item.icon}</div>
+          {NAV_ICONS[item.icon]}
           <div className="nav-label">{item.label}</div>
         </div>
       ))}
@@ -1334,9 +1419,9 @@ function BottomNav({ active, onChange }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SESSION ITEM (shared component)
+   SESSION ITEM
 ════════════════════════════════════════════════════════════════ */
-function SessionItem({ s, compact, onClick }) {
+function SessionItem({ s, onClick }) {
   const isComp = s.type === 'competition';
   const hasScore = s.score != null && s.max != null && s.max > 0;
   return (
@@ -1361,11 +1446,8 @@ function SessionItem({ s, compact, onClick }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   CHART HELPERS — smoothing, gradients, interaction
+   CHART HELPERS
 ════════════════════════════════════════════════════════════════ */
-
-// Catmull-Rom → cubic Bézier: smooth line through all points.
-// Falls back to straight segments for <3 points.
 function smoothPath(pts) {
   if (!pts.length) return '';
   if (pts.length < 3) {
@@ -1377,7 +1459,7 @@ function smoothPath(pts) {
     const p1 = pts[i];
     const p2 = pts[i+1];
     const p3 = pts[i+2] || p2;
-    const t = 0.16; // tension
+    const t = 0.16;
     const c1x = p1.x + (p2.x - p0.x) * t;
     const c1y = p1.y + (p2.y - p0.y) * t;
     const c2x = p2.x - (p3.x - p1.x) * t;
@@ -1386,9 +1468,6 @@ function smoothPath(pts) {
   }
   return d;
 }
-
-// Reusable <defs>: soft area gradients + a subtle glow filter.
-// Rendered once per SVG; ids are namespaced to avoid collisions.
 function ChartDefs({ id, colors = [] }) {
   return (
     <defs>
@@ -1406,9 +1485,6 @@ function ChartDefs({ id, colors = [] }) {
     </defs>
   );
 }
-
-// Finds nearest point to a tap/drag on an SVG, in viewBox coordinates.
-// Returns the index into `pts` (array of {x,...}) or null.
 function nearestPointIdx(evt, svgEl, pts, viewW) {
   if (!svgEl || !pts.length) return null;
   const rect = svgEl.getBoundingClientRect();
@@ -1423,19 +1499,17 @@ function nearestPointIdx(evt, svgEl, pts, viewW) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   DASHBOARD
+   MUNITIONS CHARTS (bug: removed unused `scale` prop)
 ════════════════════════════════════════════════════════════════ */
-function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, year }) {
+function MunitionsChartCumulative({ monthlyData, currentMonth }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const svgRef = React.useRef(null);
   const [sel, setSel] = React.useState(null);
+  const theme = useThemeColors();
 
-  // Build cumulative data
   let cum = 0;
   const cumData = monthlyData.map(v => { cum += v; return cum; });
   const cumMax = Math.max(cumData[cumData.length-1], 1);
-
-  // Draw up to last month that has any data
   const lastIdx = monthlyData.reduce((last, v, i) => v > 0 ? i : last, 0);
 
   const W = 280, H = 140;
@@ -1446,7 +1520,6 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
   function toX(i) { return padL + (i / 11) * chartW; }
   function toY(v) { return padT + chartH - (v / cumMax) * chartH; }
 
-  // Build line path only up to lastIdx
   const pts = cumData.slice(0, lastIdx + 1).map((v, i) => ({ x: toX(i), y: toY(v), v, i }));
   const linePath = smoothPath(pts);
   const areaPath = pts.length > 0
@@ -1457,8 +1530,6 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
     const idx = nearestPointIdx(e, svgRef.current, pts, W);
     if (idx !== null) setSel(idx);
   }
-
-  // Y axis: 3 evenly spaced lines at 25%, 50%, 75% of cumMax, rounded to nice numbers
   function niceRound(v) {
     if (v === 0) return 0;
     const mag = Math.pow(10, Math.floor(Math.log10(v)));
@@ -1471,10 +1542,7 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
     <div style={{position:'relative'}}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
         onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
-
-        <ChartDefs id="cum" colors={['#4ae8c8']} />
-
-        {/* Grid lines */}
+        <ChartDefs id="cum" colors={[theme.accent2]} />
         {gridVals.map(v => (
           <g key={v}>
             <line x1={padL} y1={toY(v)} x2={W-padR} y2={toY(v)}
@@ -1485,11 +1553,7 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
             </text>
           </g>
         ))}
-
-        {/* Area fill (gradient) */}
         {areaPath && <path d={areaPath} fill="url(#cum-grad-0)"/>}
-
-        {/* Monthly bars (subtle, in background) */}
         {monthlyData.map((val, i) => {
           if (i > lastIdx) return null;
           const barW = chartW / 12 * 0.5;
@@ -1501,56 +1565,47 @@ function MunitionsChartCumulative({ monthlyData, maxVal, currentMonth, total, ye
               fill={isCur ? 'rgba(232,200,74,0.35)' : 'rgba(74,100,130,0.3)'} rx="1"/>
           ) : null;
         })}
-
-        {/* Cumulative line (smooth + glow) */}
-        {linePath && <path d={linePath} fill="none" stroke="var(--accent2,#4ae8c8)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" filter="url(#cum-glow)"/>}
-
-        {/* Selection guide line */}
-        {selPt && <line x1={selPt.x} y1={padT} x2={selPt.x} y2={padT+chartH} stroke="var(--accent2,#4ae8c8)" strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.5"/>}
-
-        {/* Dots on cumulative line */}
+        {linePath && <path d={linePath} fill="none" stroke={theme.accent2} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" filter="url(#cum-glow)"/>}
+        {selPt && <line x1={selPt.x} y1={padT} x2={selPt.x} y2={padT+chartH} stroke={theme.accent2} strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.5"/>}
         {pts.map((p, i) => {
           const isCur = p.i === currentMonth;
           const isSel = sel === i;
           return (
             <circle key={i} cx={p.x} cy={p.y} r={isSel ? 6 : isCur ? 4.5 : 3.5}
-              fill={isCur ? 'var(--accent)' : 'var(--accent2,#4ae8c8)'}
+              fill={isCur ? theme.accent : theme.accent2}
               stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 1.5 : 0}
             />
           );
         })}
-
-        {/* Month labels */}
         {monthlyData.map((_, i) => (
           <text key={i} x={toX(i)} y={H-6} textAnchor="middle"
-            fill={i===currentMonth ? 'var(--accent)' : '#7a7a98'}
+            fill={i===currentMonth ? theme.accent : '#7a7a98'}
             fontSize="9" fontFamily="DM Mono,monospace"
             fontWeight={i===currentMonth?'bold':'normal'}>
             {MONTHS[i].slice(0,1)}
           </text>
         ))}
       </svg>
-
-      {/* Tooltip */}
       {selPt && (
         <div style={{
           position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
           transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
-          background:'var(--surface)', border:'1px solid var(--accent2,#4ae8c8)',
+          background:'var(--surface)', border:`1px solid ${theme.accent2}`,
           borderRadius:8, padding:'4px 9px', pointerEvents:'none',
           fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
         }}>
           <span style={{color:'var(--muted)'}}>{MONTHS[selPt.i]} · </span>
-          <span style={{color:'var(--accent2,#4ae8c8)',fontWeight:'bold'}}>{selPt.v.toLocaleString()}</span>
+          <span style={{color:theme.accent2,fontWeight:'bold'}}>{selPt.v.toLocaleString()}</span>
         </div>
       )}
     </div>
   );
 }
 
-function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, year, scale }) {
+function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const H = 14; // height per row in viewBox units
+  const theme = useThemeColors();
+  const H = 14;
   const GAP = 3;
   const ROW = H + GAP;
   const W = 260;
@@ -1566,21 +1621,17 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
           const isPast = i <= currentMonth;
           const bw = maxVal > 0 ? (val / maxVal) * chartW : 0;
           const y = padT + i * ROW;
-          const color = isCur ? 'var(--accent)' : isPast ? '#3a4a5a' : '#1e1e2a';
-          const labelColor = isCur ? 'var(--accent)' : val > 0 ? '#9a9abb' : '#3a3a4a';
+          const color = isCur ? theme.accent : isPast ? '#3a4a5a' : '#1e1e2a';
+          const labelColor = isCur ? theme.accent : val > 0 ? '#9a9abb' : '#3a3a4a';
           return (
             <g key={i}>
-              {/* Month label */}
               <text x={padL-3} y={y + H*0.75} textAnchor="end"
                 fill={labelColor} fontSize={9.5} fontFamily="DM Mono,monospace"
                 fontWeight={isCur ? 'bold' : 'normal'}>
                 {MONTHS[i]}
               </text>
-              {/* Background track */}
               <rect x={padL} y={y+1} width={chartW} height={H-2} fill="#1a1a24" rx="3"/>
-              {/* Bar */}
               {val > 0 && <rect x={padL} y={y+1} width={bw} height={H-2} fill={color} rx="3"/>}
-              {/* Value */}
               <text x={padL + chartW + 4} y={y + H*0.75} textAnchor="start"
                 fill={labelColor} fontSize={9.5} fontFamily="DM Mono,monospace" fontWeight="bold">
                 {val > 0 ? val.toLocaleString() : '–'}
@@ -1593,27 +1644,30 @@ function MunitionsChartHorizontal({ monthlyData, maxVal, currentMonth, total, ye
   );
 }
 
-function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year, scale }) {
+function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth }) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const [active, setActive] = useState(null);
+  const theme = useThemeColors();
 
-  // 4 cols × 3 rows grid
   const COLS = 4, ROWS = 3;
   const W = 260, H = 140;
   const padL = 4, padR = 4, padT = 4, padB = 4;
   const cellW = (W - padL - padR) / COLS;
   const cellH = (H - padT - padB) / ROWS;
 
+  function hexToRgbLocal(hex) {
+    const h = hex.replace('#','');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  const [ar, ag, ab] = hexToRgbLocal(theme.accent);
+
   function getColor(val) {
     if (val === 0) return '#1a1a24';
     const intensity = val / maxVal;
-    // interpolate from dim to accent
-    const r1=26,g1=26,b1=36; // dark base
-    // parse accent color — use a fixed warm gold as fallback
-    const r2=240,g2=180,b2=50;
-    const r = Math.round(r1 + (r2-r1)*intensity);
-    const g = Math.round(g1 + (g2-g1)*intensity);
-    const b = Math.round(b1 + (b2-b1)*intensity);
+    const r1=26,g1=26,b1=36;
+    const r = Math.round(r1 + (ar-r1)*intensity);
+    const g = Math.round(g1 + (ag-g1)*intensity);
+    const b = Math.round(b1 + (ab-b1)*intensity);
     return `rgb(${r},${g},${b})`;
   }
 
@@ -1629,28 +1683,24 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year,
           const isActive = active === i;
           const fillColor = getColor(val);
           const textColor = val/maxVal > 0.5 ? '#0a0a0c' : '#9a9abb';
-
           return (
             <g key={i}
               onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(null)}
               onTouchStart={() => setActive(active===i ? null : i)}
               style={{cursor:'pointer'}}>
-              {/* Cell background */}
               <rect x={x+2} y={y+2} width={cellW-4} height={cellH-4}
                 fill={fillColor} rx="6"
-                stroke={isCur ? 'var(--accent)' : 'transparent'}
+                stroke={isCur ? theme.accent : 'transparent'}
                 strokeWidth="1.5"/>
-              {/* Month label */}
               <text x={x + cellW/2} y={y + cellH*0.38}
                 textAnchor="middle" fill={val>0 ? textColor : '#3a3a5a'}
                 fontSize="8" fontFamily="DM Mono,monospace">
                 {MONTHS[i]}
               </text>
-              {/* Value or placeholder */}
               <text x={x + cellW/2} y={y + cellH*0.72}
                 textAnchor="middle"
-                fill={val>0 ? (val/maxVal>0.5 ? '#0a0a0c' : 'var(--accent)') : '#2a2a3a'}
+                fill={val>0 ? (val/maxVal>0.5 ? '#0a0a0c' : theme.accent) : '#2a2a3a'}
                 fontSize={isActive ? "9" : "8"} fontWeight="bold"
                 fontFamily="DM Mono,monospace">
                 {val > 0 ? val.toLocaleString() : '·'}
@@ -1659,14 +1709,13 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year,
           );
         })}
       </svg>
-      {/* Colour scale legend */}
       <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,justifyContent:'flex-end'}}>
         <span style={{fontSize:9,color:'#6a6a88',fontFamily:'DM Mono,monospace'}}>0</span>
         <svg width="60" height="8" style={{borderRadius:4,overflow:'hidden'}}>
           <defs>
             <linearGradient id="heatGrad" x1="0" x2="1" y1="0" y2="0">
               <stop offset="0%" stopColor="#1a1a24"/>
-              <stop offset="100%" stopColor="rgb(240,180,50)"/>
+              <stop offset="100%" stopColor={theme.accent}/>
             </linearGradient>
           </defs>
           <rect width="60" height="8" fill="url(#heatGrad)" rx="2"/>
@@ -1678,50 +1727,41 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth, total, year,
 }
 
 function MunitionsChart({ sessions, year, variant = 'full' }) {
-  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
   const [chartType, setChartType] = useState(() => {
     try { return localStorage.getItem('claylog_shellchart') || 'cumulative'; } catch { return 'cumulative'; }
   });
-
   const monthlyData = Array(12).fill(0);
   sessions.filter(s => (s.date||'').startsWith(year))
     .forEach(s => {
       const m = parseInt((s.date||'').slice(5,7)) - 1;
       if (m >= 0 && m < 12) monthlyData[m] += s.munition || 0;
     });
-
   const maxVal = Math.max(...monthlyData, 1);
   const currentMonth = new Date().getMonth();
   const total = monthlyData.reduce((a,v) => a+v, 0);
-  const scale = loadFontScale().factor;
   const isMini = variant === 'mini';
 
   function setType(t) {
     setChartType(t);
     try { localStorage.setItem('claylog_shellchart', t); } catch {}
   }
-
   if (isMini) {
-    // Mini: simple heatmap, no controls
     return (
       <div className="card" style={{marginBottom:0}}>
         <div className="card-header" style={{marginBottom:4}}>
           <span className="card-title" style={{fontSize:12}}>Shells {year}</span>
           <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--accent)'}}>{total.toLocaleString()}</span>
         </div>
-        <MunitionsChartHeatmap monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year} scale={scale}/>
+        <MunitionsChartHeatmap monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth}/>
       </div>
     );
   }
-
   return (
     <div className="card" style={{marginBottom:12}}>
       <div className="card-header">
         <span className="card-title">Shells fired {year}</span>
-        <span style={{fontFamily:'DM Mono,monospace',fontSize:20,fontWeight:400,color:'var(--accent)',letterSpacing:0.5}}>{total.toLocaleString()} shells</span>
+        <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:18,color:'var(--accent)',letterSpacing:0.5}}>{total.toLocaleString()}</span>
       </div>
-
-      {/* Chart type toggle */}
       <div style={{display:'flex',gap:6,marginBottom:10}}>
         {[['cumulative','📈 Cumul.'],['horizontal','≡ Bars']].map(([t,l]) => (
           <button key={t}
@@ -1730,20 +1770,19 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
             onClick={() => setType(t)}>{l}</button>
         ))}
       </div>
-
       {total === 0 ? (
         <div className="empty" style={{padding:'20px 0'}}>
           <div className="empty-text">No shell data for {year}.</div>
         </div>
       ) : chartType === 'cumulative' ? (
-        <MunitionsChartCumulative monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year}/>
+        <MunitionsChartCumulative monthlyData={monthlyData} currentMonth={currentMonth}/>
       ) : (
-        <MunitionsChartHorizontal monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth} total={total} year={year} scale={scale}/>
+        <MunitionsChartHorizontal monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth}/>
       )}
     </div>
   );
 }
-// ── Dashboard block definitions ──────────────────────────────
+
 const DEFAULT_BLOCKS = [
   { id: 'stats',     label: 'Stats',          visible: true  },
   { id: 'nextEvent', label: 'Next Event',      visible: true  },
@@ -1751,37 +1790,36 @@ const DEFAULT_BLOCKS = [
   { id: 'score',     label: 'Score (mini)',    visible: false },
   { id: 'recent',    label: 'Recent',          visible: true  },
 ];
-
+const BLOCKS_KEY = 'claylog_blocks';
+let _blocksCache = null;
 function loadBlocks() {
+  if (_blocksCache !== null) return _blocksCache;
   try {
-    const s = localStorage.getItem('claylog_blocks');
-    if (!s) return DEFAULT_BLOCKS;
+    const s = localStorage.getItem(BLOCKS_KEY);
+    if (!s) { _blocksCache = DEFAULT_BLOCKS; return _blocksCache; }
     const saved = JSON.parse(s);
-    // merge: keep order/visibility from saved, add any new blocks
     const merged = saved.filter(b => DEFAULT_BLOCKS.find(d => d.id === b.id));
     DEFAULT_BLOCKS.forEach(d => { if (!merged.find(b => b.id === d.id)) merged.push(d); });
+    _blocksCache = merged;
     return merged;
-  } catch { return DEFAULT_BLOCKS; }
+  } catch { _blocksCache = DEFAULT_BLOCKS; return _blocksCache; }
 }
-
 function saveBlocks(blocks) {
-  localStorage.setItem('claylog_blocks', JSON.stringify(blocks));
+  _blocksCache = blocks;
+  try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks)); } catch {}
 }
 
-function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEvents, editMode, setEditMode }) {
+function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEvents, editMode }) {
   const year = new Date().getFullYear();
   const yearSessions = sessions.filter(s => (s.date||'').startsWith(year));
-
   const compYear  = sessions.filter(s => s.type==='competition' && s.max>0 && (s.date||'').startsWith(year));
-  const compAll   = sessions.filter(s => s.type==='competition' && s.max>0);
   const compAllTotal = sessions.filter(s => s.type==='competition');
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
+  const compAll   = sessions.filter(s => s.type==='competition' && s.max>0);
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
   const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 2);
-
   const now = new Date();
 
-  // Next event from ICS feed + manual events
   const { events: icsEvents } = useICSFeed(icsUrl);
   const todayD = now.toISOString().slice(0,10);
   const manualUpcoming = manualEvents
@@ -1792,20 +1830,17 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const manualUpcomingDeduped = manualUpcoming.filter(m =>
     !icsUpcoming.some(e => e.date === m.date && normTitle(e.title) === normTitle(m.title))
   );
-  const allUpcoming = [...manualUpcomingDeduped, ...icsUpcoming]
-    .sort((a,b)=>a.start-b.start);
+  const allUpcoming = [...manualUpcomingDeduped, ...icsUpcoming].sort((a,b)=>a.start-b.start);
   const nextEvent = allUpcoming[0] || null;
 
   const [blocks, setBlocks]     = useState(() => loadBlocks());
-  const [dragging, setDragging] = useState(null);   // id of dragged block
-  const [dragOver, setDragOver] = useState(null);   // id of hovered target
+  const [dragging, setDragging] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
 
   function updateBlocks(next) { setBlocks(next); saveBlocks(next); }
-
   function toggleVisible(id) {
     updateBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b));
   }
-
   function moveBlock(fromId, toId) {
     if (fromId === toId) return;
     const next = [...blocks];
@@ -1815,18 +1850,13 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
     next.splice(ti, 0, item);
     updateBlocks(next);
   }
-
-  // Drag handlers (desktop)
   function onDragStart(id) { setDragging(id); }
   function onDragEnd()     { setDragging(null); setDragOver(null); }
   function onDragOver(e, id) { e.preventDefault(); setDragOver(id); }
   function onDrop(e, id)   { e.preventDefault(); if (dragging) moveBlock(dragging, id); setDragging(null); setDragOver(null); }
 
-  // Touch drag (mobile)
   const touchDragId = useRef(null);
-  function onTouchStartDrag(e, id) {
-    touchDragId.current = id;
-  }
+  function onTouchStartDrag(e, id) { touchDragId.current = id; }
   function onTouchMoveDrag(e) {
     e.preventDefault();
     const touch = e.touches[0];
@@ -1845,7 +1875,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const blockContent = {
     score: <UnifiedScoreChart sessions={sessions} variant="mini" />,
     nextEvent: nextEvent ? (
-      <div className="card" style={{marginBottom:0,borderLeft:'3px solid var(--accent)'}}>
+      <div className="card card-elev" style={{marginBottom:0,borderLeft:'3px solid var(--accent)'}}>
         <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:6}}>NEXT COMPETITION</div>
         <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>{nextEvent.title}</div>
         <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginBottom:nextEvent.location?4:0}}>
@@ -1857,7 +1887,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
           <div style={{background:'var(--accent)',color:'#111',borderRadius:20,padding:'3px 12px',fontSize:11,fontFamily:'DM Mono,monospace',fontWeight:700}}>
             {Math.ceil((nextEvent.start-now)/(1000*60*60*24))===0?'Today':Math.ceil((nextEvent.start-now)/(1000*60*60*24))===1?'Tomorrow':`in ${Math.ceil((nextEvent.start-now)/(1000*60*60*24))} days`}
           </div>
-          <button className="btn btn-ghost" style={{padding:'3px 12px',fontSize:11,margin:0}} onClick={()=>onCreateSession({date:nextEvent.date,name:nextEvent.title,ort:nextEvent.location,type:'competition'})}>
+          <button className="btn btn-ghost" style={{padding:'4px 12px',fontSize:11,margin:0,textTransform:'none',letterSpacing:0}} onClick={()=>onCreateSession({date:nextEvent.date,name:nextEvent.title,ort:nextEvent.location,type:'competition'})}>
             + Session
           </button>
         </div>
@@ -1868,7 +1898,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
         <div className="stat-box">
           <div className="stat-val">
             {yearSessions.length}
-            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:400}}> / {sessions.length}</span>
+            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:500,fontFamily:'DM Mono,monospace'}}> / {sessions.length}</span>
           </div>
           <div className="stat-label">Sessions {year}</div>
         </div>
@@ -1876,7 +1906,7 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
         <div className="stat-box">
           <div className="stat-val">
             {compYear.length}
-            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:400}}> / {compAllTotal.length}</span>
+            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:500,fontFamily:'DM Mono,monospace'}}> / {compAllTotal.length}</span>
           </div>
           <div className="stat-label">🏆 Competitions</div>
         </div>
@@ -1888,9 +1918,15 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
       <div className="card" style={{padding:'10px 12px'}}>
         <div className="card-header" style={{marginBottom:6}}><span className="card-title">Recent</span></div>
         {recent.length === 0 ? (
-          <div className="empty"><div className="empty-icon">🎯</div><div className="empty-text">No entries yet.<br/>Tap + to get started.</div></div>
+          <div className="empty">
+            <div className="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div className="empty-text">No entries yet.</div>
+            <button className="btn btn-primary" style={{width:'auto',padding:'10px 20px',margin:'0 auto',display:'inline-block'}} onClick={onCreateSession}>+ Add first session</button>
+          </div>
         ) : (
-          recent.map(s => <SessionItem key={s.id} s={s} compact onClick={() => editMode ? null : onSessionClick(s)} />)
+          recent.map(s => <SessionItem key={s.id} s={s} onClick={() => editMode ? null : onSessionClick(s)} />)
         )}
       </div>
     ),
@@ -1898,7 +1934,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
 
   return (
     <div>
-      {/* Blocks */}
       {blocks.map(block => {
         const isDraggingThis = dragging === block.id;
         const isDragTarget   = dragOver === block.id && dragging !== block.id;
@@ -1923,13 +1958,11 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
               display: (!editMode && !block.visible) ? 'none' : 'block',
               position: 'relative',
             }}>
-            {/* Edit overlay */}
             {editMode && (
               <div style={{
                 position:'absolute', top:8, right:8, zIndex:10,
                 display:'flex', gap:6, alignItems:'center'
               }}>
-                {/* Visibility toggle */}
                 <div onClick={() => toggleVisible(block.id)} style={{
                   cursor:'pointer', background:'var(--card)',
                   border:'1px solid var(--border)', borderRadius:8,
@@ -1939,7 +1972,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
                 }}>
                   {block.visible ? '● Show' : '○ Hide'}
                 </div>
-                {/* Drag handle */}
                 <div style={{
                   cursor:'grab', background:'var(--card)',
                   border:'1px solid var(--border)', borderRadius:8,
@@ -1948,7 +1980,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
                 }}>⠿</div>
               </div>
             )}
-            {/* Wackeln im Edit-Modus */}
             <div style={{
               animation: editMode ? 'wiggle .4s infinite alternate' : 'none',
               opacity: editMode && !block.visible ? 0.4 : 1,
@@ -1958,7 +1989,6 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
           </div>
         );
       })}
-
     </div>
   );
 }
@@ -1974,7 +2004,6 @@ function SessionsPage({ sessions, onSessionClick }) {
   const waffen = [...new Set(sessions.map(s => s.waffe).filter(Boolean))].sort();
   const orte = [...new Set(sessions.map(s => s.ort).filter(Boolean))].sort();
   const munitions = [...new Set(sessions.map(s => s.munition_typ).filter(Boolean))].sort();
-
   const hasFilter = filter.type || filter.disziplin || filter.waffe || filter.ort || filter.munition;
 
   const filtered = sessions
@@ -1985,7 +2014,6 @@ function SessionsPage({ sessions, onSessionClick }) {
     .filter(s => !filter.munition || s.munition_typ === filter.munition)
     .sort((a,b) => b.date > a.date ? 1 : -1);
 
-  // Group by month
   const grouped = {};
   filtered.forEach(s => {
     const d = new Date(s.date);
@@ -2007,7 +2035,6 @@ function SessionsPage({ sessions, onSessionClick }) {
         )}
         <span style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginLeft:'auto'}}>{filtered.length} sessions</span>
       </div>
-
       {showFilter && (
         <div className="card" style={{marginBottom:12,padding:'12px 14px'}}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -2050,10 +2077,11 @@ function SessionsPage({ sessions, onSessionClick }) {
           </div>
         </div>
       )}
-
       {filtered.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">📋</div>
+          <div className="empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg>
+          </div>
           <div className="empty-text">No sessions found.</div>
         </div>
       ) : groupKeys.map(key => (
@@ -2075,10 +2103,9 @@ function SessionsPage({ sessions, onSessionClick }) {
 ════════════════════════════════════════════════════════════════ */
 function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, lists, onOpenSession, pinnedNotes = [], onTogglePin }) {
   const [filter, setFilter] = useState('all');
-  const [catFilter, setCatFilter] = useState(''); // '' = all
+  const [catFilter, setCatFilter] = useState('');
   const withNotes = sessions.filter(s => (Array.isArray(s.notesCat) && s.notesCat.length) || (s.notes && s.notes.trim()));
 
-  // Build category list: defaults + custom + anything actually used in data
   const usedCats = new Set();
   withNotes.forEach(s => {
     if (Array.isArray(s.notesCat)) s.notesCat.forEach(e => usedCats.add(e.cat || 'Other'));
@@ -2086,10 +2113,6 @@ function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, list
   const allCats = [...DEFAULT_NOTE_CATEGORIES, ...(lists?.notizKategorien||[]), ...usedCats]
     .filter((c,i,arr) => c && arr.indexOf(c)===i);
 
-  // One card per note-category entry, so Technique / Material etc. captured in
-  // the same session appear as separate notes — each with its own Open/Done state.
-  // notesCat entries carry their state in e.state (persisted in notes_cat jsonb);
-  // legacy plain-text notes fall back to the per-session noteStates map.
   const noteItems = [];
   withNotes.forEach(s => {
     if (Array.isArray(s.notesCat) && s.notesCat.length) {
@@ -2109,16 +2132,13 @@ function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, list
       noteItems.push({ s, cat: 'Other', text: s.notes, i: 0, legacy: true, st });
     }
   });
-
   noteItems.sort((a, b) => {
-    // Pinned sessions float to the top, regardless of the active filter.
     const aPinned = pinnedNotes.includes(a.s.id);
     const bPinned = pinnedNotes.includes(b.s.id);
     if (aPinned !== bPinned) return aPinned ? -1 : 1;
     if (a.s.date !== b.s.date) return b.s.date > a.s.date ? 1 : -1;
-    return a.i - b.i; // keep a session's entries in their captured order
+    return a.i - b.i;
   });
-
   const filterLabels = { all: 'All', open: 'Open', done: 'Done' };
 
   return (
@@ -2140,7 +2160,9 @@ function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, list
       )}
       {noteItems.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">📝</div>
+          <div className="empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><polyline points="16 4 16 7 19 7"/><line x1="7" y1="11" x2="14" y2="11"/><line x1="7" y1="15" x2="16" y2="15"/></svg>
+          </div>
           <div className="empty-text">No notes found.</div>
         </div>
       ) : noteItems.map(({ s, cat, text, i, legacy, st }) => {
@@ -2187,18 +2209,6 @@ function NotesPage({ sessions, noteStates, onToggleNote, onToggleNoteEntry, list
 /* ════════════════════════════════════════════════════════════════
    ANALYSE PAGE
 ════════════════════════════════════════════════════════════════ */
-function useIndividualPts(data) {
-  return data
-    .filter(s => s.date && s.max > 0)
-    .sort((a,b) => a.date > b.date ? 1 : -1)
-    .map(s => ({
-      key: s.id || s.date,   // unique per session
-      date: s.date,
-      avg: Math.round(s.score/s.max*1000)/10,
-      label: new Date(s.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
-    }));
-}
-
 function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const isMini = variant === 'mini';
   const [viewMode, setViewMode] = useState('overlapped');
@@ -2210,12 +2220,13 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const [ovSel, setOvSel] = React.useState(null);
   const miniRef = React.useRef(null);
   const [miniSel, setMiniSel] = React.useState(null);
+  const theme = useThemeColors();
 
-  const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
-  const TRAIN_COLOR = 'var(--accent,#e8c84a)';
-  const COMP_COLOR_HEX  = '#4ae8c8';
-  const TRAIN_COLOR_HEX = '#e8c84a';
-  const YEAR_COLORS = ['#4ae8c8','#e8c84a','#e84a4a','#c84ae8','#4a8ce8','#e88c4a'];
+  const COMP_COLOR  = theme.accent2;
+  const TRAIN_COLOR = theme.accent;
+  const COMP_COLOR_HEX  = theme.accent2;
+  const TRAIN_COLOR_HEX = theme.accent;
+  const YEAR_COLORS = [theme.accent2, theme.accent, '#e84a4a', '#c84ae8', '#4a8ce8', '#e88c4a'];
   const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
   const MONTH_DAYS = [0,31,59,90,120,151,181,212,243,273,304,334];
 
@@ -2225,7 +2236,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const [activeYears, setActiveYears] = useState([currentYear]);
   useEffect(() => {
     setActiveYears(prev => {
-      // Keep existing selection, but ensure currentYear is included if it exists
       const valid = allYears.filter(y => prev.includes(y));
       return valid.length > 0 ? valid : [currentYear];
     });
@@ -2234,8 +2244,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   function toggleYear(y) {
     setActiveYears(prev => prev.includes(y) ? prev.filter(x=>x!==y) : [...prev, y]);
   }
-
-  // Filter base sessions
   const base = sessions.filter(s =>
     s.date && s.max > 0 &&
     (disziplin === 'all' || s.disziplin === disziplin)
@@ -2244,8 +2252,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   function toP(s) {
     return { id: s.id, date: s.date, type: s.type, year: s.date.slice(0,4), avg: Math.round(s.score/s.max*1000)/10 };
   }
-
-  // Stats summary
   function avgQ(arr) {
     return arr.length ? Math.round(arr.reduce((a,s)=>a+s.avg,0)/arr.length*10)/10 : null;
   }
@@ -2256,13 +2262,11 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
   const trainYear = avgQ(trainAll.filter(p=>p.year===currentYear));
   const trainTotal= avgQ(trainAll);
 
-  // Mini variant — current year only, comp only
   if (isMini) {
     const pts = compAll.filter(p => p.year === currentYear);
     if (!pts.length) return null;
     const W=300, H=120, padL=26, padR=6, padT=10, padB=30;
     const cW=W-padL-padR, cH=H-padT-padB;
-    // Fixed Jan–Dec axis for current year
     const minD = new Date(currentYear+'-01-01');
     const maxD = new Date(currentYear+'-12-31');
     const range = maxD - minD || 1;
@@ -2289,33 +2293,29 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         <div style={{position:'relative'}}>
         <svg ref={miniRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
           onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setMiniSel(null)}>
-          <ChartDefs id="mini" colors={['#4ae8c8']} />
-          {/* Y grid + labels (min / mid / max) */}
+          <ChartDefs id="mini" colors={[COMP_COLOR_HEX]} />
           {[minY, midY, maxY].filter((v,i,a)=>a.indexOf(v)===i).map(v => (
             <g key={v}>
               <line x1={padL} y1={ty(v)} x2={W-padR} y2={ty(v)} stroke="#2a2a3a" strokeWidth="1" strokeDasharray="3,4"/>
               <text x={padL-4} y={ty(v)+3} textAnchor="end" fill="#8a8aaa" fontSize="9" fontFamily="DM Mono,monospace">{Math.round(v)}%</text>
             </g>
           ))}
-          {/* All 12 months */}
           {[0,1,2,3,4,5,6,7,8,9,10,11].map(m => {
             const d = new Date(currentYear+'-'+String(m+1).padStart(2,'0')+'-01');
             const x = padL+((d-minD)/range)*cW;
             return (
               <text key={m} x={x} y={H-13} textAnchor="middle" fill="#8a8aaa" fontSize="9" fontFamily="DM Mono,monospace">
-                {['J','F','M','A','M','J','J','A','S','O','N','D'][m]}
+                {MONTHS[m]}
               </text>
             );
           })}
-          {/* Quarter labels (second row) */}
           {[['Q1',1.5],['Q2',4.5],['Q3',7.5],['Q4',10.5]].map(([lbl,m])=>{
             const d = new Date(currentYear+'-'+String(Math.floor(m)+1).padStart(2,'0')+'-15');
             const x = padL+((d-minD)/range)*cW;
             return <text key={lbl} x={x} y={H-1} textAnchor="middle" fill="#5a5a78" fontSize="8" fontFamily="DM Mono,monospace">{lbl}</text>;
           })}
           {mArea && <path d={mArea} fill="url(#mini-grad-0)"/>}
-          <path d={smoothPath(mPts)}
-            fill="none" stroke={COMP_COLOR} strokeWidth="2.5" strokeLinecap="round" filter="url(#mini-glow)"/>
+          <path d={smoothPath(mPts)} fill="none" stroke={COMP_COLOR} strokeWidth="2.5" strokeLinecap="round" filter="url(#mini-glow)"/>
           {sel && <line x1={sel.x} y1={padT} x2={sel.x} y2={padT+cH} stroke="#fff" strokeWidth="1" strokeDasharray="2,3" strokeOpacity="0.4"/>}
           {mPts.map(p=><circle key={p.id} cx={p.x} cy={p.y} r={sel&&sel.id===p.id?6:3.5} fill={COMP_COLOR} stroke={sel&&sel.id===p.id?'#fff':'none'} strokeWidth={sel&&sel.id===p.id?1.5:0}/>)}
         </svg>
@@ -2336,7 +2336,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     );
   }
 
-  // ── TIMELINE MODE ────────────────────────────────────────────
   function renderTimeline() {
     const showComp  = typeFilter !== 'practice';
     const showTrain = typeFilter !== 'competition';
@@ -2359,7 +2358,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     const gridVals=[]; for(let v=Math.ceil(minY/25)*25;v<=maxY;v+=25) gridVals.push(v);
     const compPts = pts.filter(p=>p.type==='competition').map(p=>({...p, x:tx(p.date), y:ty(p.avg)}));
     const trainPts= pts.filter(p=>p.type==='practice').map(p=>({...p, x:tx(p.date), y:ty(p.avg)}));
-    // All rendered points for hit-testing
     const allPlotted = [...compPts, ...trainPts].sort((a,b)=>a.x-b.x);
 
     function handleMove(e) {
@@ -2408,13 +2406,9 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     );
   }
 
-  // ── OVERLAPPED MODE ──────────────────────────────────────────
   function renderOverlapped() {
-    const COMP_COLOR  = 'var(--accent2,#4ae8c8)';
-    const TRAIN_COLOR = 'var(--accent,#e8c84a)';
     const W=300, H=210, padL=30, padR=10, padT=14, padB=24;
     const cW=W-padL-padR, cH=H-padT-padB;
-
     function toX(dateStr) {
       const d=new Date(dateStr), start=new Date(d.getFullYear(),0,1);
       const doy=Math.floor((d-start)/(1000*60*60*24));
@@ -2431,11 +2425,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         all:   src.map(toP2),
         comp:  src.filter(s=>s.type==='competition').map(toP2),
         train: src.filter(s=>s.type==='practice').map(toP2),
-        avg:   src.length ? Math.round(src.reduce((a,s)=>a+s.score/s.max*100,0)/src.length*10)/10 : null
       };
     }
-
-    // Collect every plotted point across active years for hit-testing
     const plotted = [];
     allYears.forEach((year, yi) => {
       if (!activeYears.includes(year)) return;
@@ -2504,8 +2495,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
         </div>
       )}
       </div>
-
-      {/* Year toggles */}
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
         {allYears.map((y,i)=>(
           <button key={y} className="analyse-tab" onClick={()=>toggleYear(y)} style={{
@@ -2518,7 +2507,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     </>);
   }
 
-  // ── LEGEND ───────────────────────────────────────────────────
   function renderLegend() {
     if(viewMode==='timeline') {
       const showComp=typeFilter!=='practice', showTrain=typeFilter!=='competition';
@@ -2537,7 +2525,7 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     );
     return (
       <div style={{display:'flex',gap:10,marginTop:8,flexWrap:'wrap'}}>
-        {allYears.filter(y=>activeYears.includes(y)).map((y,i)=>{
+        {allYears.filter(y=>activeYears.includes(y)).map(y=>{
           const ci=allYears.indexOf(y);
           const avg=avgQ(base.filter(s=>s.date.startsWith(y)&&(typeFilter==='all'||s.type===typeFilter)).map(toP));
           return avg!==null?(
@@ -2554,7 +2542,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
 
   return (
     <div className="card">
-      {/* View mode toggle */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
         <div style={{display:'flex',background:'var(--surface)',borderRadius:10,padding:3,gap:2}}>
           {[['timeline','📈 Timeline'],['overlapped','📅 Overlapped']].map(([m,l])=>(
@@ -2573,16 +2560,12 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           {disziplinen.map(d=><option key={d}>{d}</option>)}
         </select>
       </div>
-
-      {/* Type filter */}
       <div style={{display:'flex',gap:6,marginBottom:12}}>
         {[['all','All'],['competition','🏆 Competition'],['practice','🏋️ Practice']].map(([v,l])=>(
           <button key={v} className={`analyse-tab ${typeFilter===v?'active':''}`}
             style={{fontSize:11,padding:'4px 10px'}} onClick={()=>setTypeFilter(v)}>{l}</button>
         ))}
       </div>
-
-      {/* Stats summary */}
       {(typeFilter==='all'||typeFilter==='competition') && compTotal!==null && (
         <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:COMP_COLOR,marginBottom:4}}>
           🏆 Ø {currentYear}: {compYear??'–'}% | Ø All: {compTotal}%
@@ -2593,7 +2576,6 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           🏋️ Ø {currentYear}: {trainYear??'–'}% | Ø All: {trainTotal}%
         </div>
       )}
-
       {base.length===0
         ? <div className="empty" style={{padding:'20px 0'}}><div className="empty-text">No results yet.</div></div>
         : <>
@@ -2604,12 +2586,12 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
     </div>
   );
 }
+
 function AnalysePage({ sessions }) {
   const [tab, setTab] = useState('score');
   const years = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
   const currentYear = String(new Date().getFullYear());
   const [selectedYear, setSelectedYear] = useState(currentYear);
-
   const filtered = selectedYear === 'all' ? sessions : sessions.filter(s => (s.date||'').startsWith(selectedYear));
 
   const waffenMap = {};
@@ -2632,7 +2614,6 @@ function AnalysePage({ sessions }) {
 
   return (
     <div>
-      {/* 3 tabs */}
       <div style={{display:'flex',gap:0,marginBottom:0,borderBottom:'1px solid var(--border)'}}>
         {[['score','📈','Score'],['ammo','🔴','Ammo'],['waffen','🔫','Guns']].map(([t,icon,label]) => (
           <button key={t} onClick={()=>setTab(t)} style={{
@@ -2648,8 +2629,6 @@ function AnalysePage({ sessions }) {
           </button>
         ))}
       </div>
-
-      {/* Year filter for equipment tabs */}
       {(tab==='ammo'||tab==='waffen') && (
         <div className="tab-row" style={{marginTop:10,marginBottom:4}}>
           {['all',...years].map(y=>(
@@ -2657,13 +2636,11 @@ function AnalysePage({ sessions }) {
           ))}
         </div>
       )}
-
       {tab==='score' && <UnifiedScoreChart sessions={sessions} />}
-
       {tab==='ammo' && (
         <div className="card" style={{marginTop:10}}>
           {munRows.length===0
-            ? <div className="empty"><div className="empty-icon">🔴</div><div className="empty-text">No ammo data.</div></div>
+            ? <div className="empty"><div className="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></div><div className="empty-text">No ammo data.</div></div>
             : <table className="a-table">
                 <thead><tr><th>Ammo</th><th className="num">Sessions</th><th className="num">Shells</th></tr></thead>
                 <tbody>{munRows.map(([m,d])=><tr key={m}><td>{m}</td><td className="num">{d.sessions}</td><td className="num">{d.shots.toLocaleString()}</td></tr>)}</tbody>
@@ -2671,11 +2648,10 @@ function AnalysePage({ sessions }) {
           }
         </div>
       )}
-
       {tab==='waffen' && (
         <div className="card" style={{marginTop:10}}>
           {waffenRows.length===0
-            ? <div className="empty"><div className="empty-icon">🔫</div><div className="empty-text">No gun data.</div></div>
+            ? <div className="empty"><div className="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h6l2-3 3 5 3-2h4"/></svg></div><div className="empty-text">No gun data.</div></div>
             : <table className="a-table">
                 <thead><tr><th>Gun</th><th className="num">Sessions</th><th className="num">Ø Score</th></tr></thead>
                 <tbody>{waffenRows.map(([w,d])=><tr key={w}><td>{w}</td><td className="num">{d.sessions}</td><td className="num" style={{color:'var(--accent)'}}>{d.scored?Math.round(d.totalQ/d.scored*100)+'%':'–'}</td></tr>)}</tbody>
@@ -2686,6 +2662,7 @@ function AnalysePage({ sessions }) {
     </div>
   );
 }
+
 /* ════════════════════════════════════════════════════════════════
    SETTINGS PAGE
 ════════════════════════════════════════════════════════════════ */
@@ -2695,6 +2672,7 @@ function FontScaleSettings() {
     const f = parseFloat(val);
     setFactor(f);
     applyFontScale(f);
+    _fontScaleCache = f;
     localStorage.setItem('claylog_fontscale', JSON.stringify({ id: 'custom', factor: f }));
     window.dispatchEvent(new Event('fontscalechange'));
   }
@@ -2746,7 +2724,7 @@ function NavVisibilitySettings() {
             marginBottom:8, cursor:'pointer', transition:'all .15s'
           }}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <span style={{fontSize:22}}>{item.icon}</span>
+              <span style={{width:24,height:24,color: isHidden ? 'var(--muted)' : 'var(--accent)'}}>{NAV_ICONS[item.icon]}</span>
               <span style={{fontSize:15,fontWeight:600,color: isHidden ? 'var(--muted)' : 'var(--text)'}}>{item.label}</span>
             </div>
             <div style={{
@@ -2771,25 +2749,21 @@ function NavVisibilitySettings() {
 
 function AppearanceSettings() {
   const [current, setCurrent] = useState(() => loadTheme());
-
   function selectTheme(theme) {
     const next = { id: theme.id, accent: theme.accent, accent2: theme.accent2 };
     setCurrent(next);
     applyTheme(next.accent, next.accent2);
     localStorage.setItem('claylog_theme', JSON.stringify(next));
   }
-
   function updateCustom(key, val) {
     const next = { ...current, id: 'custom', [key]: val };
     setCurrent(next);
     applyTheme(next.accent, next.accent2);
     localStorage.setItem('claylog_theme', JSON.stringify(next));
   }
-
   return (
     <div className="card">
       <div className="card-title" style={{marginBottom:14}}>🎨 Appearance</div>
-
       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>THEME</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16,alignItems:'center'}}>
         {THEMES.filter(t=>t.id!=='custom').map(t => (
@@ -2808,8 +2782,6 @@ function AppearanceSettings() {
             <span style={{fontSize:13,color: current.id===t.id ? t.accent : 'var(--text)',fontWeight:600}}>{t.label}</span>
           </div>
         ))}
-
-        {/* Custom color pickers inline */}
         <div style={{display:'flex',alignItems:'center',gap:6,
           borderRadius:10, padding:'7px 10px',
           border: current.id==='custom' ? `2px solid ${current.accent}` : '2px solid var(--border)',
@@ -2830,9 +2802,7 @@ function AppearanceSettings() {
           <span style={{fontSize:13,color: current.id==='custom' ? current.accent : 'var(--text)',fontWeight:600}}>Custom</span>
         </div>
       </div>
-
       <NavVisibilitySettings />
-
       <div style={{marginTop:16}}>
         <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>ENTRY FORM FIELDS</div>
         <div style={{fontSize:13,color:'var(--muted)',marginBottom:10,lineHeight:1.5}}>
@@ -2840,7 +2810,6 @@ function AppearanceSettings() {
         </div>
         <FormModeSettings />
       </div>
-
       <div style={{marginTop:16}}>
         <FontScaleSettings />
       </div>
@@ -2855,13 +2824,9 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-/* ════════════════════════════════════════════════════════════════
-   QR CODE — pure JS, no external library
-════════════════════════════════════════════════════════════════ */
 function QRCode({ url, size = 160 }) {
   const canvasRef = useRef(null);
   useEffect(() => {
-    // Use QRious library loaded from CDN
     if (!window.QRious) return;
     new window.QRious({
       element: canvasRef.current,
@@ -2878,7 +2843,6 @@ function QRCode({ url, size = 160 }) {
 function ShareCard() {
   const url = window.location.href.split('?')[0];
   const [shared, setShared] = useState(false);
-
   async function handleShare() {
     if (navigator.share) {
       try {
@@ -2896,36 +2860,23 @@ function ShareCard() {
       setTimeout(()=>setShared(false), 2000);
     }
   }
-
   return (
     <div className="card">
       <div className="card-title" style={{marginBottom:12}}>🔗 Share app</div>
       <div style={{fontSize:13,color:'var(--muted)',marginBottom:16,lineHeight:1.5}}>
         Scan the QR code or share the link — the app opens directly in the browser, no installation needed.
       </div>
-
-      {/* QR Code */}
       <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
-        <div style={{
-          background:'#111', padding:12, borderRadius:12,
-          border:'1px solid var(--border)',
-          display:'inline-flex', flexDirection:'column', alignItems:'center', gap:8
-        }}>
+        <div style={{background:'#111', padding:12, borderRadius:12, border:'1px solid var(--border)',
+          display:'inline-flex', flexDirection:'column', alignItems:'center', gap:8}}>
           <QRCode url={url} size={160}/>
-          <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',
-            letterSpacing:1,opacity:.7}}>SCAN TO OPEN</div>
+          <div style={{fontSize:10,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,opacity:.7}}>SCAN TO OPEN</div>
         </div>
       </div>
-
-      {/* URL display */}
-      <div style={{
-        background:'var(--card)', borderRadius:10, padding:'10px 12px',
+      <div style={{background:'var(--card)', borderRadius:10, padding:'10px 12px',
         fontFamily:'DM Mono,monospace', fontSize:11, color:'var(--muted)',
         marginBottom:12, wordBreak:'break-all', lineHeight:1.5,
-        border:'1px solid var(--border)'
-      }}>{url}</div>
-
-      {/* Share button */}
+        border:'1px solid var(--border)'}}>{url}</div>
       <button className="btn btn-primary" onClick={handleShare} style={{width:'100%'}}>
         {shared ? '✅ Copied!' : '📤 Share link'}
       </button>
@@ -2936,38 +2887,12 @@ function ShareCard() {
 function ICSGuide() {
   const [open, setOpen] = useState(false);
   const steps = [
-    {
-      n: '1',
-      title: 'Create a separate «Competitions» calendar',
-      text: 'Create a new calendar in Google Calendar named «Competitions». Important: Do not use your main calendar — this way only competition events are shared with ClayLog, nothing personal.',
-      tip: '💡 Google Calendar: Left sidebar → «Other calendars» → «+» → «Create new calendar»',
-    },
-    {
-      n: '2',
-      title: 'Open calendar settings',
-      text: 'Click the three dots (···) next to your new calendar and select «Settings and sharing».',
-      tip: null,
-    },
-    {
-      n: '3',
-      title: 'Copy private iCal address',
-      text: 'Scroll to the bottom of the settings page to «Integrate calendar». Click the eye icon 👁 next to «Secret address in iCal format» to reveal the URL, then copy it.',
-      tip: '⚠️ Use the secret address, not the public URL — it works without making the calendar public.',
-    },
-    {
-      n: '4',
-      title: 'Paste URL & save',
-      text: 'Paste the copied URL into the field above and tap Save.',
-      tip: null,
-    },
-    {
-      n: '5',
-      title: 'Add events',
-      text: 'Add your competitions to Google Calendar. They will appear automatically in the Events tab after about 15–60 minutes.',
-      tip: '💡 Alternative: Add competitions directly in ClayLog via the Events tab — they appear immediately.',
-    },
+    { n: '1', title: 'Create a separate «Competitions» calendar', text: 'Create a new calendar in Google Calendar named «Competitions». Important: Do not use your main calendar — this way only competition events are shared with ClayLog, nothing personal.', tip: '💡 Google Calendar: Left sidebar → «Other calendars» → «+» → «Create new calendar»' },
+    { n: '2', title: 'Open calendar settings', text: 'Click the three dots (···) next to your new calendar and select «Settings and sharing».', tip: null },
+    { n: '3', title: 'Copy private iCal address', text: 'Scroll to the bottom of the settings page to «Integrate calendar». Click the eye icon 👁 next to «Secret address in iCal format» to reveal the URL, then copy it.', tip: '⚠️ Use the secret address, not the public URL — it works without making the calendar public.' },
+    { n: '4', title: 'Paste URL & save', text: 'Paste the copied URL into the field above and tap Save.', tip: null },
+    { n: '5', title: 'Add events', text: 'Add your competitions to Google Calendar. They will appear automatically in the Events tab after about 15–60 minutes.', tip: '💡 Alternative: Add competitions directly in ClayLog via the Events tab — they appear immediately.' },
   ];
-
   return (
     <div style={{marginTop:12}}>
       <button onClick={()=>setOpen(o=>!o)} style={{
@@ -2975,46 +2900,31 @@ function ICSGuide() {
         display:'flex', alignItems:'center', gap:6,
         color:'var(--accent)', fontFamily:'DM Mono,monospace', fontSize:12, fontWeight:600
       }}>
-        <span style={{
-          display:'inline-block', transition:'transform .2s',
-          transform: open ? 'rotate(90deg)' : 'rotate(0deg)'
-        }}>▶</span>
+        <span style={{display:'inline-block', transition:'transform .2s',
+          transform: open ? 'rotate(90deg)' : 'rotate(0deg)'}}>▶</span>
         {open ? 'Hide guide' : '? Guide: Connect Google Calendar'}
       </button>
-
       {open && (
         <div style={{marginTop:12}}>
           {steps.map(s => (
-            <div key={s.n} style={{
-              display:'flex', gap:12, marginBottom:14, alignItems:'flex-start'
-            }}>
-              {/* Step number */}
-              <div style={{
-                width:26, height:26, borderRadius:'50%', flexShrink:0,
+            <div key={s.n} style={{ display:'flex', gap:12, marginBottom:14, alignItems:'flex-start' }}>
+              <div style={{width:26, height:26, borderRadius:'50%', flexShrink:0,
                 background:'var(--accent)', color:'#111',
                 display:'flex', alignItems:'center', justifyContent:'center',
-                fontWeight:800, fontSize:13, fontFamily:'DM Mono,monospace'
-              }}>{s.n}</div>
-              {/* Content */}
+                fontWeight:800, fontSize:13, fontFamily:'DM Mono,monospace'}}>{s.n}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700, fontSize:13, marginBottom:4}}>{s.title}</div>
                 <div style={{fontSize:12, color:'var(--muted)', lineHeight:1.6}}>{s.text}</div>
                 {s.tip && (
-                  <div style={{
-                    marginTop:6, padding:'6px 10px', borderRadius:8,
+                  <div style={{marginTop:6, padding:'6px 10px', borderRadius:8,
                     background:'var(--card)', border:'1px solid var(--border)',
-                    fontSize:11, color:'var(--muted)', lineHeight:1.5
-                  }}>{s.tip}</div>
+                    fontSize:11, color:'var(--muted)', lineHeight:1.5}}>{s.tip}</div>
                 )}
               </div>
             </div>
           ))}
-
-          {/* FAQ */}
-          <div style={{
-            marginTop:8, padding:'10px 12px', borderRadius:10,
-            background:'var(--card)', border:'1px solid var(--border)'
-          }}>
+          <div style={{marginTop:8, padding:'10px 12px', borderRadius:10,
+            background:'var(--card)', border:'1px solid var(--border)'}}>
             <div style={{fontWeight:700, fontSize:12, marginBottom:8, fontFamily:'DM Mono,monospace', letterSpacing:.5}}>FAQ</div>
             {[
               [`Events don't appear immediately`, `Google updates the ICS feed every 15–60 minutes. New events will appear automatically after a short delay.`],
@@ -3035,30 +2945,37 @@ function ICSGuide() {
 }
 
 function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, onSync, onExport, onClearData, onSaveLists, syncStatus, icsUrl, onSaveIcsUrl }) {
-  const [showLists, setShowLists] = useState(false);
+  const dlg = useDialog();
   const name = user?.user_metadata?.name || '';
   const email = user?.email || '';
-
-  // New discipline form state
   const [newName, setNewName] = useState('');
   const [newMax, setNewMax] = useState('');
+  const [icsInput, setIcsInput] = useState(icsUrl || '');
 
-  function addDisziplin() {
+  useEffect(() => { setIcsInput(icsUrl || ''); }, [icsUrl]);
+
+  async function addDisziplin() {
     const n = newName.trim();
     const m = parseInt(newMax);
-    if (!n) { alert('Please enter a name.'); return; }
-    if (!m || m <= 0) { alert('Please enter a valid maximum score.'); return; }
+    if (!n) { dlg.alert('Missing name', 'Please enter a name.'); return; }
+    if (!m || m <= 0) { dlg.alert('Invalid score', 'Please enter a valid maximum score.'); return; }
     const fixed = DEFAULT_DISZIPLINEN;
     if (fixed.includes(n) || customDisz.some(d=>d.name===n)) {
-      alert('This discipline already exists.'); return;
+      dlg.alert('Already exists', 'This discipline already exists.'); return;
     }
     onSaveCustomDisz([...customDisz, { name: n, scoreOnly: true, totalMax: m }]);
     setNewName(''); setNewMax('');
   }
 
-  function deleteDisziplin(name) {
-    if (!confirm(`Delete "${name}"?`)) return;
-    onSaveCustomDisz(customDisz.filter(d=>d.name!==name));
+  async function deleteDisziplin(nm) {
+    const ok = await dlg.confirm('Delete discipline?', `"${nm}" will be removed.`, { danger: true, confirmLabel: 'Delete' });
+    if (ok) onSaveCustomDisz(customDisz.filter(d=>d.name!==nm));
+  }
+
+  async function saveIcs() {
+    const val = icsInput.trim();
+    onSaveIcsUrl(val);
+    await dlg.alert(val ? 'Saved' : 'Removed', val ? 'ICS URL saved!' : 'ICS feed removed.');
   }
 
   return (
@@ -3072,23 +2989,16 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
         </div>
         <div className="form-group">
           <label>ICS URL</label>
-          <input type="url" defaultValue={icsUrl||''} placeholder="https://calendar.google.com/calendar/ical/…"
-            id="ics-url-input"
+          <input type="url" value={icsInput} onChange={e=>setIcsInput(e.target.value)}
+            placeholder="https://calendar.google.com/calendar/ical/…"
             style={{fontSize:12,wordBreak:'break-all'}}/>
         </div>
-        <button className="btn btn-primary" style={{marginTop:4}} onClick={()=>{
-          const val = document.getElementById('ics-url-input').value.trim();
-          onSaveIcsUrl(val);
-          alert(val ? '✅ ICS URL saved!' : 'ICS feed removed.');
-        }}>Save</button>
-
-        {/* Collapsible guide */}
+        <button className="btn btn-primary" style={{marginTop:4}} onClick={saveIcs}>Save</button>
         <ICSGuide />
       </div>
 
       <div className="card">
         <div className="card-title" style={{marginBottom:12}}>🎯 Custom Disciplines</div>
-
         {customDisz.length > 0 && (
           <div style={{marginBottom:14}}>
             {customDisz.map(d => (
@@ -3102,7 +3012,6 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
             ))}
           </div>
         )}
-
         <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:14}}>
           <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>NEW DISCIPLINE</div>
           <div className="input-row" style={{marginBottom:10}}>
@@ -3187,22 +3096,29 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
           ✉ tobitoenz@gmx.ch
         </a>
       </div>
-
       <p style={{textAlign:'center',color:'var(--muted)',fontSize:12,marginTop:16,fontFamily:'DM Mono,monospace'}}>ClayLog V1.0.5</p>
     </div>
   );
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SESSION MODAL (Neue Einheit / Edit)
+   CONSTANTS + NORMALIZE
 ════════════════════════════════════════════════════════════════ */
 const DEFAULT_DISZIPLINEN = ['Fitasc','Compak','Skeet','Universal','Trap'];
 const DEFAULT_NOTE_CATEGORIES = ['Technique','Material','Mental/Fitness','Other'];
+// Extended legacy mapping — covers all strings we've seen in old data.
+const CATEGORY_ALIASES = {
+  'Sonstiges': 'Other',
+  'Technik': 'Technique',
+  'Materiel': 'Material',
+  'Materiaal': 'Material',
+  'Mental': 'Mental/Fitness',
+  'Fitness': 'Mental/Fitness',
+  'Mental & Fitness': 'Mental/Fitness',
+};
 function normalizeCat(cat) {
   if (!cat) return 'Other';
-  if (cat === 'Sonstiges') return 'Other';
-  if (cat === 'Technik') return 'Technique';
-  return cat;
+  return CATEGORY_ALIASES[cat] || cat;
 }
 const DISZ_CONFIG = {
   Fitasc: { passen: 4, maxPro: 25, scoreOnly: false },
@@ -3212,8 +3128,12 @@ const DISZ_CONFIG = {
   Trap:   { passen: 5, maxPro: 25, scoreOnly: false },
 };
 
+/* ════════════════════════════════════════════════════════════════
+   SESSION MODAL
+════════════════════════════════════════════════════════════════ */
 function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, onClose, onSaveLists, lastSession }) {
-  const fields = loadFieldConfig(); // { name, notes, shells, location, ammo, gun }
+  const dlg = useDialog();
+  const fields = useMemo(() => loadFieldConfig(), []);
   useModalLock(true);
   const isEdit = !!session?.id;
   const allDisz = [...DEFAULT_DISZIPLINEN, ...customDisz.map(d=>d.name)];
@@ -3224,11 +3144,9 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   const [date, setDate] = useState(session?.date || prefill?.date || todayStr());
   const [notesEntries, setNotesEntries] = useState(() => {
     if (Array.isArray(session?.notesCat)) return session.notesCat.map(e => ({...e}));
-    // Migrate old object-shape {cat: text} into array form
     if (session?.notesCat && typeof session.notesCat === 'object' && Object.keys(session.notesCat).length) {
-      return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: cat==='Sonstiges'?'Other':cat, text}));
+      return Object.entries(session.notesCat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: normalizeCat(cat), text}));
     }
-    // Migrate legacy plain-text notes into "Sonstiges" on first edit
     if (session?.notes && session.notes.trim()) return [{ cat: 'Other', text: session.notes }];
     return [{ cat: '', text: '' }];
   });
@@ -3238,8 +3156,9 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   function addEntry() { setNotesEntries(prev => [...prev, { cat:'', text:'' }]); }
   function removeEntry(i) { setNotesEntries(prev => prev.filter((_,idx)=>idx!==i)); }
   const noteCategories = [...DEFAULT_NOTE_CATEGORIES, ...(lists.notizKategorien||[]).filter(c=>!DEFAULT_NOTE_CATEGORIES.includes(c))];
-  function addNoteCategory(i) {
-    const v = prompt('New category name:', '');
+
+  async function addNoteCategory(i) {
+    const v = await dlg.prompt('New category', '', { placeholder: 'e.g. Wind reading', confirmLabel: 'Add' });
     if (!v || !v.trim()) return;
     const val = v.trim();
     if (!noteCategories.includes(val)) {
@@ -3248,12 +3167,14 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     }
     updateEntry(i, 'cat', val);
   }
+
   const [munition, setMunition] = useState(session?.munition || '');
   const [ort, setOrt] = useState(session?.ort ?? prefill?.ort ?? lastSession?.ort ?? '');
   const [waffe, setWaffe] = useState(session?.waffe ?? lastSession?.waffe ?? '');
   const [munitionTyp, setMunitionTyp] = useState(session?.munition_typ ?? lastSession?.munition_typ ?? '');
-  function addToList(key, label, setter) {
-    const v = prompt(`Add new ${label}:`, '');
+
+  async function addToList(key, label, setter) {
+    const v = await dlg.prompt(`Add ${label}`, '', { placeholder: `New ${label}`, confirmLabel: 'Add' });
     if (!v || !v.trim()) return;
     const val = v.trim();
     const updated = { ...lists, [key]: [...(lists[key]||[]).filter(x=>x!==val), val] };
@@ -3261,7 +3182,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     setter(val);
   }
 
-  // Score state
   const [hasScore, setHasScore] = useState(session?.max > 0 || false);
   const [passen, setRounds] = useState(() => {
     const p = session?.passen;
@@ -3271,7 +3191,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
   });
   const [passenVals, setRoundsVals] = useState(() => {
     const p = session?.passen;
-    // Handle array from Supabase (numbers or strings)
     if (Array.isArray(p) && p.length > 0) {
       return p.map(v => (v === null || v === undefined || v === '') ? '' : String(v));
     }
@@ -3287,8 +3206,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     }
     return DISZ_CONFIG[disziplin]?.maxPro || 25;
   });
-
-  // scoreOnly state for custom disciplines with no passen
   const [scoreOnlyVal, setScoreOnlyVal] = useState(() => session?.score || '');
   const [scoreOnlyMax, setScoreOnlyMax] = useState(() => {
     if (session?.max) return session.max;
@@ -3296,15 +3213,12 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     return cd?.scoreOnly ? (cd.totalMax || '') : '';
   });
 
-  // Check if current disziplin is scoreOnly
   const getCfg = (d) => DISZ_CONFIG[d] || customDisz.find(x=>x.name===d);
   const isScoreOnly = getCfg(disziplin)?.scoreOnly === true;
 
-  // Track if this is the first render (to avoid overwriting loaded values on edit)
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
-    // Only reset passen values when user actively changes disziplin/type (not on initial load)
     const cfg = getCfg(disziplin);
     if (!cfg) return;
     if (cfg.scoreOnly) {
@@ -3358,6 +3272,11 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
     onSave(s);
   }
 
+  async function confirmDelete() {
+    const ok = await dlg.confirm('Delete session?', 'This cannot be undone.', { danger: true, confirmLabel: 'Delete' });
+    if (ok) onDelete(session.id);
+  }
+
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
@@ -3369,7 +3288,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         </div>
 
-        {/* Type */}
         <div className="form-group">
           <label>Type</label>
           <div className="type-btn-row">
@@ -3378,7 +3296,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         </div>
 
-        {/* Name (optional) */}
         {fields.name !== false && (
           <div className="form-group">
             <label>Name <span style={{color:'var(--muted)',fontSize:11,fontWeight:400}}>(optional)</span></label>
@@ -3387,7 +3304,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         )}
 
-        {/* Discipline + Date */}
         <div className="input-row">
           <div className="form-group">
             <label>Discipline</label>
@@ -3403,10 +3319,8 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
 
         <div className="divider"><div className="divider-line"/><div className="divider-text">RESULT</div><div className="divider-line"/></div>
 
-        {/* Score section */}
         {isScoreOnly ? (
-          <ScoreOnlyInput
-            scoreVal={scoreOnlyVal} maxVal={scoreOnlyMax}
+          <ScoreOnlyInput scoreVal={scoreOnlyVal} maxVal={scoreOnlyMax}
             onChangeScore={setScoreOnlyVal} onChangeMax={setScoreOnlyMax} />
         ) : type === 'competition' ? (
           <CompetitionScore passen={passen} passenVals={passenVals} maxPro={maxPro}
@@ -3421,7 +3335,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
             onChangeVal={(i,v) => { const nv=[...passenVals]; nv[i]=v; setRoundsVals(nv); }} />
         )}
 
-        {/* Notes by selectable category */}
         {fields.notes !== false && (
           <div className="form-group" style={{marginTop:8}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
@@ -3447,7 +3360,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         )}
 
-        {/* Shells + Location */}
         {(fields.shells !== false || fields.location !== false) && (
           <div className="input-row">
             {fields.shells !== false && (
@@ -3471,7 +3383,6 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         )}
 
-        {/* Ammo + Gun */}
         {(fields.ammo !== false || fields.gun !== false) && (
           <div className="input-row">
             {fields.ammo !== false && (
@@ -3501,7 +3412,7 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
           </div>
         )}
 
-        {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={()=>{ if(confirm('Delete this session? This cannot be undone.')) onDelete(session.id); }}>🗑 Delete</button>}
+        {isEdit && <button className="btn btn-danger" style={{marginTop:8}} onClick={confirmDelete}>🗑 Delete</button>}
       </div>
     </div>
   );
@@ -3515,20 +3426,20 @@ function ScoreOnlyInput({ scoreVal, maxVal, onChangeScore, onChangeMax }) {
         <div className="form-group" style={{flex:1}}>
           <label>Score</label>
           <input type="number" value={scoreVal} min="0" placeholder="0"
-            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            style={{textAlign:'center',fontFamily:'var(--font-display)',fontWeight:700,fontSize:26,padding:8}}
             onChange={e=>onChangeScore(e.target.value)} />
         </div>
         <div className="form-group" style={{flex:1}}>
           <label>Maximum</label>
           <input type="number" value={maxVal} min="0" placeholder="0"
-            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            style={{textAlign:'center',fontFamily:'var(--font-display)',fontWeight:700,fontSize:26,padding:8}}
             onChange={e=>onChangeMax(e.target.value)} />
         </div>
       </div>
       <div className="serie-total">
         {parseInt(scoreVal)||0}
         <span className="serie-max"> / {parseInt(maxVal)||0}</span>
-        {pct !== null && <span style={{fontSize:20,color:'var(--accent2)',fontFamily:'DM Mono,monospace',marginLeft:12}}>{pct}%</span>}
+        {pct !== null && <span style={{fontSize:18,color:'var(--accent2)',fontFamily:'DM Mono,monospace',marginLeft:12}}>{pct}%</span>}
       </div>
     </>
   );
@@ -3542,7 +3453,7 @@ function CompetitionScore({ passen, passenVals, maxPro, totalScore, totalMax, on
         <div className="passen-control">
           <button className="passen-btn" onClick={()=>onChangeRounds(-1)}>−</button>
           <input type="number" value={passen} min="1" max="20"
-            style={{textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:28,padding:8}}
+            style={{textAlign:'center',fontFamily:'var(--font-display)',fontWeight:700,fontSize:26,padding:8}}
             onChange={e=>{ const n=parseInt(e.target.value)||1; onChangeRounds(n-passen); }} />
           <button className="passen-btn" onClick={()=>onChangeRounds(1)}>+</button>
         </div>
@@ -3577,7 +3488,7 @@ function PracticeScore({ hasScore, onToggle, passen, passenVals, maxPro, totalSc
             <span style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>ROUNDS:</span>
             <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangeRounds(-1)}>−</button>
             <input type="number" value={passen} min="1" max="20"
-              style={{width:60,textAlign:'center',fontFamily:'Arial,sans-serif',fontSize:22,padding:6,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:8,outline:'none'}}
+              style={{width:60,textAlign:'center',fontFamily:'var(--font-display)',fontWeight:700,fontSize:20,padding:6,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:8,outline:'none'}}
               onChange={e=>{ const n=parseInt(e.target.value)||1; onChangeRounds(n-passen); }} />
             <button className="passen-btn" style={{width:32,height:32,fontSize:18}} onClick={()=>onChangeRounds(1)}>+</button>
           </div>
@@ -3600,7 +3511,6 @@ function PracticeScore({ hasScore, onToggle, passen, passenVals, maxPro, totalSc
 ════════════════════════════════════════════════════════════════ */
 function makeGCalUrl({ title, date, dateEnd, location, notes }) {
   const d = date ? date.replace(/-/g,'') : '';
-  // For end date, Google Calendar needs day+1 for all-day events
   let endD = '';
   if (dateEnd && dateEnd !== date) {
     const end = new Date(dateEnd+'T00:00:00');
@@ -3622,6 +3532,7 @@ function makeGCalUrl({ title, date, dateEnd, location, notes }) {
 }
 
 function DetailModal({ session, onEdit, onDelete, onClose }) {
+  const dlg = useDialog();
   useModalLock(true);
   const hasScore = session.max > 0;
   const quote = hasScore ? Math.round(session.score / session.max * 100) : null;
@@ -3633,22 +3544,35 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
     notes: session.notes,
   });
 
+  async function confirmDelete() {
+    const ok = await dlg.confirm('Delete session?', 'This cannot be undone.', { danger: true, confirmLabel: 'Delete' });
+    if (ok) onDelete(session.id);
+  }
+
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
-        <div className="modal-handle" />
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
-          <div>
-            <div style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:2,marginBottom:4}}>{session.type?.toUpperCase()}</div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16,gap:16}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:2,marginBottom:4}}>{session.type?.toUpperCase()}</div>
             <div style={{fontSize:22,fontWeight:600}}>{session.name || session.disziplin}</div>
             {session.name && <div style={{fontSize:13,color:'var(--muted)',marginTop:2}}>{session.disziplin}</div>}
             <div style={{fontSize:13,color:'var(--muted)',fontFamily:'DM Mono,monospace',marginTop:4}}>{fmtDate(session.date)}</div>
           </div>
           {hasScore && (
-            <div style={{textAlign:'right'}}>
-              <div className="detail-score-big">{session.score}</div>
-              <div style={{fontSize:14,color:'var(--muted)'}}>/ {session.max}</div>
-              <div style={{fontSize:20,color:'var(--accent2)',fontFamily:'DM Mono,monospace'}}>{quote}%</div>
+            <div style={{textAlign:'right',flexShrink:0}}>
+              <div className="detail-score-line">
+                <span className="detail-score-big">{session.score}</span>
+                <span style={{fontSize:15,color:'var(--muted)',fontFamily:'DM Mono,monospace'}}>/{session.max}</span>
+              </div>
+              <div style={{
+                display:'inline-block', marginTop:6,
+                background: 'rgba(74,232,200,.15)',
+                color:'var(--accent2)',
+                fontFamily:'var(--font-display)', fontWeight:700,
+                fontSize:14, padding:'3px 10px', borderRadius:20,
+                letterSpacing:.5
+              }}>{quote}%</div>
             </div>
           )}
         </div>
@@ -3663,7 +3587,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
                 {session.passen.map((v,i) => (
                   <div key={i} style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 6px',textAlign:'center'}}>
-                    <div style={{fontSize:22,fontWeight:700,color:'var(--accent)',fontFamily:'DM Mono,monospace'}}>{v}</div>
+                    <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:22,color:'var(--accent)'}}>{v}</div>
                     <div style={{fontSize:11,color:'var(--muted)',letterSpacing:1,marginTop:2}}>P{i+1}</div>
                   </div>
                 ))}
@@ -3698,7 +3622,7 @@ function DetailModal({ session, onEdit, onDelete, onClose }) {
 
         <div className="btn-row">
           <button className="btn btn-ghost" style={{flex:1,marginTop:0}} onClick={()=>onEdit(session)}>✏️ Edit</button>
-          <button className="btn btn-danger" style={{flex:1,marginTop:0}} onClick={()=>{ if(confirm('Delete this session? This cannot be undone.')) onDelete(session.id); }}>🗑 Delete</button>
+          <button className="btn btn-danger" style={{flex:1,marginTop:0}} onClick={confirmDelete}>🗑 Delete</button>
         </div>
         <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
           style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,
@@ -3724,7 +3648,6 @@ function ResetPasswordScreen({ accessToken, onDone }) {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-
   async function handleReset() {
     if (!password || password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (password !== password2) { setError('Passwords do not match.'); return; }
@@ -3739,11 +3662,9 @@ function ResetPasswordScreen({ accessToken, onDone }) {
       setSuccess('✅ Password updated! You can now sign in.');
       window.history.replaceState(null, '', window.location.pathname);
       setTimeout(() => onDone(), 2500);
-    } catch(e) {
-      setError(e.message);
-    } finally { setLoading(false); }
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
   }
-
   return (
     <div className="auth-screen">
       <div style={{marginBottom:'8px',textAlign:'center'}}>
@@ -3775,7 +3696,6 @@ function ResetPasswordScreen({ accessToken, onDone }) {
 /* ════════════════════════════════════════════════════════════════
    ROOT APP
 ════════════════════════════════════════════════════════════════ */
-// Detect recovery token before React initializes (avoids timing issues)
 function getRecoveryTokenFromURL() {
   const hash = window.location.hash;
   if (hash) {
@@ -3788,53 +3708,35 @@ function getRecoveryTokenFromURL() {
 }
 const INITIAL_RECOVERY_TOKEN = getRecoveryTokenFromURL();
 
-/* ─── INSTALL BANNER ────────────────────────────────────────── */
 function loadInstallDismissed() {
   try { return localStorage.getItem('claylog_install_dismissed') === '1'; } catch { return false; }
 }
 function dismissInstallBanner() {
   try { localStorage.setItem('claylog_install_dismissed', '1'); } catch {}
 }
-
 function isStandalone() {
   return window.navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches;
 }
-
 function InstallBanner() {
   const [dismissed, setDismissed] = useState(() => loadInstallDismissed());
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [standalone, setStandalone] = useState(() => isStandalone());
-  const [platform, setPlatform] = useState('other'); // 'ios' | 'android' | 'other'
-
+  const [platform, setPlatform] = useState('other');
   useEffect(() => {
     const ua = window.navigator.userAgent || '';
     if (/iphone|ipad|ipod/i.test(ua)) setPlatform('ios');
     else if (/android/i.test(ua)) setPlatform('android');
-
-    function onBeforeInstall(e) {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    }
+    function onBeforeInstall(e) { e.preventDefault(); setDeferredPrompt(e); }
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
-
-    function onAppInstalled() {
-      setStandalone(true);
-      dismissInstallBanner();
-    }
+    function onAppInstalled() { setStandalone(true); dismissInstallBanner(); }
     window.addEventListener('appinstalled', onAppInstalled);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
       window.removeEventListener('appinstalled', onAppInstalled);
     };
   }, []);
-
-  function handleClose() {
-    setDismissed(true);
-    dismissInstallBanner();
-  }
-
+  function handleClose() { setDismissed(true); dismissInstallBanner(); }
   async function handleInstallClick() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -3842,14 +3744,11 @@ function InstallBanner() {
     if (outcome === 'accepted') dismissInstallBanner();
     setDeferredPrompt(null);
   }
-
   if (standalone || dismissed) return null;
-  // On platforms we don't have specific guidance for, stay silent rather than guess
   if (platform === 'other' && !deferredPrompt) return null;
-
   return (
     <div style={{
-      position:'fixed', bottom:90, left:16, right:16, zIndex:9998,
+      position:'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left:16, right:16, zIndex:9998,
       background:'var(--card)', border:'1px solid var(--border)', borderRadius:16,
       padding:'14px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
       display:'flex', alignItems:'center', gap:12
@@ -3885,12 +3784,9 @@ function InstallBanner() {
 }
 
 function App() {
-  // Auth state
   const [authToken, setAuthToken] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [recoveryToken, setRecoveryToken] = useState(INITIAL_RECOVERY_TOKEN);
-
-  // App state
   const [sessions, setSessions] = useState([]);
   const [events, setEvents] = useState(() => LS.get('claylog_events', []));
   const [noteStates, setNoteStates] = useState({});
@@ -3898,10 +3794,8 @@ function App() {
   const [customDisz, setCustomDisz] = useState(() => LS.get('claylog_customdisz', []));
   const [pinnedNotes, setPinnedNotes] = useState(() => LS.get('claylog_pinnednotes', []));
   const [syncStatus, setSyncStatus] = useState('idle');
-  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [toastMsg, setToastMsg] = useState(null);
 
-  // UI state
   const [tab, setTab] = useState('dashboard');
   const [editMode, setEditMode] = useState(false);
   const [modal, setModal] = useState(null);
@@ -3909,17 +3803,19 @@ function App() {
 
   const refreshTimerRef = useRef(null);
   const toastTimerRef = useRef(null);
+  const sessionsRef = useRef(sessions);      // ← race-condition fix
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
 
-  // Typed toast: type drives colour + icon. type = 'success' | 'info' | 'warning' | 'error'
+  // Dialog system
+  const dlgApi = useDialogApi();
+
   function showToast(text, type = 'info', ms = 4000) {
     setToastMsg({ text, type });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToastMsg(null), ms);
   }
 
-  /* ── AUTH ── */
   useEffect(() => {
-    // If recovery token was detected at startup, skip normal auth load
     if (INITIAL_RECOVERY_TOKEN) {
       window.history.replaceState(null, '', window.location.pathname);
       return;
@@ -3933,25 +3829,20 @@ function App() {
     }
   }, []);
 
-  // Offline detection + automatic queue flush on reconnect
   useEffect(() => {
     function handleOnline() {
-      setIsOffline(false);
       if (authToken) {
         setSyncStatus('syncing');
         flushSyncQueue(authToken).then(({ ok, failed }) => {
           setSyncStatus(failed > 0 ? 'error' : 'ok');
-          if (ok > 0) {
-            showToast(`Synced ${ok} change${ok>1?'s':''} from offline`, 'success');
-          }
+          if (ok > 0) showToast(`Synced ${ok} change${ok>1?'s':''} from offline`, 'success');
         });
       }
     }
-    function handleOffline() { setIsOffline(true); }
+    function handleOffline() { setSyncStatus('offline'); }
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    setIsOffline(!navigator.onLine);
-    // Attempt a flush on initial load too, in case items were queued last session
+    if (!navigator.onLine) setSyncStatus('offline');
     if (navigator.onLine && authToken) handleOnline();
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -3966,18 +3857,13 @@ function App() {
     LS.set('claylog_auth', { token: data.access_token, refresh_token: data.refresh_token, user: data.user, expires_at: expiresAt });
     scheduleRefresh(data.refresh_token, expiresAt);
   }
-
-  // Let the reactive token refresh (triggered by a 401 inside sbFetch)
-  // push the new session back into React state + reschedule the timer.
   useEffect(() => {
     _onAuthStateChange = (data) => { saveAuth(data); };
     return () => { _onAuthStateChange = null; };
   }, []);
-
   function scheduleRefresh(refreshTok, expiresAt) {
     if (!refreshTok) return;
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    // Refresh 3 minutes before expiry
     const delay = Math.max(0, (expiresAt||Date.now()) - Date.now() - 180000);
     refreshTimerRef.current = setTimeout(async () => {
       try {
@@ -3985,7 +3871,6 @@ function App() {
         saveAuth(data);
         setSyncStatus('ok');
       } catch {
-        // Retry once after 30 seconds before giving up
         setTimeout(async () => {
           try {
             const data = await authRefresh(refreshTok);
@@ -3996,12 +3881,10 @@ function App() {
       }
     }, delay);
   }
-
   function handleLogin(data) {
     saveAuth(data);
     loadData(data.access_token);
   }
-
   function handleSignOut() {
     setAuthToken(null); setCurrentUser(null);
     setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]);
@@ -4009,7 +3892,6 @@ function App() {
     LS.del('claylog_lists'); LS.del('claylog_customdisz');
   }
 
-  /* ── DATA ── */
   async function loadData(token) {
     setSyncStatus('syncing');
     try {
@@ -4030,7 +3912,7 @@ function App() {
         notes: r.notes || '',
         notesCat: Array.isArray(r.notes_cat) ? r.notes_cat
           : (r.notes_cat && typeof r.notes_cat === 'object' && Object.keys(r.notes_cat).length)
-            ? Object.entries(r.notes_cat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: cat==='Sonstiges'?'Other':cat, text}))
+            ? Object.entries(r.notes_cat).filter(([,v])=>v&&v.trim()).map(([cat,text])=>({cat: normalizeCat(cat), text}))
             : [],
         waffe: r.waffe || '',
         ort: r.ort || '',
@@ -4040,35 +3922,22 @@ function App() {
       }));
       setSessions(s);
       LS.set('claylog_sessions', s);
-
-      // Note states
       const ns = {};
       s.forEach(ses => { if (ses.note_state && ses.note_state !== 'normal') ns[ses.id] = ses.note_state; });
       setNoteStates(ns);
       LS.set('claylog_notestates', ns);
-
-      // Lists + custom disciplines
       if (listData?.length) {
         const ld = listData[0]?.data || { waffe:[], ort:[], munition:[] };
         const { customDisz: cdFromSb, pinnedNotes: pnFromSb, ...listsOnly } = ld;
         setLists(listsOnly);
         LS.set('claylog_lists', listsOnly);
-        if (cdFromSb?.length) {
-          setCustomDisz(cdFromSb);
-          LS.set('claylog_customdisz', cdFromSb);
-        }
-        if (pnFromSb?.length) {
-          setPinnedNotes(pnFromSb);
-          LS.set('claylog_pinnednotes', pnFromSb);
-        }
+        if (cdFromSb?.length) { setCustomDisz(cdFromSb); LS.set('claylog_customdisz', cdFromSb); }
+        if (pnFromSb?.length) { setPinnedNotes(pnFromSb); LS.set('claylog_pinnednotes', pnFromSb); }
       } else {
-        const saved = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
-        setLists(saved);
+        setLists(LS.get('claylog_lists', { waffe:[], ort:[], munition:[] }));
       }
-
       setSyncStatus('ok');
     } catch(e) {
-      // Fall back to localStorage
       setSessions(LS.get('claylog_sessions', []).map(s => ({
         ...s,
         type: s.type === 'wettkampf' ? 'competition' : s.type === 'training' ? 'practice' : s.type || 'practice',
@@ -4086,7 +3955,6 @@ function App() {
     setEvents(newEvents);
     LS.set('claylog_events', newEvents);
   }
-
   function deleteEvent(id) {
     const newEvents = events.filter(e=>e.id!==id);
     setEvents(newEvents);
@@ -4094,18 +3962,15 @@ function App() {
   }
 
   async function saveSession(session) {
-    const newSessions = sessions.some(s=>s.id===session.id)
-      ? sessions.map(s=>s.id===session.id?session:s)
-      : [session, ...sessions];
+    // Race-condition fix: read the latest list from the ref, not the stale state closure.
+    const current = sessionsRef.current;
+    const exists = current.some(s => s.id === session.id);
+    const newSessions = exists ? current.map(s => s.id === session.id ? session : s) : [session, ...current];
     setSessions(newSessions);
     LS.set('claylog_sessions', newSessions);
     setModal(null); setSelectedSession(null);
-    // Supabase upsert
     try {
       setSyncStatus('syncing');
-      // Only send columns that exist in the Supabase sessions table.
-      // notesCat is camelCase and gets remapped to notes_cat below; name IS a
-      // real column and must be kept, otherwise it never persists to the server.
       const { notesCat: _nc, ...sessionFields } = session;
       const row = { ...sessionFields, notes_cat: session.notesCat || {}, user_id: currentUser?.id };
       await sbFetch('POST', 'sessions', [row], '', authToken);
@@ -4115,7 +3980,6 @@ function App() {
         setSyncStatus('offline');
         showToast('Saved offline — will sync when back online', 'info');
       } else if (e.message === 'AUTH_EXPIRED') {
-        // Already queued by sbFetch — will sync after the next sign-in.
         setSyncStatus('error');
         showToast('Session expired — saved locally, will sync after sign-in', 'warning', 5000);
       } else {
@@ -4127,7 +3991,8 @@ function App() {
   }
 
   async function deleteSession(id) {
-    const newSessions = sessions.filter(s=>s.id!==id);
+    const current = sessionsRef.current;
+    const newSessions = current.filter(s => s.id !== id);
     setSessions(newSessions);
     LS.set('claylog_sessions', newSessions);
     setModal(null); setSelectedSession(null);
@@ -4153,30 +4018,34 @@ function App() {
     if (newState === 'normal') delete ns[sessionId];
     setNoteStates(ns);
     LS.set('claylog_notestates', ns);
-    // Update in Supabase
     try {
       await sbFetch('PATCH', 'sessions', { note_state: newState }, `?id=eq.${sessionId}`, authToken);
     } catch {}
   }
 
-  // Per-note Open/Done: the state lives on the individual notesCat entry and is
-  // persisted inside the notes_cat jsonb column, so two notes in the same session
-  // (e.g. Technique vs Material) can be marked independently.
+  // Optimistic with rollback: if the PATCH fails, restore the previous state.
   async function toggleNoteEntry(session, entryIndex, newState) {
+    const previous = sessionsRef.current;
     const entries = Array.isArray(session.notesCat) ? session.notesCat.map(e => ({...e})) : [];
     if (!entries[entryIndex]) return;
     if (newState === 'normal') delete entries[entryIndex].state;
     else entries[entryIndex].state = newState;
     const updated = { ...session, notesCat: entries };
-    const newSessions = sessions.map(s => s.id === session.id ? updated : s);
-    setSessions(newSessions);
-    LS.set('claylog_sessions', newSessions);
+    const optimistic = previous.map(s => s.id === session.id ? updated : s);
+    setSessions(optimistic);
+    LS.set('claylog_sessions', optimistic);
     try {
       setSyncStatus('syncing');
       await sbFetch('PATCH', 'sessions', { notes_cat: entries }, `?id=eq.${session.id}`, authToken);
       setSyncStatus('ok');
     } catch (e) {
+      // Roll back to the previous state on failure.
+      setSessions(previous);
+      LS.set('claylog_sessions', previous);
       setSyncStatus(isNetworkError(e) ? 'offline' : 'error');
+      if (!isNetworkError(e) && e.message !== 'AUTH_EXPIRED') {
+        showToast('Could not save note state', 'error');
+      }
     }
   }
 
@@ -4189,29 +4058,24 @@ function App() {
       await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...newLists, customDisz: cd, pinnedNotes: pn } }], '', authToken);
     } catch {}
   }
-
   async function saveCustomDisz(arr) {
     setCustomDisz(arr);
     LS.set('claylog_customdisz', arr);
-    // Sync to Supabase alongside lists
     try {
       const currentLists = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
       const pn = LS.get('claylog_pinnednotes', []);
       await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: arr, pinnedNotes: pn } }], '', authToken);
     } catch {}
   }
-
   async function savePinnedNotes(arr) {
     setPinnedNotes(arr);
     LS.set('claylog_pinnednotes', arr);
-    // Sync to Supabase alongside lists
     try {
       const currentLists = LS.get('claylog_lists', { waffe:[], ort:[], munition:[] });
       const cd = LS.get('claylog_customdisz', []);
       await sbFetch('POST', 'lists', [{ user_id: currentUser?.id, data: { ...currentLists, customDisz: cd, pinnedNotes: arr } }], '', authToken);
     } catch {}
   }
-
   function togglePinNote(sessionId) {
     const newPinned = pinnedNotes.includes(sessionId)
       ? pinnedNotes.filter(id => id !== sessionId)
@@ -4228,7 +4092,8 @@ function App() {
   }
 
   async function clearAllData() {
-    if (!confirm('Delete ALL data? This cannot be undone!')) return;
+    const ok = await dlgApi.confirm('Delete ALL data?', 'This cannot be undone.', { danger: true, confirmLabel: 'Delete everything' });
+    if (!ok) return;
     setSessions([]); setNoteStates({}); setLists({ waffe:[], ort:[], munition:[] }); setCustomDisz([]); setPinnedNotes([]);
     LS.del('claylog_sessions'); LS.del('claylog_notestates'); LS.del('claylog_lists'); LS.del('claylog_customdisz'); LS.del('claylog_pinnednotes');
     try {
@@ -4237,7 +4102,6 @@ function App() {
   }
 
   const [icsUrl, setIcsUrl] = useState(() => { try { return localStorage.getItem('claylog_icsurl') || ''; } catch { return ''; } });
-
   function saveIcsUrl(url) {
     setIcsUrl(url);
     try { localStorage.setItem('claylog_icsurl', url); } catch {}
@@ -4247,37 +4111,11 @@ function App() {
     setSelectedSession({ _prefill: prefill });
     setModal('new');
   }
-  function openNew() {
-    setSelectedSession(null);
-    setModal('new');
-  }
-  // For a new entry, prefill ammo/gun/location from the most recent session
-  // that actually has those fields set. We sort by date (newest first) rather
-  // than relying on array order, since a reload re-sorts by date and entries
-  // sharing a date have no guaranteed order. Falling through to the newest
-  // non-empty entry means a stray blank session never wipes the prefill.
-  const lastFilledSession = useMemo(() => {
-    const byDateDesc = [...sessions].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
-    return (
-      byDateDesc.find(s => s.ort || s.waffe || s.munition_typ) ||
-      byDateDesc[0] ||
-      null
-    );
-  }, [sessions]);
-  function openDetail(s) {
-    setSelectedSession(s);
-    setModal('detail');
-  }
-  function openEdit(s) {
-    setSelectedSession(s);
-    setModal('edit');
-  }
-  function closeModal() {
-    setModal(null);
-    setSelectedSession(null);
-  }
+  function openNew() { setSelectedSession(null); setModal('new'); }
+  function openDetail(s) { setSelectedSession(s); setModal('detail'); }
+  function openEdit(s) { setSelectedSession(s); setModal('edit'); }
+  function closeModal() { setModal(null); setSelectedSession(null); }
 
-  /* ── RENDER ── */
   if (recoveryToken) {
     return <ResetPasswordScreen accessToken={recoveryToken} onDone={() => setRecoveryToken(null)} />;
   }
@@ -4286,85 +4124,100 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <Header user={currentUser} syncStatus={syncStatus}
-        showEdit={tab === 'dashboard'} editMode={editMode}
-        onToggleEdit={() => setEditMode(e => !e)} />
+    <DialogContext.Provider value={dlgApi}>
+      <div className="app">
+        <Header user={currentUser} syncStatus={syncStatus}
+          showEdit={tab === 'dashboard'} editMode={editMode}
+          onToggleEdit={() => setEditMode(e => !e)} />
 
-      <div className="main">
-        {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} editMode={editMode} setEditMode={setEditMode} />}
-        {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
-        {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
-        {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} onToggleNoteEntry={toggleNoteEntry} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
-        {tab === 'analyse' && <AnalysePage sessions={sessions} />}
-        {tab === 'settings' && (
-          <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
+        <div className="main">
+          {tab === 'dashboard' && <Dashboard sessions={sessions} onSessionClick={openDetail} icsUrl={icsUrl} onCreateSession={openNewWithPrefill} manualEvents={events} editMode={editMode} />}
+          {tab === 'sessions' && <SessionsPage sessions={sessions} onSessionClick={openDetail} />}
+          {tab === 'events' && <EventsPage icsUrl={icsUrl} manualEvents={events} onSaveEvent={saveEvent} onDeleteEvent={deleteEvent} onCreateSession={openNewWithPrefill} />}
+          {tab === 'notizen' && <NotesPage sessions={sessions} noteStates={noteStates} onToggleNote={toggleNote} onToggleNoteEntry={toggleNoteEntry} lists={lists} onOpenSession={openDetail} pinnedNotes={pinnedNotes} onTogglePin={togglePinNote} />}
+          {tab === 'analyse' && <AnalysePage sessions={sessions} />}
+          {tab === 'settings' && (
+            <SettingsPage user={currentUser} lists={lists} syncStatus={syncStatus}
+              customDisz={customDisz}
+              onSaveCustomDisz={saveCustomDisz}
+              onSignOut={handleSignOut}
+              onSync={() => loadData(authToken)}
+              onExport={exportData}
+              onClearData={clearAllData}
+              onSaveLists={saveLists}
+              icsUrl={icsUrl}
+              onSaveIcsUrl={saveIcsUrl} />
+          )}
+        </div>
+
+        {!modal && <button className="fab" onClick={openNew}>+</button>}
+        <BottomNav active={tab} onChange={(t) => { if (t !== 'dashboard') setEditMode(false); setTab(t); }} />
+
+        {(modal === 'new' || modal === 'edit') && (
+          <SessionModal
+            key={modal === 'edit' ? selectedSession?.id : 'new'}
+            session={modal === 'edit' ? selectedSession : null}
+            prefill={modal === 'new' ? selectedSession?._prefill : null}
+            lists={lists}
             customDisz={customDisz}
-            onSaveCustomDisz={saveCustomDisz}
-            onSignOut={handleSignOut}
-            onSync={() => loadData(authToken)}
-            onExport={exportData}
-            onClearData={clearAllData}
+            onSave={saveSession}
+            onDelete={deleteSession}
+            onClose={closeModal}
             onSaveLists={saveLists}
-            icsUrl={icsUrl}
-            onSaveIcsUrl={saveIcsUrl} />
+            lastSession={modal === 'new' ? (sessions[0] || null) : null} />
         )}
+        {modal === 'detail' && selectedSession && (
+          <DetailModal
+            session={selectedSession}
+            onEdit={(s) => { setSelectedSession(s); setModal('edit'); }}
+            onDelete={deleteSession}
+            onClose={closeModal} />
+        )}
+        <InstallBanner />
+        {toastMsg && (() => {
+          const TOAST = {
+            success: { bg:'#1e7d5a', icon:'✓' },
+            info:    { bg:'#2c5d8a', icon:'ℹ️' },
+            warning: { bg:'#b8860b', icon:'⚠️' },
+            error:   { bg:'#c0392b', icon:'✕' },
+          };
+          const t = TOAST[toastMsg.type] || TOAST.info;
+          return (
+            <div style={{position:'fixed',bottom:'calc(90px + env(safe-area-inset-bottom))',left:16,right:16,background:t.bg,color:'#fff',
+              borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
+              boxShadow:'0 4px 20px rgba(0,0,0,0.4)',lineHeight:1.4}}>
+              {t.icon} {toastMsg.text}
+            </div>
+          );
+        })()}
+
+        {/* Dialog host — renders prompt/alert/confirm modals */}
+        <DialogHost state={dlgApi.state} onResolve={dlgApi.resolve} />
       </div>
-
-      {!modal && <button className="fab" onClick={openNew}>+</button>}
-      <BottomNav active={tab} onChange={(t) => { if (t !== 'dashboard') setEditMode(false); setTab(t); }} />
-
-      {(modal === 'new' || modal === 'edit') && (
-        <SessionModal
-          key={modal === 'edit' ? selectedSession?.id : 'new'}
-          session={modal === 'edit' ? selectedSession : null}
-          prefill={modal === 'new' ? selectedSession?._prefill : null}
-          lists={lists}
-          customDisz={customDisz}
-          onSave={saveSession}
-          onDelete={deleteSession}
-          onClose={closeModal}
-          onSaveLists={saveLists}
-          lastSession={modal === 'new' ? lastFilledSession : null} />
-      )}
-      {modal === 'detail' && selectedSession && (
-        <DetailModal
-          session={selectedSession}
-          onEdit={(s) => { setSelectedSession(s); setModal('edit'); }}
-          onDelete={deleteSession}
-          onClose={closeModal} />
-      )}
-      <InstallBanner />
-      {toastMsg && (() => {
-        const TOAST = {
-          success: { bg:'#1e7d5a', icon:'✓' },
-          info:    { bg:'#2c5d8a', icon:'ℹ️' },
-          warning: { bg:'#b8860b', icon:'⚠️' },
-          error:   { bg:'#c0392b', icon:'✕' },
-        };
-        const t = TOAST[toastMsg.type] || TOAST.info;
-        return (
-          <div style={{position:'fixed',bottom:90,left:16,right:16,background:t.bg,color:'#fff',
-            borderRadius:12,padding:'12px 16px',fontSize:13,zIndex:9999,
-            boxShadow:'0 4px 20px rgba(0,0,0,0.4)',lineHeight:1.4}}>
-            {t.icon} {toastMsg.text}
-          </div>
-        );
-      })()}
-    </div>
+    </DialogContext.Provider>
   );
 }
 
 ReactDOM.render(<App />, document.getElementById('root'));
 </script>
 <script>
-  // Register service worker for offline support (registration must live outside
-  // the Babel/JSX block since it has nothing to do with React).
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(err => {
         console.warn('ClayLog: service worker registration failed', err);
       });
+    });
+    // SW update notification: when a new SW takes over, offer a reload.
+    let refreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshed) return;
+      refreshed = true;
+      // Only reload if the user is not in the middle of a modal.
+      if (!document.querySelector('.modal-backdrop, .dlg-backdrop')) {
+        if (confirm('A new version of ClayLog is ready. Reload now?')) {
+          window.location.reload();
+        }
+      }
     });
   }
 </script>
