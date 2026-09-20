@@ -1793,15 +1793,21 @@ function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
   const [sel, setSel] = React.useState(null);
   const [selTimer, setSelTimer] = React.useState(null);
 
-  const W = 300, H = 150;
-  const padL = 8, padR = 8, padT = 14, padB = 26;
+  const W = 300, H = 170;
+  const padL = 8, padR = 8, padT = 14, padB = 24;
   const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
+
+  // Oben: Band für die kumulative Linie
+  const lineH = 38;
+  const lineY0 = padT;
+
+  // Unten: Heatmap-Grid
+  const gridY0 = lineY0 + lineH + 8;
+  const gridH = H - gridY0 - padB;
   const COLS = 6, ROWS = 2;
   const cellW = chartW / COLS;
-  const cellH = chartH / ROWS;
+  const cellH = gridH / ROWS;
 
-  // Parse theme accent → rgb
   function hexToRgbLocal(hex) {
     const h = hex.replace('#','');
     return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
@@ -1809,37 +1815,26 @@ function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
   const [ar, ag, ab] = hexToRgbLocal(theme.accent);
   function heatColor(val) {
     if (val === 0) return '#1a1a24';
-    const t = Math.pow(val / maxVal, 0.7); // gamma for better contrast on low values
+    const t = Math.pow(val / maxVal, 0.7);
     const r = Math.round(26 + (ar-26)*t);
     const g = Math.round(26 + (ag-26)*t);
     const b = Math.round(36 + (ab-36)*t);
     return `rgb(${r},${g},${b})`;
   }
 
-  // Cumulative line points — one per month, at cell centers
+  // Kumulative Werte
   let cum = 0;
-  const cumPts = monthlyData.map((v, i) => {
-    cum += v;
-    const col = i % COLS;
-    const row = Math.floor(i / COLS);
-    const cx = padL + col * cellW + cellW/2;
-    const cyTop = padT + row * cellH + 4;
-    return { x: cx, y: cyTop, v, cum, i };
-  });
-  const cumMax = Math.max(cum[cumPts.length-1] || cumPts[cumPts.length-1]?.cum || 1, 1);
+  const cumData = monthlyData.map(v => { cum += v; return cum; });
+  const cumMax = Math.max(cumData[cumData.length-1], 1);
 
-  // For the line, we map cumulative value to a y inside each row's cell
-  // so the line rides along the top of the heatmap. But we also want a
-  // sense of the *shape*. Simpler: draw the line at the bottom edge of the
-  // year (a single Y axis at the bottom). This keeps the heatmap clean.
-  // → Instead: a subtle line graph overlay at the top of the card.
-  //   Recompute with its own Y range = cumMax.
-  const lineH = 32;
-  const lineY0 = padT;
-  const linePts = cumPts.map((p, i) => ({
-    x: p.x,
-    y: lineY0 + lineH - (p.cum / cumMax) * lineH,
-    ...p,
+  // Linie: X läuft GLEICHMÄSSIG über die volle Breite (Index-basiert, nicht Grid-basiert)
+  const lineStep = chartW / 11;
+  const linePts = cumData.map((c, i) => ({
+    x: padL + i * lineStep,
+    y: lineY0 + lineH - (c / cumMax) * lineH,
+    v: monthlyData[i],
+    cum: c,
+    i,
   }));
   const linePath = smoothPath(linePts);
   const areaPath = linePts.length
@@ -1852,16 +1847,15 @@ function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
     const xView = ((clientX - rect.left) / rect.width) * W;
     const col = Math.floor((xView - padL) / cellW);
     if (col < 0 || col >= COLS) { setSel(null); return; }
-    // Determine row from touch Y if available, else row 0
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const yView = ((clientY - rect.top) / rect.height) * H;
-    const row = Math.max(0, Math.min(ROWS - 1, Math.floor((yView - padT) / cellH)));
+    const row = Math.max(0, Math.min(ROWS - 1, Math.floor((yView - gridY0) / cellH)));
     const idx = row * COLS + col;
     if (idx >= 0 && idx < 12) setSel(idx);
     if (selTimer) clearTimeout(selTimer);
     setSelTimer(setTimeout(() => setSel(null), 3000));
   }
-  const selPt = sel !== null ? cumPts[sel] : null;
+  const selPt = sel !== null ? linePts[sel] : null;
 
   return (
     <div style={{position:'relative'}}>
@@ -1869,34 +1863,46 @@ function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
         onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
         <ChartDefs id="shells-combined" colors={[theme.accent2]} />
 
-        {/* Subtle cumulative line at the top */}
-        {areaPath && <path d={areaPath} fill="url(#shells-combined-grad-0)" opacity="0.5"/>}
+        {/* Kumulative Linie + sanfte Fläche oben */}
+        {areaPath && <path d={areaPath} fill="url(#shells-combined-grad-0)"/>}
         {linePath && (
-          <path d={linePath} fill="none" stroke={theme.accent2} strokeWidth="1.8"
-            strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+          <path d={linePath} fill="none" stroke={theme.accent2} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
         )}
 
-        {/* Heatmap cells — 6 cols × 2 rows */}
+        {/* Punkte auf der Linie */}
+        {linePts.map((p, i) => {
+          const isCur = i === currentMonth;
+          const isSel = sel === i;
+          return (
+            <circle key={i} cx={p.x} cy={p.y}
+              r={isSel ? 5 : isCur ? 3.5 : 2.5}
+              fill={isCur ? theme.accent : theme.accent2}
+              stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 1.5 : 0}
+            />
+          );
+        })}
+
+        {/* Heatmap-Grid 6×2 */}
         {monthlyData.map((val, i) => {
           const col = i % COLS;
           const row = Math.floor(i / COLS);
           const x = padL + col * cellW;
-          const y = padT + lineH + 6 + row * (cellH - lineH/2 - 3);
-          const cH = cellH - lineH/2 - 3;
+          const y = gridY0 + row * cellH;
           const isCur = i === currentMonth;
           const isSel = sel === i;
           return (
             <g key={i} onClick={() => setSel(sel === i ? null : i)} style={{cursor:'pointer'}}>
-              <rect x={x+2} y={y+2} width={cellW-4} height={cH-4}
+              <rect x={x+2} y={y+2} width={cellW-4} height={cellH-4}
                 fill={heatColor(val)} rx="6"
                 stroke={isSel ? '#fff' : isCur ? theme.accent : 'transparent'}
                 strokeWidth={isSel ? 2 : 1.5}/>
-              <text x={x + cellW/2} y={y + cH/2 - 4} textAnchor="middle"
+              <text x={x + cellW/2} y={y + cellH/2 - 3} textAnchor="middle"
                 fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#3a3a5a'}
                 fontSize="9" fontFamily="DM Mono,monospace" fontWeight="bold">
                 {MONTHS[i]}
               </text>
-              <text x={x + cellW/2} y={y + cH/2 + 9} textAnchor="middle"
+              <text x={x + cellW/2} y={y + cellH/2 + 10} textAnchor="middle"
                 fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#2a2a3a'}
                 fontSize={val >= 1000 ? "9" : "10"} fontFamily="DM Mono,monospace" fontWeight="bold">
                 {val > 0 ? (val >= 1000 ? (val/1000).toFixed(1)+'k' : val) : '·'}
@@ -1906,8 +1912,8 @@ function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
         })}
       </svg>
 
-            {/* Tooltip */}
-      {selPt && selPt.v > 0 && (
+      {/* Tooltip */}
+      {selPt && (
         <div style={{
           position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
           transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
