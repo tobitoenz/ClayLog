@@ -56,25 +56,27 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .page.active { display: block; }
 .bottom-nav {
   display: flex; background: var(--surface);
-  border-top: 1px solid var(--border); padding: 6px 0 28px; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 4px 0 max(6px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .bottom-nav::-webkit-scrollbar { display: none; }
 .nav-item {
-  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 8px 2px 6px; cursor: pointer; transition: all .2s; user-select: none;
-  border-radius: 14px; margin: 0 1px; white-space: nowrap;
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 6px 2px 4px; cursor: pointer; transition: all .2s; user-select: none;
+  border-radius: 12px; margin: 0 1px; white-space: nowrap;
   color: var(--muted);
 }
 .nav-icon {
-  width: calc(24px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
-  height: calc(24px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
+  width: calc(22px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
+  height: calc(22px * (1 + 0.2 * max(min(var(--font-scale, 1), 2) - 1.3, 0)));
   transition: transform .2s; line-height: 1; display: block;
 }
 .nav-label {
-  font-size: var(--fs-nav, 11px); letter-spacing: .3px; text-transform: uppercase;
+  font-size: var(--fs-nav, 10px); letter-spacing: .3px; text-transform: uppercase;
   color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500;
-  white-space: nowrap;
+  white-space: nowrap; line-height: 1;
 }
 .nav-item.active { background: rgba(255,255,255,.06); color: var(--accent); }
 .nav-item.active .nav-icon { transform: scale(1.08); }
@@ -117,8 +119,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   display: flex; align-items: center; justify-content: center;
   font-size: 22px; flex-shrink: 0;
 }
-.session-icon.practice { background: rgba(232,200,74,.12); }
-.session-icon.competition { background: rgba(74,232,200,.12); }
+.session-icon.practice { background: rgba(232,200,74,.12); color: var(--accent); }
+.session-icon.competition { background: rgba(74,232,200,.12); color: var(--accent2); }
 .session-info { flex: 1; min-width: 0; }
 .session-name { font-weight: 600; font-size: var(--fs-lg, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .session-meta { font-size: var(--fs-sm, 13px); color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
@@ -151,7 +153,7 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; top: 0; }
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 12px; }
-.modal-title { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: 2px; margin-bottom: 12px; }
+.modal-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: .5px; margin-bottom: 12px; }
 .modal-header-sticky {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
@@ -194,7 +196,7 @@ textarea { resize: none; min-height: 80px; }
 .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .btn {
   width: 100%; padding: 14px; border-radius: 12px; border: none;
-  font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .6px;
   text-transform: uppercase;
   cursor: pointer; transition: transform .1s, box-shadow .15s, background .15s;
   margin-top: 6px;
@@ -222,7 +224,7 @@ textarea { resize: none; min-height: 80px; }
 }
 .auth-logo { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: 4px; color: var(--accent); margin-bottom: 4px; }
 .auth-subtitle { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-bottom: 40px; text-transform: uppercase; }
-.auth-title { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; color: var(--text); }
+.auth-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .3px; margin-bottom: 20px; color: var(--text); }
 .auth-box { width: 100%; max-width: 340px; }
 .auth-error { color: var(--red); font-size: 13px; margin-bottom: 12px; min-height: 18px; font-family: 'DM Mono', monospace; }
 .auth-success { color: var(--accent2); font-size: 13px; margin-bottom: 12px; font-family: 'DM Mono', monospace; }
@@ -282,7 +284,7 @@ canvas { width: 100% !important; }
 .divider-line { flex: 1; height: 1px; background: var(--border); }
 .divider-text { font-size: 10px; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; }
 .type-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.type-btn { padding: 13px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; font-family: var(--font-display); font-weight: 600; letter-spacing: .5px; transition: transform .1s; }
+.type-btn { padding: 13px; border-radius: 12px; border: none; font-size: 15px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; letter-spacing: .3px; transition: transform .1s; }
 .type-btn:active { transform: scale(.97); }
 .score-check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; margin-bottom: 4px; }
 .check-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); background: var(--card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -310,15 +312,15 @@ canvas { width: 100% !important; }
   overflow: hidden;
 }
 @keyframes dlgPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.dlg-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 1px; padding: 18px 20px 4px; }
+.dlg-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: .2px; padding: 18px 20px 4px; }
 .dlg-msg { font-size: 14px; color: var(--text); line-height: 1.55; padding: 0 20px 18px; }
 .dlg-msg input { margin-top: 12px; }
 .dlg-actions { display: flex; gap: 8px; padding: 0 16px 16px; }
 .dlg-btn {
   flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
   background: transparent; color: var(--text);
-  font-family: var(--font-display); font-weight: 700; font-size: 13px;
-  letter-spacing: .5px; cursor: pointer; transition: transform .1s, background .15s;
+  font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  letter-spacing: .3px; cursor: pointer; transition: transform .1s, background .15s;
   text-transform: uppercase;
 }
 .dlg-btn:active { transform: scale(.97); }
@@ -412,6 +414,26 @@ function useThemeColors() {
 /* ════════════════════════════════════════════════════════════════
    NAV ICONS
 ════════════════════════════════════════════════════════════════ */
+// Session-Card Icons — gleiche Sprache wie die Nav (SVG outline, currentColor)
+const SESSION_ICONS = {
+  competition: (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 21h8"/>
+      <path d="M12 17v4"/>
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/>
+      <path d="M17 5h3v3a3 3 0 0 1-3 3"/>
+      <path d="M7 5H4v3a3 3 0 0 0 3 3"/>
+    </svg>
+  ),
+  practice: (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/>
+      <circle cx="12" cy="12" r="5"/>
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+};
+
 const NAV_ICONS = {
   dashboard: (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1425,7 +1447,7 @@ function SessionItem({ s, onClick }) {
   return (
     <div className="session-item" onClick={onClick}>
       <div className={`session-icon ${isComp ? 'competition' : 'practice'}`}>
-        {isComp ? '🏆' : '🏋️'}
+        {isComp ? SESSION_ICONS.competition : SESSION_ICONS.practice}
       </div>
       <div className="session-info">
         <div className="session-name">{s.name || s.disziplin || 'Practice'}</div>
@@ -1539,7 +1561,7 @@ function MunitionsChartCumulative({ monthlyData, currentMonth }) {
   return (
     <div style={{position:'relative'}}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
-        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
+        onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
         <ChartDefs id="cum" colors={[theme.accent2]} />
         {gridVals.map(v => (
           <g key={v}>
@@ -1725,9 +1747,6 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth }) {
 }
 
 function MunitionsChart({ sessions, year, variant = 'full' }) {
-  const [chartType, setChartType] = useState(() => {
-    try { return localStorage.getItem('claylog_shellchart') || 'cumulative'; } catch { return 'cumulative'; }
-  });
   const monthlyData = Array(12).fill(0);
   sessions.filter(s => (s.date||'').startsWith(year))
     .forEach(s => {
@@ -1737,13 +1756,8 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
   const maxVal = Math.max(...monthlyData, 1);
   const currentMonth = new Date().getMonth();
   const total = monthlyData.reduce((a,v) => a+v, 0);
-  const isMini = variant === 'mini';
 
-  function setType(t) {
-    setChartType(t);
-    try { localStorage.setItem('claylog_shellchart', t); } catch {}
-  }
-  if (isMini) {
+  if (variant === 'mini') {
     return (
       <div className="card" style={{marginBottom:0}}>
         <div className="card-header" style={{marginBottom:4}}>
@@ -1754,33 +1768,164 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
       </div>
     );
   }
+
   return (
     <div className="card" style={{marginBottom:12}}>
-      <div className="card-header">
+      <div className="card-header" style={{marginBottom:10}}>
         <span className="card-title">Shells fired {year}</span>
-        <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:18,color:'var(--accent)',letterSpacing:0.5}}>{total.toLocaleString()}</span>
-      </div>
-      <div style={{display:'flex',gap:6,marginBottom:10}}>
-        {[['cumulative','📈 Cumul.'],['horizontal','≡ Bars']].map(([t,l]) => (
-          <button key={t}
-            className={`analyse-tab ${chartType===t?'active':''}`}
-            style={{fontSize:11,padding:'4px 10px'}}
-            onClick={() => setType(t)}>{l}</button>
-        ))}
+        <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:22,color:'var(--accent)',letterSpacing:0.5,lineHeight:1}}>{total.toLocaleString()}</span>
       </div>
       {total === 0 ? (
         <div className="empty" style={{padding:'20px 0'}}>
           <div className="empty-text">No shell data for {year}.</div>
         </div>
-      ) : chartType === 'cumulative' ? (
-        <MunitionsChartCumulative monthlyData={monthlyData} currentMonth={currentMonth}/>
       ) : (
-        <MunitionsChartHorizontal monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth}/>
+        <MunitionsChartCombined monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth}/>
       )}
     </div>
   );
 }
 
+function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
+  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  const theme = useThemeColors();
+  const svgRef = React.useRef(null);
+  const [sel, setSel] = React.useState(null);
+  const [selTimer, setSelTimer] = React.useState(null);
+
+  const W = 300, H = 150;
+  const padL = 8, padR = 8, padT = 14, padB = 26;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const COLS = 6, ROWS = 2;
+  const cellW = chartW / COLS;
+  const cellH = chartH / ROWS;
+
+  // Parse theme accent → rgb
+  function hexToRgbLocal(hex) {
+    const h = hex.replace('#','');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  const [ar, ag, ab] = hexToRgbLocal(theme.accent);
+  function heatColor(val) {
+    if (val === 0) return '#1a1a24';
+    const t = Math.pow(val / maxVal, 0.7); // gamma for better contrast on low values
+    const r = Math.round(26 + (ar-26)*t);
+    const g = Math.round(26 + (ag-26)*t);
+    const b = Math.round(36 + (ab-36)*t);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // Cumulative line points — one per month, at cell centers
+  let cum = 0;
+  const cumPts = monthlyData.map((v, i) => {
+    cum += v;
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const cx = padL + col * cellW + cellW/2;
+    const cyTop = padT + row * cellH + 4;
+    return { x: cx, y: cyTop, v, cum, i };
+  });
+  const cumMax = Math.max(cum[cumPts.length-1] || cumPts[cumPts.length-1]?.cum || 1, 1);
+
+  // For the line, we map cumulative value to a y inside each row's cell
+  // so the line rides along the top of the heatmap. But we also want a
+  // sense of the *shape*. Simpler: draw the line at the bottom edge of the
+  // year (a single Y axis at the bottom). This keeps the heatmap clean.
+  // → Instead: a subtle line graph overlay at the top of the card.
+  //   Recompute with its own Y range = cumMax.
+  const lineH = 32;
+  const lineY0 = padT;
+  const linePts = cumPts.map((p, i) => ({
+    x: p.x,
+    y: lineY0 + lineH - (p.cum / cumMax) * lineH,
+    ...p,
+  }));
+  const linePath = smoothPath(linePts);
+  const areaPath = linePts.length
+    ? `M${linePts[0].x},${lineY0+lineH} ` + smoothPath(linePts).replace(/^M/,'L') + ` L${linePts[linePts.length-1].x},${lineY0+lineH} Z`
+    : '';
+
+  function handleMove(e) {
+    const rect = svgRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const xView = ((clientX - rect.left) / rect.width) * W;
+    const col = Math.floor((xView - padL) / cellW);
+    if (col < 0 || col >= COLS) { setSel(null); return; }
+    // Determine row from touch Y if available, else row 0
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const yView = ((clientY - rect.top) / rect.height) * H;
+    const row = Math.max(0, Math.min(ROWS - 1, Math.floor((yView - padT) / cellH)));
+    const idx = row * COLS + col;
+    if (idx >= 0 && idx < 12) setSel(idx);
+    if (selTimer) clearTimeout(selTimer);
+    setSelTimer(setTimeout(() => setSel(null), 3000));
+  }
+  const selPt = sel !== null ? cumPts[sel] : null;
+
+  return (
+    <div style={{position:'relative'}}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
+        <ChartDefs id="shells-combined" colors={[theme.accent2]} />
+
+        {/* Subtle cumulative line at the top */}
+        {areaPath && <path d={areaPath} fill="url(#shells-combined-grad-0)" opacity="0.5"/>}
+        {linePath && (
+          <path d={linePath} fill="none" stroke={theme.accent2} strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+        )}
+
+        {/* Heatmap cells — 6 cols × 2 rows */}
+        {monthlyData.map((val, i) => {
+          const col = i % COLS;
+          const row = Math.floor(i / COLS);
+          const x = padL + col * cellW;
+          const y = padT + lineH + 6 + row * (cellH - lineH/2 - 3);
+          const cH = cellH - lineH/2 - 3;
+          const isCur = i === currentMonth;
+          const isSel = sel === i;
+          return (
+            <g key={i} onClick={() => setSel(sel === i ? null : i)} style={{cursor:'pointer'}}>
+              <rect x={x+2} y={y+2} width={cellW-4} height={cH-4}
+                fill={heatColor(val)} rx="6"
+                stroke={isSel ? '#fff' : isCur ? theme.accent : 'transparent'}
+                strokeWidth={isSel ? 2 : 1.5}/>
+              <text x={x + cellW/2} y={y + cH/2 - 4} textAnchor="middle"
+                fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#3a3a5a'}
+                fontSize="9" fontFamily="DM Mono,monospace" fontWeight="bold">
+                {MONTHS[i]}
+              </text>
+              <text x={x + cellW/2} y={y + cH/2 + 9} textAnchor="middle"
+                fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#2a2a3a'}
+                fontSize={val >= 1000 ? "9" : "10"} fontFamily="DM Mono,monospace" fontWeight="bold">
+                {val > 0 ? (val >= 1000 ? (val/1000).toFixed(1)+'k' : val) : '·'}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+            {/* Tooltip */}
+      {selPt && selPt.v > 0 && (
+        <div style={{
+          position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
+          transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
+          background:'var(--surface)', border:`1px solid ${theme.accent2}`,
+          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
+          fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
+        }}>
+          <div style={{color:'var(--muted)',fontSize:10}}>{MONTHS[selPt.i]} · Σ {selPt.cum.toLocaleString()}</div>
+          <div style={{color:theme.accent2,fontWeight:'bold',fontSize:13}}>{selPt.v.toLocaleString()} shells</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════════════════ */
 const DEFAULT_BLOCKS = [
   { id: 'stats',     label: 'Stats',          visible: true  },
   { id: 'nextEvent', label: 'Next Event',      visible: true  },
@@ -1815,6 +1960,12 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
   const quoteYear = compYear.length  ? Math.round(compYear.reduce((a,s)=>a+s.score/s.max,0)/compYear.length*1000)/10 : null;
   const compAll   = sessions.filter(s => s.type==='competition' && s.max>0);
   const quoteAll  = compAll.length   ? Math.round(compAll.reduce((a,s)=>a+s.score/s.max,0)/compAll.length*1000)/10  : null;
+  const bestYear = compYear.length
+    ? Math.round(Math.max(...compYear.map(s => s.score/s.max)) * 1000)/10
+    : null;
+  const bestAll = compAll.length
+    ? Math.round(Math.max(...compAll.map(s => s.score/s.max)) * 1000)/10
+    : null;
   const recent    = [...sessions].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 2);
   const now = new Date();
 
@@ -1892,23 +2043,59 @@ function Dashboard({ sessions, onSessionClick, icsUrl, onCreateSession, manualEv
       </div>
     ) : null,
     stats: (
-      <div className="stat-grid">
-        <div className="stat-box">
-          <div className="stat-val">
-            {yearSessions.length}
-            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:500,fontFamily:'DM Mono,monospace'}}> / {sessions.length}</span>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+        {/* Sessions */}
+        <div className="stat-box" style={{gridColumn:'1/-1'}}>
+          <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:13,color:'var(--muted)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:10}}>Sessions</div>
+          <div style={{display:'flex',alignItems:'baseline',gap:16}}>
+            <div style={{display:'flex',alignItems:'baseline',gap:6,flex:1}}>
+              <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:32,color:'var(--accent)',lineHeight:1}}>{yearSessions.length}</span>
+              <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)',letterSpacing:.5}}>{year}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+              <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:20,color:'var(--muted)',lineHeight:1}}>{sessions.length}</span>
+              <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)',letterSpacing:.5}}>total</span>
+            </div>
           </div>
-          <div className="stat-label">Sessions {year}</div>
         </div>
-        <div className="stat-box"><div className="stat-val">{quoteYear !== null ? quoteYear+'%' : '–'}</div><div className="stat-label">🏆 Ø {year}</div></div>
-        <div className="stat-box">
-          <div className="stat-val">
-            {compYear.length}
-            <span style={{fontSize:'0.45em',color:'var(--muted)',fontWeight:500,fontFamily:'DM Mono,monospace'}}> / {compAllTotal.length}</span>
+        {/* Competitions */}
+        <div className="stat-box" style={{gridColumn:'1/-1',borderLeft:'3px solid var(--accent2)'}}>
+          <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:13,color:'var(--accent2)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:10}}>Competitions</div>
+          <div style={{display:'flex',alignItems:'baseline',gap:16}}>
+            <div style={{display:'flex',alignItems:'baseline',gap:6,flex:1}}>
+              <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:32,color:'var(--accent2)',lineHeight:1}}>{compYear.length}</span>
+              <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)',letterSpacing:.5}}>{year}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+              <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:20,color:'var(--muted)',lineHeight:1}}>{compAllTotal.length}</span>
+              <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)',letterSpacing:.5}}>total</span>
+            </div>
           </div>
-          <div className="stat-label">🏆 Competitions</div>
         </div>
-        <div className="stat-box"><div className="stat-val">{quoteAll !== null ? quoteAll+'%' : '–'}</div><div className="stat-label">Ø All time</div></div>
+        {/* Ø Score */}
+        <div className="stat-box">
+          <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:12,color:'var(--muted)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:10}}>Ø Score</div>
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between'}}>
+            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:26,color:'var(--accent)',lineHeight:1}}>{quoteYear !== null ? quoteYear+'%' : '–'}</span>
+            <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)'}}>{year}</span>
+          </div>
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginTop:6}}>
+            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:16,color:'var(--muted)',lineHeight:1}}>{quoteAll !== null ? quoteAll+'%' : '–'}</span>
+            <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)'}}>total</span>
+          </div>
+        </div>
+        {/* Best */}
+        <div className="stat-box">
+          <div style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:12,color:'var(--muted)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:10}}>Best</div>
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between'}}>
+            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:26,color:'var(--accent)',lineHeight:1}}>{bestYear !== null ? bestYear : '–'}</span>
+            <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)'}}>{year}</span>
+          </div>
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginTop:6}}>
+            <span style={{fontFamily:'var(--font-display)',fontWeight:700,fontSize:16,color:'var(--muted)',lineHeight:1}}>{bestAll !== null ? bestAll : '–'}</span>
+            <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--muted)'}}>all</span>
+          </div>
+        </div>
       </div>
     ),
     shells: <MunitionsChart sessions={sessions} year={year} />,
@@ -2289,8 +2476,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
           {compYear && <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:COMP_COLOR}}>{compYear}%</span>}
         </div>
         <div style={{position:'relative'}}>
-        <svg ref={miniRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
-          onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setMiniSel(null)}>
+                <svg ref={miniRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+          onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setMiniSel(null)}>
           <ChartDefs id="mini" colors={[COMP_COLOR_HEX]} />
           {[minY, midY, maxY].filter((v,i,a)=>a.indexOf(v)===i).map(v => (
             <g key={v}>
@@ -2366,8 +2553,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
 
     return (
       <div style={{position:'relative'}}>
-      <svg ref={tlRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
-        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setTlSel(null)}>
+            <svg ref={tlRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setTlSel(null)}>
         <ChartDefs id="tl" colors={[COMP_COLOR_HEX, TRAIN_COLOR_HEX]} />
         {gridVals.map(v=>(
           <g key={v}>
@@ -2447,8 +2634,8 @@ function UnifiedScoreChart({ sessions, variant = 'full' }) {
 
     return (<>
       <div style={{position:'relative'}}>
-      <svg ref={ovRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
-        onTouchStart={handleMove} onTouchMove={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setOvSel(null)}>
+            <svg ref={ovRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
+        onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setOvSel(null)}>
         <ChartDefs id="ov" colors={YEAR_COLORS} />
         {[0,25,50,75,100].map(v=>(
           <g key={v}>
@@ -2613,19 +2800,23 @@ function AnalysePage({ sessions }) {
   return (
     <div>
       <div style={{display:'flex',gap:0,marginBottom:0,borderBottom:'1px solid var(--border)'}}>
-        {[['score','📈','Score'],['ammo','🔴','Ammo'],['waffen','🔫','Guns']].map(([t,icon,label]) => (
-          <button key={t} onClick={()=>setTab(t)} style={{
-            flex:1, padding:'10px 4px', background:'transparent', border:'none',
-            borderBottom: tab===t ? '2px solid var(--accent)' : '2px solid transparent',
-            color: tab===t ? 'var(--accent)' : 'var(--muted)',
-            fontFamily:'DM Mono,monospace', fontSize:11, fontWeight:600,
-            cursor:'pointer', transition:'all .15s', display:'flex', flexDirection:'column',
-            alignItems:'center', gap:3, letterSpacing:.5
-          }}>
-            <span style={{fontSize:16}}>{icon}</span>
-            <span>{label}</span>
-          </button>
-        ))}
+        {[
+  ['score', <svg key="i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg>, 'Score'],
+  ['ammo', <svg key="i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>, 'Ammo'],
+  ['waffen', <svg key="i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h6l2-3 3 5 3-2h4"/></svg>, 'Guns'],
+].map(([t,icon,label]) => (
+  <button key={t} onClick={()=>setTab(t)} style={{
+    flex:1, padding:'10px 4px', background:'transparent', border:'none',
+    borderBottom: tab===t ? '2px solid var(--accent)' : '2px solid transparent',
+    color: tab===t ? 'var(--accent)' : 'var(--muted)',
+    fontFamily:'DM Mono,monospace', fontSize:11, fontWeight:600,
+    cursor:'pointer', transition:'all .15s', display:'flex', flexDirection:'column',
+    alignItems:'center', gap:4, letterSpacing:.5
+  }}>
+    {icon}
+    <span>{label}</span>
+  </button>
+))}
       </div>
       {(tab==='ammo'||tab==='waffen') && (
         <div className="tab-row" style={{marginTop:10,marginBottom:4}}>
@@ -2761,7 +2952,7 @@ function AppearanceSettings() {
   }
   return (
     <div className="card">
-      <div className="card-title" style={{marginBottom:14}}>🎨 Appearance</div>
+      <div className="card-title" style={{marginBottom:14}}>Appearance</div>
       <div style={{fontSize:11,color:'var(--muted)',fontFamily:'DM Mono,monospace',letterSpacing:1,marginBottom:10}}>THEME</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16,alignItems:'center'}}>
         {THEMES.filter(t=>t.id!=='custom').map(t => (
@@ -2860,7 +3051,7 @@ function ShareCard() {
   }
   return (
     <div className="card">
-      <div className="card-title" style={{marginBottom:12}}>🔗 Share app</div>
+      <div className="card-title" style={{marginBottom:12}}>Share app</div>
       <div style={{fontSize:13,color:'var(--muted)',marginBottom:16,lineHeight:1.5}}>
         Scan the QR code or share the link — the app opens directly in the browser, no installation needed.
       </div>
@@ -2981,7 +3172,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       <AppearanceSettings />
 
       <div className="card">
-        <div className="card-title" style={{marginBottom:12}}>📅 Events / ICS Feed</div>
+        <div className="card-title" style={{marginBottom:12}}>Events / ICS Feed</div>
         <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>
           Connect Google Calendar — competitions appear automatically in the Events tab and on the Dashboard.
         </div>
@@ -2996,7 +3187,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       </div>
 
       <div className="card">
-        <div className="card-title" style={{marginBottom:12}}>🎯 Custom Disciplines</div>
+        <div className="card-title" style={{marginBottom:12}}>Custom Disciplines</div>
         {customDisz.length > 0 && (
           <div style={{marginBottom:14}}>
             {customDisz.map(d => (
@@ -3050,7 +3241,7 @@ function SettingsPage({ user, lists, customDisz, onSaveCustomDisz, onSignOut, on
       </div>
 
       <div className="card">
-        <div className="card-title" style={{marginBottom:12}}>🔫 Guns / Locations / Ammo</div>
+        <div className="card-title" style={{marginBottom:12}}>Guns / Locations / Ammo</div>
         {[['waffe','Gun'],['ort','Location'],['munition','Ammo'],['notizKategorien','Note categories (custom)']].map(([key,label]) => (
           <div key={key} style={{marginBottom:12}}>
             <label style={{marginBottom:6}}>{label}</label>
@@ -3289,9 +3480,19 @@ function SessionModal({ session, prefill, lists, customDisz, onSave, onDelete, o
         <div className="form-group">
           <label>Type</label>
           <div className="type-btn-row">
-            <button className="type-btn" style={{background: type==='practice'?'var(--accent)':'var(--card)', color: type==='practice'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('practice')}>🏋️ Practice</button>
-            <button className="type-btn" style={{background: type==='competition'?'var(--accent2)':'var(--card)', color: type==='competition'?'#000':'var(--muted)', border:'1px solid var(--border)'}} onClick={()=>setType('competition')}>🏆 Competition</button>
-          </div>
+			<button className="type-btn" style={{background: type==='practice'?'var(--accent)':'var(--card)', color: type==='practice'?'#000':'var(--muted)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', gap:8}} onClick={()=>setType('practice')}>
+			<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+    Practice
+  </button>
+  <button className="type-btn" style={{background: type==='competition'?'var(--accent2)':'var(--card)', color: type==='competition'?'#000':'var(--muted)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', gap:8}} onClick={()=>setType('competition')}>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/>
+    </svg>
+    Competition
+  </button>
+</div>
         </div>
 
         {fields.name !== false && (
@@ -4204,18 +4405,6 @@ ReactDOM.render(<App />, document.getElementById('root'));
       navigator.serviceWorker.register('./sw.js').catch(err => {
         console.warn('ClayLog: service worker registration failed', err);
       });
-    });
-    // SW update notification: when a new SW takes over, offer a reload.
-    let refreshed = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshed) return;
-      refreshed = true;
-      // Only reload if the user is not in the middle of a modal.
-      if (!document.querySelector('.modal-backdrop, .dlg-backdrop')) {
-        if (confirm('A new version of ClayLog is ready. Reload now?')) {
-          window.location.reload();
-        }
-      }
     });
   }
 </script>
