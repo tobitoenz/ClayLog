@@ -1747,12 +1747,16 @@ function MunitionsChartHeatmap({ monthlyData, maxVal, currentMonth }) {
 }
 
 function MunitionsChart({ sessions, year, variant = 'full' }) {
-  const monthlyData = Array(12).fill(0);
-  sessions.filter(s => (s.date||'').startsWith(year))
-    .forEach(s => {
-      const m = parseInt((s.date||'').slice(5,7)) - 1;
-      if (m >= 0 && m < 12) monthlyData[m] += s.munition || 0;
-    });
+  function buildMonthly(y) {
+    const arr = Array(12).fill(0);
+    sessions.filter(s => (s.date||'').startsWith(String(y)))
+      .forEach(s => {
+        const m = parseInt((s.date||'').slice(5,7)) - 1;
+        if (m >= 0 && m < 12) arr[m] += s.munition || 0;
+      });
+    return arr;
+  }
+  const monthlyData = buildMonthly(year);
   const maxVal = Math.max(...monthlyData, 1);
   const currentMonth = new Date().getMonth();
   const total = monthlyData.reduce((a,v) => a+v, 0);
@@ -1780,151 +1784,97 @@ function MunitionsChart({ sessions, year, variant = 'full' }) {
           <div className="empty-text">No shell data for {year}.</div>
         </div>
       ) : (
-        <MunitionsChartCombined monthlyData={monthlyData} maxVal={maxVal} currentMonth={currentMonth}/>
+        <MunitionsChartCombined monthlyData={monthlyData} currentMonth={currentMonth}/>
       )}
     </div>
   );
 }
 
-function MunitionsChartCombined({ monthlyData, maxVal, currentMonth }) {
-  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+function MunitionsChartCombined({ monthlyData, currentMonth }) {
+  const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const theme = useThemeColors();
-  const svgRef = React.useRef(null);
-  const [sel, setSel] = React.useState(null);
-  const [selTimer, setSelTimer] = React.useState(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const W = 300, H = 170;
-  const padL = 8, padR = 8, padT = 14, padB = 24;
-  const chartW = W - padL - padR;
+  const scaleMax = Math.max(...monthlyData, 1);
 
-  // Oben: Band für die kumulative Linie
-  const lineH = 38;
-  const lineY0 = padT;
-
-  // Unten: Heatmap-Grid
-  const gridY0 = lineY0 + lineH + 8;
-  const gridH = H - gridY0 - padB;
-  const COLS = 6, ROWS = 2;
-  const cellW = chartW / COLS;
-  const cellH = gridH / ROWS;
-
-  function hexToRgbLocal(hex) {
-    const h = hex.replace('#','');
-    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  // Bei „showAll = false" nur Monate mit Daten
+  const visibleIdx = showAll
+    ? [0,1,2,3,4,5,6,7,8,9,10,11]
+    : monthlyData.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+  if (!visibleIdx.length) {
+    visibleIdx.push(currentMonth);
   }
-  const [ar, ag, ab] = hexToRgbLocal(theme.accent);
-  function heatColor(val) {
-    if (val === 0) return '#1a1a24';
-    const t = Math.pow(val / maxVal, 0.7);
-    const r = Math.round(26 + (ar-26)*t);
-    const g = Math.round(26 + (ag-26)*t);
-    const b = Math.round(36 + (ab-36)*t);
-    return `rgb(${r},${g},${b})`;
-  }
-
-  // Kumulative Werte
-  let cum = 0;
-  const cumData = monthlyData.map(v => { cum += v; return cum; });
-  const cumMax = Math.max(cumData[cumData.length-1], 1);
-
-  // Linie: X läuft GLEICHMÄSSIG über die volle Breite (Index-basiert, nicht Grid-basiert)
-  const lineStep = chartW / 11;
-  const linePts = cumData.map((c, i) => ({
-    x: padL + i * lineStep,
-    y: lineY0 + lineH - (c / cumMax) * lineH,
-    v: monthlyData[i],
-    cum: c,
-    i,
-  }));
-  const linePath = smoothPath(linePts);
-  const areaPath = linePts.length
-    ? `M${linePts[0].x},${lineY0+lineH} ` + smoothPath(linePts).replace(/^M/,'L') + ` L${linePts[linePts.length-1].x},${lineY0+lineH} Z`
-    : '';
-
-  function handleMove(e) {
-    const rect = svgRef.current.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const xView = ((clientX - rect.left) / rect.width) * W;
-    const col = Math.floor((xView - padL) / cellW);
-    if (col < 0 || col >= COLS) { setSel(null); return; }
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const yView = ((clientY - rect.top) / rect.height) * H;
-    const row = Math.max(0, Math.min(ROWS - 1, Math.floor((yView - gridY0) / cellH)));
-    const idx = row * COLS + col;
-    if (idx >= 0 && idx < 12) setSel(idx);
-    if (selTimer) clearTimeout(selTimer);
-    setSelTimer(setTimeout(() => setSel(null), 3000));
-  }
-  const selPt = sel !== null ? linePts[sel] : null;
 
   return (
-    <div style={{position:'relative'}}>
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',overflow:'visible',touchAction:'pan-y'}}
-        onTouchStart={handleMove} onMouseMove={handleMove} onMouseLeave={()=>setSel(null)}>
-        <ChartDefs id="shells-combined" colors={[theme.accent2]} />
-
-        {/* Kumulative Linie + sanfte Fläche oben */}
-        {areaPath && <path d={areaPath} fill="url(#shells-combined-grad-0)"/>}
-        {linePath && (
-          <path d={linePath} fill="none" stroke={theme.accent2} strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"/>
-        )}
-
-        {/* Punkte auf der Linie */}
-        {linePts.map((p, i) => {
+    <div>
+      <div>
+        {visibleIdx.map((i) => {
+          const cur = monthlyData[i];
           const isCur = i === currentMonth;
-          const isSel = sel === i;
+          const curW = (cur / scaleMax) * 100;
+
           return (
-            <circle key={i} cx={p.x} cy={p.y}
-              r={isSel ? 5 : isCur ? 3.5 : 2.5}
-              fill={isCur ? theme.accent : theme.accent2}
-              stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 1.5 : 0}
-            />
+            <div key={i} style={{
+              display:'grid',
+              gridTemplateColumns:'34px 1fr 72px',
+              alignItems:'center',
+              gap:10,
+              padding: isCur ? '5px 0' : '3px 0',
+            }}>
+              {/* Monat */}
+              <span style={{
+                fontFamily:'DM Mono,monospace',
+                fontSize:11,
+                fontWeight: isCur ? 700 : 500,
+                color: isCur ? theme.accent : 'var(--muted)',
+                letterSpacing:0.5,
+                textTransform:'uppercase',
+              }}>{MONTHS_FULL[i].slice(0,3)}</span>
+
+              {/* Balken */}
+              <div style={{position:'relative', height: isCur ? 16 : 11}}>
+                {curW > 0 && (
+                  <div style={{
+                    position:'absolute', top:'50%', transform:'translateY(-50%)',
+                    left:0, height:'100%', width:`${curW}%`,
+                    background: isCur
+                      ? `linear-gradient(90deg, ${theme.accent} 0%, ${theme.accent}cc 100%)`
+                      : theme.accent,
+                    opacity: isCur ? 1 : 0.75,
+                    borderRadius:3,
+                    boxShadow: isCur ? `0 0 8px ${theme.accent}66` : 'none',
+                  }}/>
+                )}
+              </div>
+
+              {/* Wert */}
+              <div style={{
+                textAlign:'right',
+                fontFamily:'var(--font-display)',
+                fontSize: isCur ? 18 : 15,
+                fontWeight: 700,
+                color: cur > 0 ? theme.accent : 'var(--muted)',
+                lineHeight:1,
+                letterSpacing:0.3,
+              }}>
+                {cur > 0 ? cur.toLocaleString() : '–'}
+              </div>
+            </div>
           );
         })}
+      </div>
 
-        {/* Heatmap-Grid 6×2 */}
-        {monthlyData.map((val, i) => {
-          const col = i % COLS;
-          const row = Math.floor(i / COLS);
-          const x = padL + col * cellW;
-          const y = gridY0 + row * cellH;
-          const isCur = i === currentMonth;
-          const isSel = sel === i;
-          return (
-            <g key={i} onClick={() => setSel(sel === i ? null : i)} style={{cursor:'pointer'}}>
-              <rect x={x+2} y={y+2} width={cellW-4} height={cellH-4}
-                fill={heatColor(val)} rx="6"
-                stroke={isSel ? '#fff' : isCur ? theme.accent : 'transparent'}
-                strokeWidth={isSel ? 2 : 1.5}/>
-              <text x={x + cellW/2} y={y + cellH/2 - 3} textAnchor="middle"
-                fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#3a3a5a'}
-                fontSize="9" fontFamily="DM Mono,monospace" fontWeight="bold">
-                {MONTHS[i]}
-              </text>
-              <text x={x + cellW/2} y={y + cellH/2 + 10} textAnchor="middle"
-                fill={val/maxVal > 0.55 ? '#0a0a0c' : val > 0 ? theme.accent : '#2a2a3a'}
-                fontSize={val >= 1000 ? "9" : "10"} fontFamily="DM Mono,monospace" fontWeight="bold">
-                {val > 0 ? (val >= 1000 ? (val/1000).toFixed(1)+'k' : val) : '·'}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Tooltip */}
-      {selPt && (
-        <div style={{
-          position:'absolute', top:0, left:`${(selPt.x/W)*100}%`,
-          transform:`translateX(${selPt.x > W*0.6 ? '-105%' : '5%'})`,
-          background:'var(--surface)', border:`1px solid ${theme.accent2}`,
-          borderRadius:8, padding:'5px 10px', pointerEvents:'none',
-          fontFamily:'DM Mono,monospace', fontSize:11, whiteSpace:'nowrap', zIndex:5
+      <button
+        onClick={() => setShowAll(v => !v)}
+        style={{
+          marginTop:10,
+          background:'none', border:'none', cursor:'pointer', padding:0,
+          fontFamily:'DM Mono,monospace', fontSize:10,
+          color:'var(--muted)', letterSpacing:0.5,
+          textDecoration:'underline',
         }}>
-          <div style={{color:'var(--muted)',fontSize:10}}>{MONTHS[selPt.i]} · Σ {selPt.cum.toLocaleString()}</div>
-          <div style={{color:theme.accent2,fontWeight:'bold',fontSize:13}}>{selPt.v.toLocaleString()} shells</div>
-        </div>
-      )}
+        {showAll ? 'Show only active months' : 'Show all 12 months'}
+      </button>
     </div>
   );
 }
